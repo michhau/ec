@@ -12,7 +12,11 @@ using CSV, DataFrames, Dates, StatsBase
 
 export movingaverage, backlookingmovavg, getinstrumentheights
 
-"Create moving average (michi 16.09.2021); omitting NaNs!!"
+"""
+    movingaverage(X::Vector, numofele::Integer)
+
+Create moving average (michi 16.09.2021); omitting NaNs!!
+"""
 function movingaverage(X::Vector, numofele::Integer)
     BackDelta = div(numofele, 2)
     ForwardDelta = isodd(numofele) ? div(numofele, 2) : div(numofele, 2) - 1
@@ -98,7 +102,11 @@ function movingaverage(X::Vector, numofele::Integer)
     return Y
 end
 
-"Only back-looking moving average."
+"""
+    backlookingmovavg(X::Vector, numofele::Integer)::Vector
+
+Only back-looking moving average.
+"""
 function backlookingmovavg(X::Vector, numofele::Integer)::Vector
     len = size(X, 1)
     #create vector with vec_isnan[i]=1 if X[i]=NaN, 0 otherwise
@@ -147,32 +155,4 @@ function backlookingmovavg(X::Vector, numofele::Integer)::Vector
     end
     return Y
 end
-#=
-"Get the height above snow surface for the instruments 
-with a given source file. Interpolate between noted heights."
-function getinstrumentheights(source::String, timevec::Vector)
-    @info("Loading instrument heights. Using defined column names!
-    Linearly interpolating between noted values")
-    df = CSV.File(source; header=0, skipto=12, tasks = Threads.nthreads())|> Tables.matrix
-    dateformat = DateFormat("yyyy-mm-dd HH:MM:SS")
-    timenoted = DateTime.(df[:,1], dateformat)
-    inivec = zeros(size(timevec, 1))
-    outdf = DataFrame(time = timevec, t1tc1=inivec, t1tc2=inivec,
-    t1tc3=inivec, t1tc4=inivec, t1tc5=inivec, t1irg=inivec, 
-    t2tc1=inivec, t2tc2=inivec, t2tc3=inivec, t2tc4=inivec, 
-    t2tc5=inivec, t2tc6=inivec, t2tc7=inivec, t2tc8=inivec,
-    t2tc9=inivec, t2tc10=inivec, t2irg=inivec, t2csat1=inivec,
-    t2csat2=inivec, t2vent=inivec, t3tc1=inivec, t3tc2=inivec,
-    t3tc3=inivec, t3tc4=inivec, t3tc5=inivec, t3tc6=inivec,
-    t3tc7=inivec, t3tc8=inivec, t3tc9=inivec, t3tc10=inivec,
-    t3vent=inivec)
-    for i in 1:size(timenoted, 1)
-        pos = findall(x->x>=timenoted[i], outdf[:,1])
-        println(size(pos, 1))
-        outdf[pos[1],2:end] = df[i, 8:end]
-    end
-    println("Done")
-    return outdf
-end
-=#
 end #module
