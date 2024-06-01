@@ -108,6 +108,7 @@ Load 3D-ultrasonic rawdata from Kaijo and return timestamps and data.
 """
 function loadkaijoraw(source::String)
     @info("Loading Kaijo raw data from ", source)
+    @warn("Be careful with axis rotation!! Check image for possible reorientation.")
     df = CSV.File(source; header=0, skipto=5, tasks=Threads.nthreads()) |> Tables.matrix
     dateformat = DateFormat("yyyy-mm-dd HH:MM:SS.ss")
     timeofmeasure = DateTime.(df[:, 1], dateformat)
