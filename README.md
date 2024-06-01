@@ -9,9 +9,10 @@
     
     Offline Preprocessing includes:
     1. Check according to physical limits (u,v,w,T,co2,h2o)
-    2. Make dataset time-continuos (adding rows with time stamps and 'missing' data, if needed)
-    3. Despiking according to algorithm in Sigmund et al. (2022) (https://doi.org/10.1007/s10546-021-00653-x)
-    4. save as *.csv or *.nc
+    2. Check quality control flags of device (CSAT & IRGASON)
+    3. Make dataset time-continuos (adding rows with time stamps and 'missing' data, if needed)
+    4. Despiking according to algorithm in Sigmund et al. (2022) (https://doi.org/10.1007/s10546-021-00653-x)
+    5. save as *.csv or *.nc
 
 ## Evaluation
 
@@ -24,3 +25,5 @@ use /code/scripts/load_data.jl to load data in specific time period (evalstart -
 4. Double rotation (default: blocks of 30min length)
 
 optional: load slow data
+
+
