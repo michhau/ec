@@ -838,7 +838,7 @@ end
 """
     blockevaluation(evaldf::DataFrame, blocklength, timestep)
 
-Evaluate data blocks and get information.
+Evaluate data blocks and get information on blockdur, wT, mean wind, meanT, winddir.
 """
 function blockevaluation(evaldf::DataFrame, blocklength, timestep)
     #parameters for splitting the data into blocks
