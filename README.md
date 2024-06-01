@@ -27,3 +27,7 @@ use /code/scripts/load_data.jl to load data in specific time period (evalstart -
 optional: load slow data
 
 
+
+### Other
+- code/scripts/block_evaluation.jl: get starttime, endtime, block duration, winddir, mean wind speed, mean wT, mean T per block and plot
+
