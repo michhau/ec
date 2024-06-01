@@ -26,7 +26,11 @@ export readperiodfile, nan2missing!, missing2nan!, loadt1raw, loadt2raw, loadkai
 ######################################################
 ###                LOADING AND I/O                 ###
 ######################################################
-"Read in periods file to get start/end of measurement periods."
+"""
+    readperiodfile(file::String)::DataFrame
+
+Read in periods file to get start/end of measurement periods.
+"""
 function readperiodfile(file::String)::DataFrame
     @info("Loading measurement period information from ", file)
     intercsv = CSV.File(file; header=0, skipto=2) |> Tables.matrix
@@ -38,15 +42,23 @@ function readperiodfile(file::String)::DataFrame
     return df
 end
 
-"OLD Replace NaN with missing in DataFrame in place.
-Except first column (time)"
+"""
+    nan2missing!(data::DataFrame)
+
+OLD Replace NaN with missing in DataFrame in place.
+Except first column (time)
+"""
 function nan2missing!(data::DataFrame)
     for col in eachcol(data)
         replace!(col, NaN => missing)
     end
 end
 
-"Replace missing with NaN in DataFrame in-place."
+"""
+    missing2nan!(data::DataFrame)
+
+Replace missing with NaN in DataFrame in-place.
+"""
 function missing2nan!(data::DataFrame)
     for col in eachcol(data)
         if !(Int <: eltype(col))
@@ -58,7 +70,11 @@ function missing2nan!(data::DataFrame)
 end
 
 #########       I/O for tower 1/2 data        ########
-"Read-in raw turbulence data from tower 1"
+"""
+    loadt1raw(source::String)
+
+Read-in raw turbulence data from tower 1
+"""
 function loadt1raw(source::String)
     @info("Loading tower 1 turbulence raw data")
     df = CSV.File(source; header=0, skipto=5, tasks=Threads.nthreads()) |> Tables.matrix
@@ -69,7 +85,11 @@ function loadt1raw(source::String)
     # return df[:,1], df[:,8:end]
 end
 
-"Read-in raw turbulence data from tower 2"
+"""
+    loadt2raw(source::String)
+
+Read-in raw turbulence data from tower 2
+"""
 function loadt2raw(source::String)
     @info("Loading tower 2 turbulence raw data")
     #df = CSV.File(source; header=0, skipto=5, tasks = Threads.nthreads())|> Tables.matrix
@@ -81,7 +101,11 @@ function loadt2raw(source::String)
 end
 
 #########   I/O for Kaijo turbulence data     ########
-"Load 3D-ultrasonic rawdata from Kaijo and return timestamps and data."
+"""
+    loadkaijoraw(source::String)
+
+Load 3D-ultrasonic rawdata from Kaijo and return timestamps and data.
+"""
 function loadkaijoraw(source::String)
     @info("Loading Kaijo raw data from ", source)
     df = CSV.File(source; header=0, skipto=5, tasks=Threads.nthreads()) |> Tables.matrix
@@ -92,7 +116,11 @@ function loadkaijoraw(source::String)
 end
 
 ######### I/O for TJK-station turbulence data ########
-"Not exposed. Load 3D-ultrasonic rawdata into a Float-Array."
+"""
+    load3Dwindraw(source::String)::Array
+
+Not exposed. Load 3D-ultrasonic rawdata into a Float-Array.
+"""
 function load3Dwindraw(source::String)::Array
     @info("Loading ultrasonic raw data from ", source)
     df = CSV.File(source; header=0, skipto=5, tasks=Threads.nthreads()) |> Tables.matrix
@@ -104,8 +132,12 @@ function load3Dwindraw(source::String)::Array
     return df[rowfirstzero:end, :]
 end
 
-"Not exposed. Load timestamps for idx=0 from 3D-ultrasonic timestamp-file.
-Return [rawtimestamps, rawtimestampdata (for checking)]."
+"""
+    loadtimestampsraw(source::String)
+
+Not exposed. Load timestamps for idx=0 from 3D-ultrasonic timestamp-file.
+Return [rawtimestamps, rawtimestampdata (for checking)].
+"""
 function loadtimestampsraw(source::String)
     @info("Loading raw timestamp data for idx=0")
     df = readdlm(source, ',', String, '\n'; skipstart=4, use_mmap=true)
@@ -118,7 +150,12 @@ function loadtimestampsraw(source::String)
     return timeofmeasure[df[:, 1].==0], df[df[:, 1].==0, 2]
 end
 
-"Not exposed. Creating the timestamps for the single 3D-wind-records from timestamp-file."
+"""
+    createtimestamps(
+    rawwinddata::Array, rawtimestampdata::Vector, rawtimestamps::Vector, timestep)::Vector
+
+Not exposed. Creating the timestamps for the single 3D-wind-records from timestamp-file.
+"""
 function createtimestamps(
     rawwinddata::Array, rawtimestampdata::Vector, rawtimestamps::Vector, timestep)::Vector
     @info("Creating timestamps...")
@@ -153,8 +190,12 @@ function createtimestamps(
     return timestamps
 end
 
-"Unifies all the loading and creating functions for the timestamps.
-Timestep corresponds to measurement frequency."
+"""
+    createtimestamped3Dwind(windrawsource::String, timestampfile::String, timestep)
+
+Unifies all the loading and creating functions for the timestamps.
+Timestep corresponds to measurement frequency.
+"""
 function createtimestamped3Dwind(windrawsource::String, timestampfile::String, timestep)
     println("Creating data with timestamps and 3D-wind.")
     println("HINT: Usually only needs to be executed once. Then read from created file.")
@@ -165,8 +206,12 @@ function createtimestamped3Dwind(windrawsource::String, timestampfile::String, t
     return timestamps, rawwinddata[:, 2:end]
 end
 
-"Read data from .csv-file and convert it to a DataFrame that is returned.
-Usual way of importing data after .csv-file is being created once."
+"""
+    csvtodataframe(source::String)
+
+Read data from .csv-file and convert it to a DataFrame that is returned.
+Usual way of importing data after .csv-file is being created once.
+"""
 function csvtodataframe(source::String)
     @info("Reading data into DataFrame", source)
     df = DataFrame(CSV.File(source))
@@ -177,7 +222,11 @@ function csvtodataframe(source::String)
     return df
 end
 
-"Saving preprocessed turbulence data as NetCDF4"
+"""
+    saveturbasnetcdf(data::DataFrame, target::String, deflatelvl::Int64=5)
+
+Saving preprocessed turbulence data as NetCDF4
+"""
 function saveturbasnetcdf(data::DataFrame, target::String, deflatelvl::Int64=5)
     @info("Saving turbulence data to NetCDF4-file")
     ds = NCDataset(target, "c")
@@ -192,7 +241,11 @@ function saveturbasnetcdf(data::DataFrame, target::String, deflatelvl::Int64=5)
     close(ds)
 end
 
-"Read turbulence data given start and endtime from NetCDF4-file."
+"""
+    readturbasnetcdf(source::String, perstart::DateTime, perend::DateTime)::DataFrame
+
+Read turbulence data given start and endtime from NetCDF4-file.
+"""
 function readturbasnetcdf(source::String, perstart::DateTime, perend::DateTime)::DataFrame
     @info("Reading turbulence data from NetCDF-file")
     ds = Dataset(source, "r")
@@ -216,7 +269,11 @@ function readturbasnetcdf(source::String, perstart::DateTime, perend::DateTime):
 end
 
 ######################################################
-"Make a continuous time series and fill with missings"
+"""
+    makecontinuous(df::DataFrame)
+
+Make a continuous time series and fill with missings
+"""
 function makecontinuous(df::DataFrame)
     @info("Making data series continuous...")
     gaps = detectwrongtimestep(df, Millisecond(50))
@@ -265,13 +322,21 @@ function makecontinuous(df::DataFrame)
     return dfnew
 end
 
-"Find nearest indices for given targettime in searchvector."
+"""
+    findnearest(targettime::DateTime, searchvec::Vector)::Vector{Int}
+
+Find nearest indices for given targettime in searchvector.
+"""
 function findnearest(targettime::DateTime, searchvec::Vector)::Vector{Int}
     return findall(x -> x == minimum(abs.(searchvec .- targettime)), abs.(searchvec .- targettime))
 end
 
-"Given initialtime-vector and finaltime-vector extend initialdata to finaldata.
-No interpolation, just look for nearest neighbor in initialtime."
+"""
+    extendtofinertimeseries!(finaldata::AbstractVector, finaltime::Vector{DateTime}, initialdata::AbstractVector, initialtime::Vector{DateTime})
+
+Given initialtime-vector and finaltime-vector extend initialdata to finaldata.
+No interpolation, just look for nearest neighbor in initialtime.
+"""
 function extendtofinertimeseries!(finaldata::AbstractVector, finaltime::Vector{DateTime}, initialdata::AbstractVector, initialtime::Vector{DateTime})
     lookidx = findfirst(x->x==minimum(abs.(initialtime .- finaltime[1])), abs.(initialtime .- finaltime[1]))
     for idx in 1:size(finaldata, 1)
@@ -286,19 +351,31 @@ function extendtofinertimeseries!(finaldata::AbstractVector, finaltime::Vector{D
     end
 end
 
-"Split data into day and night parts"
+"""
+    splitdaynight(data::DataFrame, daystart::Time, dayend::Time)
+
+Split data into day and night parts
+"""
 function splitdaynight(data::DataFrame, daystart::Time, dayend::Time)
     dataday = data[daystart.<=Dates.Time.(data.time).<=dayend, :]
     datanight = data[.!(daystart .<= Dates.Time.(data.time) .<= dayend), :]
     return dataday, datanight
 end
 
-"Winddirection in deg for u and v. u>0&&v>0 => dir∈]0,90["
+"""
+    simplewinddir(u::Number, v::Number)::Number
+
+Winddirection in deg for u and v. u>0&&v>0 => dir∈]0,90[
+"""
 function simplewinddir(u::Number, v::Number)::Number
     return mod(rad2deg(atan(-v, u)) + 360, 360)
 end
 
-"Calculate wind direction of DataFrame"
+"""
+    winddir(datain::DataFrame)::DataFrame
+
+Calculate wind direction of DataFrame
+"""
 function winddir(datain::DataFrame)::DataFrame
     alpha = zeros(Float64, size(datain, 1))
     for idx in 1:size(datain, 1)
@@ -318,8 +395,12 @@ function winddir(datain::DataFrame)::DataFrame
     return DataFrame(time=datain.time, α=alpha)
 end
 
-"Replace bad data with missing according to sonic and gas analyser
-diagnostic flags and unphysical data"
+"""
+    qualcontrolflags!(evaldf::DataFrame)
+
+Replace bad data with missing according to sonic and gas analyser
+diagnostic flags and unphysical data
+"""
 function qualcontrolflags!(evaldf::DataFrame)
     if count(x -> x == "diagsonic", names(evaldf)) > 0
         evaldf[findall(x -> x > 42, collect(skipmissing(evaldf.diagsonic))), 2:end] .= missing
@@ -331,8 +412,14 @@ function qualcontrolflags!(evaldf::DataFrame)
     end
 end
 
-"Quality control of the ultrasonic data based on threshold value.
-Set to missing"
+"""
+    sonicqualcontrol(data::DataFrame, umin=-15.00001, umax=15.00001,
+    vmin=-15.00001, vmax=15.00001, wmin=-2.500001, wmax=2.500001, Tmin=-7.00001,
+    Tmax=21.00001, qh2omin=0, qh2omax=25)
+
+Quality control of the ultrasonic data based on threshold value.
+Set to missing
+"""
 function sonicqualcontrol(data::DataFrame, umin=-15.00001, umax=15.00001,
     vmin=-15.00001, vmax=15.00001, wmin=-2.500001, wmax=2.500001, Tmin=-7.00001,
     Tmax=21.00001, qh2omin=0, qh2omax=25)
@@ -359,7 +446,11 @@ function sonicqualcontrol(data::DataFrame, umin=-15.00001, umax=15.00001,
     return data
 end
 
-"Despiking algorithm after Sigmund et al. (2022)"
+"""
+    despiking(datain::DataFrame, windowwidth=6000, maxsteps=10, breakcrit=1.05)::DataFrame
+
+Despiking algorithm after Sigmund et al. (2022)
+"""
 function despiking(datain::DataFrame, windowwidth=6000, maxsteps=10, breakcrit=1.05)::DataFrame
     @info("Despiking...")
     #number of elements for the running median
@@ -463,7 +554,11 @@ function despiking(datain::DataFrame, windowwidth=6000, maxsteps=10, breakcrit=1
     return datain
 end
 
-"Show percentages for u,v,w,T for missing data"
+"""
+    printmissstats(df::DataFrame)
+
+Show percentages for u,v,w,T for missing data
+"""
 function printmissstats(df::DataFrame)
     missingu = count(x -> ismissing(x), df.u)
     missingv = count(x -> ismissing(x), df.v)
@@ -476,8 +571,12 @@ function printmissstats(df::DataFrame)
         round(1000 * missingT / size(df, 1), digits=2))
 end
 
-"Apply a NaN-mask to tower1 and tower2 data when sensors were repositioned.
-Only tower1 and tower2!"
+"""
+    repositionnanmask!(data::DataFrame; timetoreposition=Minute(45))
+
+Apply a NaN-mask to tower1 and tower2 data when sensors were repositioned.
+Only tower1 and tower2!
+"""
 function repositionnanmask!(data::DataFrame; timetoreposition=Minute(45))
     newpositions = [DateTime(2021, 05, 25, 14, 00, 00), DateTime(2021, 05, 28, 09, 00, 00),
         DateTime(2021, 05, 31, 10, 23, 00), DateTime(2021, 06, 08, 09, 45, 00)]
@@ -491,8 +590,12 @@ function repositionnanmask!(data::DataFrame; timetoreposition=Minute(45))
     end
 end
 
-"Perform in-place double rotation on DataFrame
-(using col. names 'u','v','w') to set mean(v)=mean(w)=0., blockdur=duration of blocks, periodwise refers to gaps."
+"""
+    drdf!(data::DataFrame; blockdur=Minute(30), periodwise=true, gapthresh=Minute(10))
+
+Perform in-place double rotation on DataFrame
+(using col. names 'u','v','w') to set mean(v)=mean(w)=0., blockdur=duration of blocks, periodwise refers to gaps.
+"""
 function drdf!(data::DataFrame; blockdur=Minute(30), periodwise=true, gapthresh=Minute(10))
     endidcs = zeros(Int64, 0)
     startidcs = zeros(Int64, 0)
@@ -571,8 +674,12 @@ function drdf!(data::DataFrame; blockdur=Minute(30), periodwise=true, gapthresh=
     end
 end
 
-"Perform the double rotation for given 'data' (time,u,v,w) to set mean(v)=mean(w)=0.
-Also return mean windspeed and -direction."
+"""
+    doublerotation(data)
+
+Perform the double rotation for given 'data' (time,u,v,w) to set mean(v)=mean(w)=0.
+Also return mean windspeed and -direction.
+"""
 function doublerotation(data)
     #creating necessary temporary arrays
     data1 = Array{Union{Missing,Float64}}(missing, size(data, 1), 2)
@@ -602,7 +709,11 @@ function doublerotation(data)
     return data2, mean_wndspd, mean_dir
 end
 
-"Linearly interpolate missing values. If gapsize>threshgapsize => do nothing."
+"""
+    interpolatemissing(data::DataFrame, threshgapsize::Int=20)
+
+Linearly interpolate missing values. If gapsize>threshgapsize => do nothing.
+"""
 function interpolatemissing(data::DataFrame, threshgapsize::Int=20)
     rowlength = size(data, 1)
     collength = size(data, 2)
@@ -694,7 +805,11 @@ function interpolatemissing(data::DataFrame, threshgapsize::Int=20)
     return data
 end
 
-"After Stull p.307ff. Detrend data with linear fit"
+"""
+    detrend(invec::Vector)::Vector
+
+Following Stull p.307ff. Detrend data with linear fit
+"""
 function detrend(invec::Vector)::Vector
     model(x, p) = p[1] * x .+ p[2]
     p0 = [0.0001, 3.0]
@@ -703,7 +818,11 @@ function detrend(invec::Vector)::Vector
     return invec - (param[1] * collect(1:size(invec, 1)) .+ param[2])
 end
 
-"Determine parameters for block splitting"
+"""
+    parametersblocksplitting(blocklength, timestep, sizedf::Integer)
+
+Determine parameters for block splitting
+"""
 function parametersblocksplitting(blocklength, timestep, sizedf::Integer)
     rowsperblock = ceil(Int, Millisecond(blocklength) / timestep)
     M = floor(Int, log2(rowsperblock))
@@ -715,7 +834,11 @@ function parametersblocksplitting(blocklength, timestep, sizedf::Integer)
     return rowsperblock, M, Mdur, mrd_discarded, nrblcks, lengthlastblck
 end
 
-"Evaluate data blocks and get information."
+"""
+    blockevaluation(evaldf::DataFrame, blocklength, timestep)
+
+Evaluate data blocks and get information.
+"""
 function blockevaluation(evaldf::DataFrame, blocklength, timestep)
     #parameters for splitting the data into blocks
     (rowsperblock, M, Mdur, mrd_discarded, nrblocks, lengthlastblock) =
@@ -792,7 +915,11 @@ function blockevaluation(evaldf::DataFrame, blocklength, timestep)
     return eval_block, rotdata
 end
 
-"detect gaps bigger than 'gapthresh' in data"
+"""
+    detectgaps(data::DataFrame, gapthresh::Period)
+
+detect gaps bigger than 'gapthresh' in data
+"""
 function detectgaps(data::DataFrame, gapthresh::Period)
     gaps = DataFrame(idx_before_gap=Int64[], time_before_gap=DateTime[], gaplength=Period[])
     for i in 1:size(data, 1)-1
@@ -803,7 +930,11 @@ function detectgaps(data::DataFrame, gapthresh::Period)
     return gaps
 end
 
-"Detect also nan-filled gaps addiitonally to above function 'detectgaps'"
+"""
+    detectnanandgap(data::DataFrame, gapthresh::Period)
+
+Detect also nan-filled gaps addiitonally to above function 'detectgaps'
+"""
 function detectnanandgap(data::DataFrame, gapthresh::Period)
     gaps = DataFrame(idx_before_gap=Int64[], idx_after_gap=Int64[])
     for i in 1:size(data, 1)-1
@@ -833,7 +964,11 @@ function detectnanandgap(data::DataFrame, gapthresh::Period)
     sort(gaps, :idx_before_gap)
 end
 
-"detect timesteps not equal to 'timestep' in data"
+"""
+    detectwrongtimestep(data::DataFrame, timestep::Period)
+
+detect timesteps not equal to 'timestep' in data
+"""
 function detectwrongtimestep(data::DataFrame, timestep::Period)
     gaps = DataFrame(idx_before_gap=Int64[], time_before_gap=DateTime[], gaplength=Period[])
     for i in 1:size(data, 1)-1
@@ -844,8 +979,12 @@ function detectwrongtimestep(data::DataFrame, timestep::Period)
     return gaps
 end
 
-"Apply a function func (i.e. mrd) to blocks (duration -> dur) of data from
-datasource. Last block shorter. If endidx==-1 use all data."
+"""
+    blockapply(f::Function, datasource::DataFrame, startidx::Integer, endidx::Integer, dur::Period)
+
+Apply a function func (i.e. mrd) to blocks (duration -> dur) of data from
+datasource. Last block shorter. If endidx==-1 use all data.
+"""
 function blockapply(f::Function, datasource::DataFrame, startidx::Integer, endidx::Integer, dur::Period)
     ###################################################################
     #splitting the data into blocks
@@ -878,7 +1017,12 @@ end
 ######################################################
 ###                FLUX CALCULATIONS               ###
 ######################################################
-"Calculate 'modelled' flux according to OSHD-FSM with measured data"
+"""
+    OSHD_SHF(ta::Vector, tsrf::Vector, ua::Vector, z0::Float64,
+    zt1::Number, zu1::Number, dh::Number=0.0)
+
+Calculate 'modelled' flux according to OSHD-FSM with measured data
+"""
 function OSHD_SHF(ta::Vector, tsrf::Vector, ua::Vector, z0::Float64,
     zt1::Number, zu1::Number, dh::Number=0.0)
     #parameters
@@ -914,7 +1058,11 @@ function OSHD_SHF(ta::Vector, tsrf::Vector, ua::Vector, z0::Float64,
     return h, RiB, tsrf.-ta
 end
 
-"Calculate continuous flux (X'Y')"
+"""
+    contflux(X::Vector, Y::Vector, numofele::Integer)::Vector
+
+Calculate continuous flux (X'Y')
+"""
 function contflux(X::Vector, Y::Vector, numofele::Integer)::Vector
     Xavg = gen.movingaverage(X, numofele)
     Yavg = gen.movingaverage(Y, numofele)
@@ -923,7 +1071,11 @@ function contflux(X::Vector, Y::Vector, numofele::Integer)::Vector
     return Xdash .* Ydash
 end
 
-"Calculate turbulent flux and Obukhov length"
+"""
+    turbflux(data::DataFrame, reyavgtime::Period, p_over_p0::Float64=1013 / 798)::DataFrame
+
+Calculate turbulent flux and Obukhov length
+"""
 function turbflux(data::DataFrame, reyavgtime::Period, p_over_p0::Float64=1013 / 798)::DataFrame
     leng = size(data, 1)
     fluxout = DataFrame("time" => data.time, "wT" => fill(NaN, leng), "wq" => fill(NaN, leng),
@@ -969,7 +1121,11 @@ function turbflux(data::DataFrame, reyavgtime::Period, p_over_p0::Float64=1013 /
     return fluxout
 end
 
-"Calculate turbulent flux and double rotate every given interval"
+"""
+    turbfluxdrperperiod(data::DataFrame, reyavgtime::Period, dr_period::Period, p_over_p0::Float64=1013 / 798)::DataFrame
+
+Calculate turbulent flux and double rotate every given interval
+"""
 function turbfluxdrperperiod(data::DataFrame, reyavgtime::Period, dr_period::Period, p_over_p0::Float64=1013 / 798)::DataFrame
     leng = size(data, 1)
     fluxout = DataFrame("time" => data.time, "wT" => fill(NaN, leng), "wq" => fill(NaN, leng),
@@ -1029,7 +1185,11 @@ function turbfluxdrperperiod(data::DataFrame, reyavgtime::Period, dr_period::Per
     return fluxout
 end
 
-"Average the turbulent fluxes in the DataFrame"
+"""
+    avgflux(data::DataFrame, peri::Period)
+
+Average the turbulent fluxes in the DataFrame
+"""
 function avgflux(data::DataFrame, peri::Period)
     ele = round(Int, Millisecond(peri) / Millisecond(50))
     fluxavg = similar(data)
@@ -1040,7 +1200,11 @@ function avgflux(data::DataFrame, peri::Period)
     return fluxavg
 end
 
-"Calculate Obukhov length for moving-averaged inputs"
+"""
+    obukhov(fluxin::DataFrame, avgtime::Period)::DataFrame
+
+Calculate Obukhov length for moving-averaged inputs
+"""
 function obukhov(fluxin::DataFrame, avgtime::Period)::DataFrame
     leng = size(fluxin, 1)
     Lout = DataFrame("time" => fluxin.time, "L" => fill(NaN, leng))
@@ -1049,6 +1213,11 @@ function obukhov(fluxin::DataFrame, avgtime::Period)::DataFrame
     return Lout
 end
 
+"""
+    advect(ec1::DataFrame, ec2::DataFrame, quantity::String, windcomp::String, avgtime::Period, limangle::Number, Δy::Number)::DataFrame
+
+TBW
+"""
 function advect(ec1::DataFrame, ec2::DataFrame, quantity::String, windcomp::String, avgtime::Period, limangle::Number, Δy::Number)::DataFrame
     #from Mott20(HEFEX): HA = -\frac{ΔT}{Δy}̅v with ̅v=(v₁+v₂)/2; ΔT = T₁-T₂
     @info("Advection. Direction: (1.quantity-2.quantity)*winddir")
