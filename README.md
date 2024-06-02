@@ -29,6 +29,10 @@ optional: load slow data
 ### mrd_script.jl
 /code/scripts/mrd_script.jl: calculate Multiresolution Flux Decompositions. For references see Howell&Mahrt (1997) (https://doi.org/10.1023/A:1000210427798) and Vickers&Mahrt (2003) (https://doi.org/10.1175/1520-0426(2003)20<660:TCGATF>2.0.CO;2)
 
+### turb_fluxes.jl
+
+use /code/scripts/turb_fluxes.jl to calculate turbulent fluxes (need to know Reynolds averaging time before) and Obukhov lengths. Fluxes are calculated by subtracting a moving average from the 20Hz-data and smoothing afterwards. This script also includes multiple functionalities for plotting the data.
+
 ### Other
 - code/scripts/block_evaluation.jl: get starttime, endtime, block duration, winddir, mean wind speed, mean wT, mean T per block and plot
 
