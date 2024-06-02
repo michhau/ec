@@ -33,6 +33,10 @@ optional: load slow data
 
 use /code/scripts/turb_fluxes.jl to calculate turbulent fluxes (need to know Reynolds averaging time before) and Obukhov lengths. Fluxes are calculated by subtracting a moving average from the 20Hz-data and smoothing afterwards. This script also includes multiple functionalities for plotting the data.
 
+### Flux Footprints
+
+All the scripts in this repository are adapted (or simply converted from Python to Julia) from Kljun et al. (2015) (https://doi.org/10.5194/gmd-8-3695-2015). Climatology aggregates single footprints over a longer period.
+
 ### Other
 - code/scripts/block_evaluation.jl: get starttime, endtime, block duration, winddir, mean wind speed, mean wT, mean T per block and plot
 
