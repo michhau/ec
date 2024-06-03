@@ -37,6 +37,16 @@ use /code/scripts/turb_fluxes.jl to calculate turbulent fluxes (need to know Rey
 
 All the scripts in this repository are adapted (or simply converted from Python to Julia) from Kljun et al. (2015) (https://doi.org/10.5194/gmd-8-3695-2015). Climatology aggregates single footprints over a longer period.
 
+### 2D-MRDs
+Moving-window multiresolution flux decomposition to see the time dependence of scales of turbulent variables. The general methodology is described in Haugeneder et al. (2024) (https://doi.org/10.1007/s10546-023-00856-4).
+
+- 2dmrd_distributed.jl: Calculate the 2D-MRD on multiple cores (e.g. on HYPERION) using the Julia package 'Distributed'. Change variables 'path_to_data_to_use' (points to data source), 'cols_for_mrd' (which variables/flux should be decomposed), and 'savefilename' (according to the flux variable)
+- stitch_2dmrds.jl: Stitch single 2D-MRD files (*.nc) in time domain.
+- combine_2dmrds_xxx.jl: Combine 2D-MRDs to obtain a decomposition of a composed variable (as friction velocity or turbulent kinetic energy)
+- cmp_nomrd_trad.jl: Compare non-orthogonal MRD with traditional (orthogonal) MRD (see Fig. 4 in Haugeneder et al. (2024))
+- plot_2dmrd.jl: Collection of various scripts to plot the 2D-MRDs
+
+
 ### Other
 - code/scripts/block_evaluation.jl: get starttime, endtime, block duration, winddir, mean wind speed, mean wT, mean T per block and plot
 
