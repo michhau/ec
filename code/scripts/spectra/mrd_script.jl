@@ -11,7 +11,7 @@ import PyPlot, CSV
 pydates = pyimport("matplotlib.dates")
 animation = pyimport("matplotlib.animation")
 
-importdir = joinpath(@__DIR__, "..")
+importdir = joinpath(@__DIR__, "..", "..")
 datapath = "/home/haugened/Documents/data/"
 include(joinpath(importdir, "src", "turb_data.jl"))
 include(joinpath(importdir, "src", "general.jl"))
