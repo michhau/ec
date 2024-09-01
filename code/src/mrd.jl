@@ -16,8 +16,8 @@ include("turb_data.jl")
 include("general.jl")
 import .turb
 import .gen
-export completemrd, mrdpp, completenomrd, mrd, mrd_std, mrd_std_block,
-    newmrd, generateseries, fastnomrd, nomrd, contnomrd,
+export mrd, completemrd, mrdpp, completenomrd, mrd_std, mrd_std_block,
+    generateseries, fastnomrd, nomrd, contnomrd,
     catdatanomrd, nomrd2d, write2dmrddatatonetcdf,
     read2dmrdfromnetcdf, create2dmrdtitle
 
@@ -49,6 +49,38 @@ function detectgaps(data::DataFrame, gapthresh::Period)
         end
     end
     return gaps
+end
+
+"""
+    mrd(data_a::Vector, data_b::Vector, M::Integer, Mx::Integer)
+
+NEW Orthogonal Multiresolution Flux Decomposition. Adapted from Ivana Stiperski's code.
+See Vickers&Mahrt 2003 and Howell&Mahrt 1997. With uncertainty estimation.
+"""
+function mrd(data_a::Vector, data_b::Vector, M::Integer, Mx::Integer)
+    D = zeros(Float64, M - Mx)
+    Dstd = similar(D)
+    data_a2 = copy(data_a)
+    data_b2 = copy(data_b)
+    for ims in 0:(M-Mx)
+        ms = M - ims
+        l = 2^ms
+        nw = round(Int, (2^M) / l)
+        wmeans_a = zeros(Float64, nw)
+        wmeans_b = similar(wmeans_a)
+        for i in 1:nw
+            k = round(Int, (i - 1) * l + 1)
+            wmeans_a[i] = mean(data_a2[k:i*l])
+            wmeans_b[i] = mean(data_b2[k:i*l])
+            data_a2[k:i*l] .-= wmeans_a[i]
+            data_b2[k:i*l] .-= wmeans_b[i]
+        end
+        if nw > 1
+            D[ms+1] = mean(wmeans_a .* wmeans_b)
+            Dstd[ms+1] = std(wmeans_a .* wmeans_b, mean=D[ms+1])
+        end
+    end
+    return D, Dstd
 end
 
 """
@@ -112,7 +144,7 @@ function completemrd(data::DataFrame, col1::String, col2::String, M::Integer, sh
             time_middle_idx = data.time[startidx+round(Int, (endidx - startidx) / 2)]#(2^(M-1)).+nrblocks*shift]
             push!(time_middle, time_middle_idx)
             #calculate MRD of w and T
-            (mrd_data_tmp, ) = newmrd(datatouse1, datatouse2, M, 0)
+            (mrd_data_tmp, ) = mrd(datatouse1, datatouse2, M, 0)
             if normed
                 normfct = sum(mrd_data_tmp[1:11])/fx[startidx+round(Int, (endidx - startidx) / 2)]
                 mrd_data_tmp ./= normfct
@@ -409,38 +441,6 @@ function mrd_std_block(data_tmp::DataFrame, starttime::DateTime, endtime::DateTi
     D ./= nrmrds
 
     return D
-end
-
-"""
-    newmrd(data_a::Vector, data_b::Vector, M::Integer, Mx::Integer)
-
-NEW Orthogonal Multiresolution Flux Decomposition. Adapted from Ivana Stiperski's code.
-See Vickers&Mahrt 2003 and Howell&Mahrt 1997. With uncertainty estimation.
-"""
-function newmrd(data_a::Vector, data_b::Vector, M::Integer, Mx::Integer)
-    D = zeros(Float64, M - Mx)
-    Dstd = similar(D)
-    data_a2 = copy(data_a)
-    data_b2 = copy(data_b)
-    for ims in 0:(M-Mx)
-        ms = M - ims
-        l = 2^ms
-        nw = round(Int, (2^M) / l)
-        wmeans_a = zeros(Float64, nw)
-        wmeans_b = similar(wmeans_a)
-        for i in 1:nw
-            k = round(Int, (i - 1) * l + 1)
-            wmeans_a[i] = mean(data_a2[k:i*l])
-            wmeans_b[i] = mean(data_b2[k:i*l])
-            data_a2[k:i*l] .-= wmeans_a[i]
-            data_b2[k:i*l] .-= wmeans_b[i]
-        end
-        if nw > 1
-            D[ms+1] = mean(wmeans_a .* wmeans_b)
-            Dstd[ms+1] = std(wmeans_a .* wmeans_b, mean=D[ms+1])
-        end
-    end
-    return D, Dstd
 end
 
 """
