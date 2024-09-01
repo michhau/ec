@@ -112,7 +112,7 @@ function completemrd(data::DataFrame, col1::String, col2::String, M::Integer, sh
             time_middle_idx = data.time[startidx+round(Int, (endidx - startidx) / 2)]#(2^(M-1)).+nrblocks*shift]
             push!(time_middle, time_middle_idx)
             #calculate MRD of w and T
-            mrd_data_tmp = mrd(datatouse1, datatouse2, M, 0)
+            (mrd_data_tmp, ) = newmrd(datatouse1, datatouse2, M, 0)
             if normed
                 normfct = sum(mrd_data_tmp[1:11])/fx[startidx+round(Int, (endidx - startidx) / 2)]
                 mrd_data_tmp ./= normfct
@@ -265,44 +265,6 @@ function completenomrd(data::DataFrame, col1::String, col2::String, M::Integer, 
     ProgressMeter.finish!(p)
     #@show nrblocks
     return mrd_x[1:maxsizerow, :], data_cont_mrd[1:maxsizerow, :], time_middle
-end
-
-"""
-    mrd(data_a::Vector, data_b::Vector, M::Integer, Mx::Integer)
-
-Multiresolution Flux Decomposition. Adapted from Ivana Stiperski's code.
-See Vickers&Mahrt 2003 'The Cospectral Gap and Turbulent Flux Calculations'
-"""
-function mrd(data_a::Vector, data_b::Vector, M::Integer, Mx::Integer)
-    D = zeros(Float64, M - Mx)
-    data_a2 = copy(data_a)
-    data_b2 = copy(data_b)
-    for ims in 0:(M-Mx)
-        ms = M - ims
-        l = 2^ms
-        nw = round(Int, (2^M) / l)
-        sumab = 0.0
-        for i in 1:nw
-            k = (i - 1) * l + 1 #startidx of averaging segment
-            za = data_a2[k]
-            zb = data_b2[k]
-            for j in k+1:k+l-1 #iterate over averaging segment
-                za += data_a2[j]
-                zb += data_b2[j]
-            end
-            za /= l
-            zb /= l
-            sumab += za * zb
-            for j in k:i*l #substract mean for next step
-                data_a2[j] -= za
-                data_b2[j] -= zb
-            end
-        end
-        if nw > 1
-            D[ms+1] = sumab / nw
-        end
-    end
-    return D #, a_out, b_out
 end
 
 """

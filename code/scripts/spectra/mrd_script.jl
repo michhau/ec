@@ -147,7 +147,7 @@ data_a = evaldf.w
 data_b = evaldf.T
 
 #orthogonal MRD
-D = MRD.mrd(data_a, data_b, M, 0)
+(D, ) = MRD.newmrd(data_a, data_b, M, 0)
 x = 2 .^ collect(1:M) .* Millisecond(50)
 
 #non-orthogonal MRD
