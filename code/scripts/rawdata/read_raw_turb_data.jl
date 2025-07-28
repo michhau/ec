@@ -20,7 +20,7 @@ pydates = pyimport("matplotlib.dates")
 #GridSpec = pyimport("matplotlib.gridspec")
 #mpwidgets = pyimport("matplotlib.widgets")
 
-datapath = "/home/haugened/Documents/data21_unordered/logger/tower/t12/"
+datapath = "/home/michi/Documents/slf/CONTRASTS25/data/turbtower1_slf/PS149_16-1/"
 importdir = joinpath(@__DIR__, "..", "..")
 include(joinpath(importdir, "src", "turb_data.jl"))
 include(joinpath(importdir, "src", "general.jl"))
@@ -32,17 +32,18 @@ import .gen
 #timestep between single measurements, 1/measurement frequency
 timestep = Millisecond(50)
 #windrawfile = string(datapath, "WindSonic_Duerrboden_2005xx/WindSonic_Dürrboden_combined.dat")
-t1rawfile = joinpath(datapath, "t1_fast_pardenn.dat")
-t2rawfile = joinpath(datapath, "t2tmp", "t2_db_smallac")
-t12_outfile_stam = joinpath(datapath)
-kaijofile = joinpath(datapath, "kaijo", "kaijo.dat")
-kaijo_period_file = joinpath(datapath, "kaijo", "21_kaijo_periods.txt")
-kaijo_outfile_stam = joinpath(datapath, "kaijo", "kaijo")
-windrawfile = joinpath(datapath, "TJK_Dischma_21/WindSonic_Dürrboden2021_combined.dat")
-timestamprawfile = joinpath(datapath, "TJK_Dischma_21/WindSonic_timestamp_Dürrboden2021_combined.DAT")
-outfile_stam = joinpath(datapath, "WindSonic_Duerrboden_2005xx/tjk_sonic_200504-200514")
+filename = joinpath(datapath, "box1_sonics_2a.dat")
+#t1rawfile = joinpath(datapath, "t1_fast_pardenn.dat")
+#t2rawfile = joinpath(datapath, "t2tmp", "t2_db_smallac")
+#t12_outfile_stam = joinpath(datapath)
+#kaijofile = joinpath(datapath, "kaijo", "kaijo.dat")
+#kaijo_period_file = joinpath(datapath, "kaijo", "21_kaijo_periods.txt")
+#kaijo_outfile_stam = joinpath(datapath, "kaijo", "kaijo")
+#windrawfile = joinpath(datapath, "TJK_Dischma_21/WindSonic_Dürrboden2021_combined.dat")
+#timestamprawfile = joinpath(datapath, "TJK_Dischma_21/WindSonic_timestamp_Dürrboden2021_combined.DAT")
+#outfile_stam = joinpath(datapath, "WindSonic_Duerrboden_2005xx/tjk_sonic_200504-200514")
 
-blocklength = Minute(30)
+#blocklength = Minute(30)
 ##
 
 #########################################################################
@@ -50,6 +51,32 @@ blocklength = Minute(30)
 #########################################################################
 println()
 println("-----------S-T-A-R-T-------------")
+#########################################################################
+#uncomment to read in data in filename
+
+#import the raw measurement data and create arrays with data and timestamps
+(filetime, filedata) = Main.turb.loadrawgeneric(filename)
+
+#check the column names from the file and enter in the following
+
+#(t2): fill data into DataFrames and output them to file
+irg = DataFrame(time = filetime, u = filedata[:,2],
+v = filedata[:,3], w = filedata[:,4], T = filedata[:,5], co2 = filedata[:,7],
+h2o = filedata[:,8], airpressure = filedata[:,11], diagsonic = filedata[:,6],
+diagirg = filedata[:,9], celltemperatur = filedata[:, 10], co2signalstrength = filedata[:,12],h20signalstrength = filedata[:,13])
+
+csat = DataFrame(time = filetime, u = filedata[:,14],
+v = filedata[:,15], w = filedata[:,16], T = filedata[:,17], diagsonic = filedata[:,18])
+
+#cut
+@info("Adapt the following cutting to your case!")
+firstelement = findfirst(x->x>DateTime(2025,07,14,00,00,00), filetime)
+irg = irg[firstelement+1:end, :]
+csat = csat[firstelement+1:end, :]
+
+CSV.write(joinpath(datapath, "2a_box1_irg.csv"), irg)
+CSV.write(joinpath(datapath, "2a_box1_csat.csv"), csat)
+
 #########################################################################
 #uncomment to read in tower 1 turbulence raw data
 #=

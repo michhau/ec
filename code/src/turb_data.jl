@@ -69,6 +69,25 @@ function missing2nan!(data::DataFrame)
     end
 end
 
+#########     generic I/O for EC data        ########
+"""
+    loadrawgeneric(source::String)
+
+Read-in raw turbulence data
+"""
+function loadrawgeneric(source::String)
+    @info("Loading generic eddy covariance raw data")
+    labelsfromfile = readlines(source)[2]
+    println("Column labels: ", labelsfromfile)
+    @info("You need to assign those labels properly in the next step. Time as first column is already extracted.")
+    df = CSV.File(source; header=0, skipto=5, tasks=Threads.nthreads()) |> Tables.matrix
+    dateformat = DateFormat("yyyy-mm-dd HH:MM:SS.ss")
+    timeofmeasure = DateTime.(df[:, 1], dateformat)
+    println("Done")
+    return timeofmeasure, df[:, 2:end]
+    # return df[:,1], df[:,8:end]
+end
+
 #########       I/O for tower 1/2 data        ########
 """
     loadt1raw(source::String)
