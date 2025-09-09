@@ -16,7 +16,7 @@ import FastRunningMedian
 
 include( "general.jl")
 import .gen
-export readperiodfile, nan2missing!, missing2nan!, loadt1raw, loadt2raw, loadkaijoraw,
+export readperiodfile, nan2missing!, missing2nan!, loadrawgeneric, loadt1raw, loadt2raw, loadkaijoraw,
     createtimestamped3Dwind, csvtodataframe, saveturbasnetcdf, readturbasnetcdf,
     makecontinuous, findnearest, extendtofinertimeseries!, splitdaynight, simplewinddir, qualcontrolflags!,
     sonicqualcontrol, despiking, printmissstats, repositionnanmask!, drdf!, doublerotation,
@@ -67,6 +67,25 @@ function missing2nan!(data::DataFrame)
             replace!(col, missing => -9999)
         end
     end
+end
+
+#########     generic I/O for EC data        ########
+"""
+    loadrawgeneric(source::String)
+
+Read-in raw turbulence data
+"""
+function loadrawgeneric(source::String)
+    @info("Loading generic eddy covariance raw data")
+    labelsfromfile = readlines(source)[2]
+    println("Column labels: ", labelsfromfile)
+    @info("You need to assign those labels properly in the next step. Time as first column is already extracted.")
+    df = CSV.File(source; header=0, skipto=5, tasks=Threads.nthreads()) |> Tables.matrix
+    dateformat = DateFormat("yyyy-mm-dd HH:MM:SS.ss")
+    timeofmeasure = DateTime.(df[:, 1], dateformat)
+    println("Done")
+    return timeofmeasure, df[:, 2:end]
+    # return df[:,1], df[:,8:end]
 end
 
 #########       I/O for tower 1/2 data        ########
