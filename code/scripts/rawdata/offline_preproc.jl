@@ -19,7 +19,7 @@ include(joinpath(importdir, "src", "turb_data.jl"))
 include(joinpath(importdir, "src", "general.jl"))
 import .turb
 import .gen
-PyPlot.pygui(true)
+#PyPlot.pygui(true)
 
 #########################################################################
 #timestep between single measurements, 1/measurement frequency
@@ -44,7 +44,7 @@ csat = turb.sonicqualcontrol(csat)
 
 ####################################################
 #which DataFrame should be preprocessed
-to_preproc = csat#t2lcsatdb[60*20-1:end, :]
+to_preproc = irg#t2lcsatdb[60*20-1:end, :]
 #preselect time period
 #to_preproc = to_preproc[DateTime(2021, 05, 20, 13, 07, 00).<=to_preproc.time.<=DateTime(2021, 06, 11, 08, 17, 00, 00), :] #to_preproc[249:end, :] #to_preproc[249:end, :]
 to_preproc = turb.makecontinuous(to_preproc)
@@ -58,10 +58,10 @@ after_desp = turb.despiking(to_preproc)
 #dataout = turb.interpolatemissing(after_desp)
 
 #write to output array
-CSV.write(joinpath(writepath, "2a_box1_csat_proc.csv"), after_desp)
+CSV.write(joinpath(writepath, "2a_box2_irg_proc.csv"), after_desp)
 
 ####################################################
 ###            CONVERT TO NetCDF4                ###
 ####################################################
 
-turb.saveturbasnetcdf(after_desp, joinpath(writepath, "2a_box1_csat_proc.nc"))#joinpath(writepath, "t2ucsatdb.nc"))
+turb.saveturbasnetcdf(after_desp, joinpath(writepath, "2a_box1_irg_proc.nc"))#joinpath(writepath, "t2ucsatdb.nc"))

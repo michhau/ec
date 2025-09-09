@@ -27,8 +27,8 @@ turb.missing2nan!(evaldf1)
 turb.missing2nan!(evaldf2)
 turb.missing2nan!(evaldf3)
 turb.missing2nan!(evaldf4)
-turb.missing2nan!(evaldf5)
-turb.missing2nan!(evaldf6)
+#turb.missing2nan!(evaldf5)
+#turb.missing2nan!(evaldf6)
 
 ######################################################
 ###                  MRD                           ###
@@ -37,8 +37,8 @@ turb.missing2nan!(evaldf6)
 ##
 
 M = 17
-quantity1 = "w"
-quantity2 = "T"
+quantity1 = "u"
+quantity2 = "w"
 
 blocklength = ceil(2^M * timestep, Dates.Second)
 (mrd_x_1, mrd_data_1, time_middle_1) = MRD.completemrd(evaldf1, quantity1, quantity2, M, round(Int, 0.1 * 2^M))
@@ -53,35 +53,35 @@ blocklength = ceil(2^M * timestep, Dates.Second)
 (mrd_x_4, mrd_data_4, time_middle_4) = MRD.completemrd(evaldf4, quantity1, quantity2, M, round(Int, 0.1 * 2^M))
 (mrd_time_4, mrd_D_median_4, mrd_D_min_4, mrd_D_max_4, mrd_D_quant1_4, mrd_D_quant3_4) =
     MRD.mrdpp(mrd_x_4, mrd_data_4)
-(mrd_x_5, mrd_data_5, time_middle_5) = MRD.completemrd(evaldf5, quantity1, quantity2, M, round(Int, 0.1 * 2^M))
-(mrd_time_5, mrd_D_median_5, mrd_D_min_5, mrd_D_max_5, mrd_D_quant1_5, mrd_D_quant3_5) =
-    MRD.mrdpp(mrd_x_5, mrd_data_5)
-(mrd_x_6, mrd_data_6, time_middle_6) = MRD.completemrd(evaldf6, quantity1, quantity2, M, round(Int, 0.1 * 2^M))
-(mrd_time_6, mrd_D_median_6, mrd_D_min_6, mrd_D_max_6, mrd_D_quant1_6, mrd_D_quant3_6) =
-    MRD.mrdpp(mrd_x_6, mrd_data_6)
+#(mrd_x_5, mrd_data_5, time_middle_5) = MRD.completemrd(evaldf5, quantity1, quantity2, M, round(Int, 0.1 * 2^M))
+#(mrd_time_5, mrd_D_median_5, mrd_D_min_5, mrd_D_max_5, mrd_D_quant1_5, mrd_D_quant3_5) =
+#    MRD.mrdpp(mrd_x_5, mrd_data_5)
+#(mrd_x_6, mrd_data_6, time_middle_6) = MRD.completemrd(evaldf6, quantity1, quantity2, M, round(Int, 0.1 * 2^M))
+#(mrd_time_6, mrd_D_median_6, mrd_D_min_6, mrd_D_max_6, mrd_D_quant1_6, mrd_D_quant3_6) =
+#    MRD.mrdpp(mrd_x_6, mrd_data_6)
 
 #------------------------------------------------------------------------
 #Plot result of MRD
 PyPlot.pygui(true)
 fig = PyPlot.figure()#figsize=(12,7))
 ax = fig.add_subplot(111)
-ax.set_title(string("MRD", evaldf1.time[1], " - ", evaldf1.time[end]))
+ax.set_title(string("2a MRD ", evaldf2.time[1], " - ", evaldf2.time[end]))
 ax.set_xlabel("avg. time [s]")
-ax.set_ylabel(L"$C_{w\theta} [\cdot 10^{-3} \mathrm{Kms^{-1}}]$")
+ax.set_ylabel(L"$C_{wq} [\cdot 10^{-3} \mathrm{ms^{-1}}]$")
 ax.grid(true)
 PyPlot.xscale("log")
-ax.plot(Dates.value.(mrd_time_1) ./ 1000, mrd_D_median_1 .* 1000, label="T1IRG")
+ax.plot(Dates.value.(mrd_time_1) ./ 1000, mrd_D_median_1 .* 1000, label="T1CSAT")
 ax.fill_between(Dates.value.(mrd_time_1) ./ 1000, mrd_D_quant1_1 .* 1000, mrd_D_quant3_1 .* 1000, alpha=0.4)
-ax.plot(Dates.value.(mrd_time_2) ./ 1000, mrd_D_median_2 .* 1000, label="T2IRG")
+ax.plot(Dates.value.(mrd_time_2) ./ 1000, mrd_D_median_2 .* 1000, label="IRG ice")
 ax.fill_between(Dates.value.(mrd_time_2) ./ 1000, mrd_D_quant1_2 .* 1000, mrd_D_quant3_2 .* 1000, alpha=0.4)
-ax.plot(Dates.value.(mrd_time_3) ./ 1000, mrd_D_median_3 .* 1000, label="T2LCSAT")
+ax.plot(Dates.value.(mrd_time_3) ./ 1000, mrd_D_median_3 .* 1000, label="T2CSAT")
 ax.fill_between(Dates.value.(mrd_time_3) ./ 1000, mrd_D_quant1_3 .* 1000, mrd_D_quant3_3 .* 1000, alpha=0.4)
-ax.plot(Dates.value.(mrd_time_4) ./ 1000, mrd_D_median_4 .* 1000, label="T2UCSAT")
+ax.plot(Dates.value.(mrd_time_4) ./ 1000, mrd_D_median_4 .* 1000, label="IRG lead")
 ax.fill_between(Dates.value.(mrd_time_4) ./ 1000, mrd_D_quant1_4 .* 1000, mrd_D_quant3_4 .* 1000, alpha=0.4)
-ax.plot(Dates.value.(mrd_time_5) ./ 1000, mrd_D_median_5 .* 1000, label="Kaijo")
-ax.fill_between(Dates.value.(mrd_time_5) ./ 1000, mrd_D_quant1_5 .* 1000, mrd_D_quant3_5 .* 1000, alpha=0.4)
-ax.plot(Dates.value.(mrd_time_6) ./ 1000, mrd_D_median_6 .* 1000, label="TJK")
-ax.fill_between(Dates.value.(mrd_time_6) ./ 1000, mrd_D_quant1_6 .* 1000, mrd_D_quant3_6 .* 1000, alpha=0.4)
+#ax.plot(Dates.value.(mrd_time_5) ./ 1000, mrd_D_median_5 .* 1000, label="Kaijo")
+#ax.fill_between(Dates.value.(mrd_time_5) ./ 1000, mrd_D_quant1_5 .* 1000, mrd_D_quant3_5 .* 1000, alpha=0.4)
+#ax.plot(Dates.value.(mrd_time_6) ./ 1000, mrd_D_median_6 .* 1000, label="TJK")
+#ax.fill_between(Dates.value.(mrd_time_6) ./ 1000, mrd_D_quant1_6 .* 1000, mrd_D_quant3_6 .* 1000, alpha=0.4)
 ax.legend()
 
 ######################################################

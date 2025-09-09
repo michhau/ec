@@ -26,7 +26,7 @@ import .ft
 ###              CHANGE VARIABLES HERE             ###
 ######################################################
 #data to decompose
-evaldftmp = copy(evaldf4)
+evaldftmp = copy(evaldf2[1:72000,:])
 
 turb.missing2nan!(evaldftmp)
 disallowmissing!(evaldftmp)

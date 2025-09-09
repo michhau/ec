@@ -1251,7 +1251,7 @@ function read2dmrdfromnetcdf(source::String)
 end
 
 """
-    instrumentnamefromsourcefile(sourcefile::String, regexp=r"\/[a-zA-Z0-9]*\.nc")::String
+    instrumentnamefromsourcefile(sourcefile::String, regexp=r"[a-zA-Z0-9]*.nc")::String
 
 Extract instrument name from source file
 """
