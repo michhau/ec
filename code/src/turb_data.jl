@@ -458,7 +458,9 @@ function sonicqualcontrol(data::DataFrame, umin=-15.00001, umax=15.00001,
         nrirgmis = 0
         for i in 1:size(data, 1)
             cond = isless(data.h2o[i], qh2omin) || isless(qh2omax, data.h2o[i])
-            data[i, [:h2o, :co2]] .= missing
+            if cond
+                data[i, [:h2o, :co2]] .= missing
+            end
             nrirgmis = count(cond)
         end
         println("IRG: ", nrirgmis, " rows (only :h2o and :co2) set to missing (", round(nrirgmis / size(data, 1) * 1000, digits=2), "‰)")
