@@ -20,7 +20,7 @@ pydates = pyimport("matplotlib.dates")
 #GridSpec = pyimport("matplotlib.gridspec")
 #mpwidgets = pyimport("matplotlib.widgets")
 
-datapath = "/home/michi/Documents/slf/CONTRASTS25/data/turbtower1_slf/PS149_16-1/"
+datapath = "/home/michi/Documents/slf/CONTRASTS25/data/turbtower2_slf/PS149_47-1/converted"
 importdir = joinpath(@__DIR__, "..", "..")
 include(joinpath(importdir, "src", "turb_data.jl"))
 include(joinpath(importdir, "src", "general.jl"))
@@ -32,7 +32,7 @@ import .gen
 #timestep between single measurements, 1/measurement frequency
 timestep = Millisecond(50)
 #windrawfile = string(datapath, "WindSonic_Duerrboden_2005xx/WindSonic_Dürrboden_combined.dat")
-filename = joinpath(datapath, "box1_sonics_2a.dat")
+filename = joinpath(datapath, "TOA5_Contra2_sonics_0.dat")
 #t1rawfile = joinpath(datapath, "t1_fast_pardenn.dat")
 #t2rawfile = joinpath(datapath, "t2tmp", "t2_db_smallac")
 #t12_outfile_stam = joinpath(datapath)
@@ -70,12 +70,13 @@ v = filedata[:,15], w = filedata[:,16], T = filedata[:,17], diagsonic = filedata
 
 #cut
 @info("Adapt the following cutting to your case!")
-firstelement = findfirst(x->x>DateTime(2025,07,14,00,00,00), filetime)
-irg = irg[firstelement+1:end, :]
-csat = csat[firstelement+1:end, :]
+firstelement = findfirst(x->x>=DateTime(2025,08,26,10,45,00), filetime)
+lastelement = findlast(x->x<=DateTime(2025,08,27,15,10,00), filetime)
+irg = irg[firstelement:lastelement, :]
+csat = csat[firstelement:lastelement, :]
 
-CSV.write(joinpath(datapath, "2a_box1_irg.csv"), irg)
-CSV.write(joinpath(datapath, "2a_box1_csat.csv"), csat)
+CSV.write(joinpath("/home/michi/Documents/slf/CONTRASTS25/data/processed", "3d_t2_irg.csv"), irg)
+CSV.write(joinpath("/home/michi/Documents/slf/CONTRASTS25/data/processed", "3d_t2_csat.csv"), csat)
 
 #########################################################################
 #uncomment to read in tower 1 turbulence raw data
@@ -136,7 +137,7 @@ CSV.write(string(outfile_stam, ".csv"), sonicdf)
 #ventilated air temperature measurement
 #=
 #tower 2
-df2 = CSV.File("/home/haugened/Documents/data/tower/t12_slow_duerrboden.dat"; header=0, skipto=5, tasks=Threads.nthreads()) |> Tables.matrix
+df2 = CSV.File("/home/haugened/Documents/data/tower/t12_slow_duerrboden.dat"; header=0, skipto=5, ntasks=Threads.nthreads()) |> Tables.matrix
 dateformat = DateFormat("yyyy-mm-dd HH:MM:SS")
 timeofmeasure2 = DateTime.(df2[:, 1], dateformat)
 t2ventdat = replace!(df2[:, 4], Inf => missing)
@@ -144,7 +145,7 @@ t2vent = DataFrame(time=timeofmeasure, vent_air_temp=float.(replace!(t2ventdat, 
 turb.saveturbasnetcdf(t2vent, "/home/haugened/Documents/data/tower/vent_air/t2.nc")
 
 #tower 3
-df3 = CSV.File("/home/haugened/Documents/data/tower/t3_tairvent_duerrboden.dat"; header=0, skipto=5, tasks=Threads.nthreads()) |> Tables.matrix
+df3 = CSV.File("/home/haugened/Documents/data/tower/t3_tairvent_duerrboden.dat"; header=0, skipto=5, ntasks=Threads.nthreads()) |> Tables.matrix
 timeofmeasure3 = DateTime.(df3[:, 1], dateformat)
 t3ventdat = replace!(df3[:,4], Inf => missing)
 t3vent = DataFrame(time=timeofmeasure3, vent_air_temp=float.(replace!(t3ventdat, NaN => missing)))
