@@ -80,7 +80,7 @@ function loadrawgeneric(source::String)
     labelsfromfile = readlines(source)[2]
     println("Column labels: ", labelsfromfile)
     @info("You need to assign those labels properly in the next step. Time as first column is already extracted.")
-    df = CSV.File(source; header=0, skipto=5, tasks=Threads.nthreads()) |> Tables.matrix
+    df = CSV.File(source; header=0, skipto=5, ntasks=Threads.nthreads()) |> Tables.matrix
     dateformat = DateFormat("yyyy-mm-dd HH:MM:SS.ss")
     timeofmeasure = DateTime.(df[:, 1], dateformat)
     println("Done")
@@ -96,7 +96,7 @@ Read-in raw turbulence data from tower 1
 """
 function loadt1raw(source::String)
     @info("Loading tower 1 turbulence raw data")
-    df = CSV.File(source; header=0, skipto=5, tasks=Threads.nthreads()) |> Tables.matrix
+    df = CSV.File(source; header=0, skipto=5, ntasks=Threads.nthreads()) |> Tables.matrix
     dateformat = DateFormat("yyyy-mm-dd HH:MM:SS.ss")
     timeofmeasure = DateTime.(df[:, 1], dateformat)
     println("Done")
@@ -111,8 +111,8 @@ Read-in raw turbulence data from tower 2
 """
 function loadt2raw(source::String)
     @info("Loading tower 2 turbulence raw data")
-    #df = CSV.File(source; header=0, skipto=5, tasks = Threads.nthreads())|> Tables.matrix
-    df = CSV.File(source; header=0, tasks=Threads.nthreads()) |> Tables.matrix
+    #df = CSV.File(source; header=0, skipto=5, ntasks = Threads.nthreads())|> Tables.matrix
+    df = CSV.File(source; header=0, ntasks=Threads.nthreads()) |> Tables.matrix
     #dateformat = DateFormat("yyyy-mm-dd HH:MM:SS.ss")
     #timeofmeasure = DateTime.(df[:,1], dateformat)
     println("Done")
@@ -128,7 +128,7 @@ Load 3D-ultrasonic rawdata from Kaijo and return timestamps and data.
 function loadkaijoraw(source::String)
     @info("Loading Kaijo raw data from ", source)
     @warn("Be careful with axis rotation!! Check image for possible reorientation.")
-    df = CSV.File(source; header=0, skipto=5, tasks=Threads.nthreads()) |> Tables.matrix
+    df = CSV.File(source; header=0, skipto=5, ntasks=Threads.nthreads()) |> Tables.matrix
     dateformat = DateFormat("yyyy-mm-dd HH:MM:SS.ss")
     timeofmeasure = DateTime.(df[:, 1], dateformat)
     println("Done")
@@ -143,7 +143,7 @@ Not exposed. Load 3D-ultrasonic rawdata into a Float-Array.
 """
 function load3Dwindraw(source::String)::Array
     @info("Loading ultrasonic raw data from ", source)
-    df = CSV.File(source; header=0, skipto=5, tasks=Threads.nthreads()) |> Tables.matrix
+    df = CSV.File(source; header=0, skipto=5, ntasks=Threads.nthreads()) |> Tables.matrix
     #df = readdlm(source, ',', Float64, '\n'; skipstart = 4, use_mmap = true)
     #row of first 0 (referrs to corresponding entry in the timestamp file)
     rowfirstzero = findfirst(df[:, 1] .== 0)
