@@ -611,10 +611,10 @@ end
 Show percentages for u,v,w,T for missing data
 """
 function printmissstats(df::DataFrame)
-    missingu = count(x -> ismissing(x), df.u)
-    missingv = count(x -> ismissing(x), df.v)
-    missingw = count(x -> ismissing(x), df.w)
-    missingT = count(x -> ismissing(x), df.T)
+    missingu = count(x -> (ismissing(x) || isnan(x)), df.u)
+    missingv = count(x -> (ismissing(x) || isnan(x)), df.v)
+    missingw = count(x -> (ismissing(x) || isnan(x)), df.w)
+    missingT = count(x -> (ismissing(x) || isnan(x)), df.T)
     println("Missing data (u,v,w,T [‰])")
     println(round(1000 * missingu / size(df, 1), digits=2), ", ",
         round(1000 * missingv / size(df, 1), digits=2), ", ",
