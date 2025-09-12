@@ -14,7 +14,7 @@ using Dates, PyCall, DataFrames, Statistics, LaTeXStrings, ProgressMeter, Distri
 import PyPlot, CSV
 pydates = pyimport("matplotlib.dates")
 
-datapath = "/home/michi/Documents/slf/CONTRASTS25/data/processed/2a/"
+datapath = "/home/michi/Documents/slf/CONTRASTS25/data/processed/preproc/"
 #tjkpath = "/home/haugened/Documents/data/tjk/tjk_data.csv"
 importdir = joinpath(@__DIR__, "..")
 include(joinpath(importdir, "src", "turb_data.jl"))
@@ -42,12 +42,12 @@ println("-----------S-T-A-R-T-------------")
 ###            LOADING & PREPROCESSING             ###
 ######################################################
 #select data and measurement period to be evaluated
-evalstart = DateTime(2025, 07, 14, 18, 00, 00)
-evalend   = DateTime(2025, 07, 17, 11, 00, 00)
+evalstart = DateTime(2025, 05, 14, 18, 00, 00)
+evalend   = DateTime(2025, 09, 17, 11, 00, 00)
 #evalend = evalstart + Day(10)
 
-evaldf1 = turb.readturbasnetcdf(joinpath(datapath, "2a_box1_csat_proc.nc"), evalstart, evalend)
-evaldf2 = turb.readturbasnetcdf(joinpath(datapath, "2a_box1_irg_proc.nc"), evalstart, evalend)
+evaldf1 = turb.readturbasnetcdf(joinpath(datapath, "3b_t1_irg_proc.nc"), evalstart, evalend)
+evaldf2 = turb.readturbasnetcdf(joinpath(datapath, "3b_t1_csat_proc.nc"), evalstart, evalend)
 evaldf3 = turb.readturbasnetcdf(joinpath(datapath, "2a_box2_csat_proc.nc"), evalstart, evalend)
 evaldf4 = turb.readturbasnetcdf(joinpath(datapath, "2a_box2_irg_proc.nc"), evalstart, evalend)
 #evaldf5 = turb.readturbasnetcdf(string(kaijo_outfile_stam, ".nc"), evalstart, evalend)
@@ -59,7 +59,7 @@ evaldf4 = turb.readturbasnetcdf(joinpath(datapath, "2a_box2_irg_proc.nc"), evals
 #turb.repositionnanmask!(evaldf3)
 #turb.repositionnanmask!(evaldf4)
 
-#show statistics about missing data
+#show statistics about missing or NaN-data
 turb.printmissstats(evaldf1)
 turb.printmissstats(evaldf2)
 turb.printmissstats(evaldf3)
@@ -68,8 +68,8 @@ turb.printmissstats(evaldf4)
 #turb.printmissstats(evaldf6)
 
 #interpolate missing
-evaldf1 = turb.interpolatemissing(evaldf1)
-evaldf2 = turb.interpolatemissing(evaldf2)
+evaldf1 = turb.interpolatemissing(evaldf1);
+evaldf2 = turb.interpolatemissing(evaldf2);
 evaldf3 = turb.interpolatemissing(evaldf3)
 evaldf4 = turb.interpolatemissing(evaldf4)
 #try
