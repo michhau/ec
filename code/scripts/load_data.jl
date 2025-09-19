@@ -14,7 +14,8 @@ using Dates, PyCall, DataFrames, Statistics, LaTeXStrings, ProgressMeter, Distri
 import PyPlot, CSV
 pydates = pyimport("matplotlib.dates")
 
-datapath = "/home/michi/Documents/slf/CONTRASTS25/data/processed/preproc/"
+datapath = "/home/haugened/Documents/data/CONTRASTS/EC_offline_preproc/"
+#datapath = "/home/michi/Documents/slf/CONTRASTS25/data/processed/preproc/"
 #tjkpath = "/home/haugened/Documents/data/tjk/tjk_data.csv"
 importdir = joinpath(@__DIR__, "..")
 include(joinpath(importdir, "src", "turb_data.jl"))
@@ -46,10 +47,10 @@ evalstart = DateTime(2025, 05, 14, 18, 00, 00)
 evalend   = DateTime(2025, 09, 17, 11, 00, 00)
 #evalend = evalstart + Day(10)
 
-evaldf1 = turb.readturbasnetcdf(joinpath(datapath, "3b_t1_irg_proc.nc"), evalstart, evalend)
-evaldf2 = turb.readturbasnetcdf(joinpath(datapath, "3b_t1_csat_proc.nc"), evalstart, evalend)
-evaldf3 = turb.readturbasnetcdf(joinpath(datapath, "2a_box2_csat_proc.nc"), evalstart, evalend)
-evaldf4 = turb.readturbasnetcdf(joinpath(datapath, "2a_box2_irg_proc.nc"), evalstart, evalend)
+evaldf1 = turb.readturbasnetcdf(joinpath(datapath, "2a_t1_irg_proc.nc"), evalstart, evalend)
+evaldf2 = turb.readturbasnetcdf(joinpath(datapath, "2a_t1_csat_proc.nc"), evalstart, evalend)
+evaldf3 = turb.readturbasnetcdf(joinpath(datapath, "2a_t2_irg_proc.nc"), evalstart, evalend)
+evaldf4 = turb.readturbasnetcdf(joinpath(datapath, "2a_t2_csat_proc.nc"), evalstart, evalend)
 #evaldf5 = turb.readturbasnetcdf(string(kaijo_outfile_stam, ".nc"), evalstart, evalend)
 #evaldf6 = turb.readturbasnetcdf(joinpath(tower_outfile_stam, "tjkdf.nc"), evalstart, evalend)
 
@@ -70,8 +71,8 @@ turb.printmissstats(evaldf4)
 #interpolate missing
 evaldf1 = turb.interpolatemissing(evaldf1);
 evaldf2 = turb.interpolatemissing(evaldf2);
-evaldf3 = turb.interpolatemissing(evaldf3)
-evaldf4 = turb.interpolatemissing(evaldf4)
+evaldf3 = turb.interpolatemissing(evaldf3);
+evaldf4 = turb.interpolatemissing(evaldf4);
 #try
 #    evaldf5 = turb.interpolatemissing(evaldf5)
 #catch LoadError
@@ -80,10 +81,10 @@ evaldf4 = turb.interpolatemissing(evaldf4)
 #evaldf6 = turb.interpolatemissing(evaldf6)
 
 #double rotation
-turb.drdf!(evaldf1)
-turb.drdf!(evaldf2)
-turb.drdf!(evaldf3)
-turb.drdf!(evaldf4)
+turb.drdf!(evaldf1, periodwise=false)
+turb.drdf!(evaldf2, periodwise=false)
+turb.drdf!(evaldf3, periodwise=false)
+turb.drdf!(evaldf4, periodwise=false)
 #turb.drdf!(evaldf5)
 #turb.drdf!(evaldf6, periodwise=false)
 
