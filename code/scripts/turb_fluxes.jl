@@ -22,7 +22,7 @@ PyPlot.pygui(true)
 timestep = Millisecond(50)
 ρ_air = 1.2 #kg m^{-3}
 c_p = 1004 #J kg^{-1} K^{-1}
-L_v = 2450e3 #J kg^{-1} (approx @0°C) 
+L_v = 2500e3 #J kg^{-1} (approx @0°C) 
 
 ######################################################
 ###              TURBULENT FLUXES                  ###
