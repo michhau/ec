@@ -12,7 +12,7 @@ pydates = pyimport("matplotlib.dates")
 gridspec = pyimport("matplotlib.gridspec")
 
 importdir = joinpath(@__DIR__, "..")
-datapath = "/home/haugened/Documents/slf/CONTRASTS25/data/2a/"
+#datapath = "/home/haugened/Documents/slf/CONTRASTS25/data/2a/"
 include(joinpath(importdir, "src", "turb_data.jl"))
 include(joinpath(importdir, "src", "general.jl"))
 import .turb
@@ -39,24 +39,24 @@ ra1 = Second(400) #Millisecond(2^11*timestep) #Second(330)
 ra2 = Second(400)
 ra3 = Second(400) #Millisecond(2^11*timestep) #Second(320)
 ra4 = Second(400)
-ra5 = Millisecond(2^9*timestep) #Second(300)
-ra6 = Millisecond(2^10*timestep) #Second(55)
+#ra5 = Millisecond(2^9*timestep) #Second(300)
+#ra6 = Millisecond(2^10*timestep) #Second(55)
 
 fx1_raw = turb.turbflux(evaldf1, ra1)
 fx2_raw = turb.turbflux(evaldf2, ra2)
 fx3_raw = turb.turbflux(evaldf3, ra3)
 fx4_raw = turb.turbflux(evaldf4, ra4)
-fx5_raw = turb.turbflux(evaldf5, ra5)
-fx6_raw = turb.turbflux(evaldf6, ra6)
+#fx5_raw = turb.turbflux(evaldf5, ra5)
+#fx6_raw = turb.turbflux(evaldf6, ra6)
 
 #averaging
-fx1 = turb.avgflux(fx1_raw, Second(400))
-fx2 = turb.avgflux(fx2_raw, Second(400))
-fx3 = turb.avgflux(fx3_raw, Second(400))
-fx4 = turb.avgflux(fx4_raw, Second(400))
-fx5 = turb.avgflux(fx5_raw, Second(600))
-fx6 = turb.avgflux(fx6_raw, Second(600))
-
+fx1 = turb.avgflux(fx1_raw, ra1)
+fx2 = turb.avgflux(fx2_raw, ra2)
+fx3 = turb.avgflux(fx3_raw, ra3)
+fx4 = turb.avgflux(fx4_raw, ra4)
+#fx5 = turb.avgflux(fx5_raw, Second(600))
+#fx6 = turb.avgflux(fx6_raw, Second(600))
+#=
 #Obukhov-length
 L1 = turb.obukhov(fx1_raw, Minute(30))
 L2 = turb.obukhov(fx2_raw, Minute(10))
@@ -67,7 +67,7 @@ try
 catch e
 end
 L6 = turb.obukhov(fx6_raw, Minute(10))
-
+=#
 ######################################
 #=
 #save to NetCDF4
@@ -169,6 +169,59 @@ ax.xaxis_date()
 #ax.set_xlim(DateTime(2021, 05, 31, 10, 30, 00), DateTime(2021, 05, 31, 20, 00, 00))
 ax.grid()
 ax.legend()
+##
+######################################################
+# Flux time series with dual subplots for latent and sensible heat fluxes (CONTRASTS)
+##
+fig, (ax1, ax2) = PyPlot.subplots(2, 1, figsize=(10, 8), sharex=true)
+
+# Define colors for consistent legend
+colors = ["C0", "C1", "C2", "C3"]  # Default matplotlib color cycle
+
+#define plotting step size
+step = 20*60 #every 1min
+
+#y-axis limits
+wT_limits = (-50, 50)
+wq_limits = wT_limits
+
+# Upper subplot - Buoyancy fluxes (sensible heat)
+ax1.set_title("1c Turbulent Heat Fluxes")
+wt1 = ax1.plot(fx1.time[1:step:end], fx1.wT[1:step:end] .* (ρ_air * c_p), color=colors[1])
+wt2 = ax1.plot(fx2.time[1:step:end], fx2.wT[1:step:end] .* (ρ_air * c_p), color=colors[2])
+wt3 = ax1.plot(fx3.time[1:step:end], fx3.wT[1:step:end] .* (ρ_air * c_p), color=colors[3])
+wt4 = ax1.plot(fx4.time[1:step:end], fx4.wT[1:step:end] .* (ρ_air * c_p), color=colors[4])
+ax1.set_ylabel(L"\overline{w'T_s'} ~\mathrm{[W~m^{-2}]}")
+ax1.grid()
+ax1.set_ylim(wT_limits)
+
+# Lower subplot - Latent heat fluxes
+wq1 = ax2.plot(fx1.time[1:step:end], fx1.wq[1:step:end] .* (L_v * 1e-3), color=colors[1])
+wq2 = ax2.plot(fx3.time[1:step:end], fx3.wq[1:step:end] .* (L_v * 1e-3), color=colors[3])
+ax2.set_ylabel(L"\overline{w'q'} ~\mathrm{[W~m^{-2}]}")
+ax2.set_xlabel("Time")
+ax2.xaxis_date()
+ax2.grid()
+ax2.set_ylim(wq_limits)
+
+# Create a single legend for the entire figure
+handles = [wt1[1], wt2[1], wt3[1], wt4[1]]  # Get line objects
+labels = ["ice 1.1m", "ice 2.2m", "lead 1.1m", "lead 2.3m"]
+ax1.legend(handles, labels)#, loc="upper right", bbox_to_anchor=(1.0, 1))
+
+# Optional: Uncomment these lines if you want to set specific time limits
+# ax2.set_xlim(DateTime(2021, 05, 31, 10, 30, 00), DateTime(2021, 05, 31, 20, 00))
+
+# Format dates on x-axis if needed
+# majorlocator = pydates.HourLocator(interval=1)
+# minorlocator = pydates.MinuteLocator(interval=15)
+# ax2.xaxis.set_major_locator(majorlocator)
+# ax2.xaxis.set_minor_locator(minorlocator)
+# date_format = pydates.DateFormatter("%H:%M")
+# ax2.xaxis.set_major_formatter(date_format)
+# fig.autofmt_xdate()
+
+PyPlot.tight_layout()
 ##
 ######################################################
 ##
