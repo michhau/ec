@@ -50,10 +50,10 @@ fx4_raw = turb.turbflux(evaldf4, ra4)
 #fx6_raw = turb.turbflux(evaldf6, ra6)
 
 #averaging
-fx1 = turb.avgflux(fx1_raw, ra1)
-fx2 = turb.avgflux(fx2_raw, ra2)
-fx3 = turb.avgflux(fx3_raw, ra3)
-fx4 = turb.avgflux(fx4_raw, ra4)
+fx1 = turb.avgflux(fx1_raw, ra1, true, 0.3)
+fx2 = turb.avgflux(fx2_raw, ra2, true, 0.3)
+fx3 = turb.avgflux(fx3_raw, ra3, true, 0.3)
+fx4 = turb.avgflux(fx4_raw, ra4, true, 0.3)
 #fx5 = turb.avgflux(fx5_raw, Second(600))
 #fx6 = turb.avgflux(fx6_raw, Second(600))
 #=

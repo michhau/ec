@@ -1237,17 +1237,72 @@ function turbfluxdrperperiod(data::DataFrame, reyavgtime::Period, dr_period::Per
 end
 
 """
+    compute_quality_mask!(quality_mask, valid_data, half_window, leng, nan_threshold)
+
+Helper function to compute rolling quality mask. valid_data = true means good data point
+"""
+function compute_quality_mask!(quality_mask, valid_data, half_window, leng, nan_threshold)
+    # Initialize first window
+    start_idx = 1
+    end_idx = min(leng, 1 + half_window)
+    window_size = end_idx - start_idx + 1
+    valid_count = sum(valid_data[start_idx:end_idx])
+    quality_mask[1] = (valid_count / window_size >= (1 - nan_threshold))
+    
+    # Rolling window for remaining points
+    for i in 2:leng
+        new_start = max(1, i - half_window)
+        new_end = min(leng, i + half_window)
+        old_start = max(1, (i-1) - half_window)
+        old_end = min(leng, (i-1) + half_window)
+        
+        # Update valid_count by removing old points and adding new points
+        # Remove points that left the window
+        valid_count -= sum(valid_data[old_start:(new_start-1)])
+        
+        # Add points that entered the window
+        valid_count += sum(valid_data[old_end+1:new_end])
+        
+        window_size = new_end - new_start + 1
+        quality_mask[i] = (valid_count / window_size >= (1 - nan_threshold))
+    end
+end
+
+"""
     avgflux(data::DataFrame, peri::Period)
 
 Average the turbulent fluxes in the DataFrame
 """
-function avgflux(data::DataFrame, peri::Period)
+function avgflux(data::DataFrame, peri::Period, nanmask::Bool=false, nan_threshold=0.3)::DataFrame
     ele = round(Int, Millisecond(peri) / Millisecond(50))
     fluxavg = similar(data)
     fluxavg.time = data.time
-    for iname in names(data)[2:end]
-        fluxavg[:, iname] = gen.movingaverage(data[:, iname], ele)
+    
+    if nanmask
+        leng = size(data, 1)
+        half_window = div(ele, 2)
+        
+        # Process each column (skip time column)
+        for iname in names(data)[2:end]
+            # Pre-allocate quality mask
+            quality_mask = fill(false, leng)
+            
+            # Compute quality mask for this variable
+            compute_quality_mask!(quality_mask, .!isnan.(data[:, iname]), half_window, leng, nan_threshold)
+
+            println(count(quality_mask) , " valid points for ", iname)
+            # Calculate moving average
+            fluxavg[:, iname] = gen.movingaverage(data[:, iname], ele)
+            
+            # Set values to NaN where quality threshold is not met
+            fluxavg[.!quality_mask, iname] .= NaN
+        end
+    else
+        for iname in names(data)[2:end]
+            fluxavg[:, iname] = gen.movingaverage(data[:, iname], ele)
+        end
     end
+    
     return fluxavg
 end
 
