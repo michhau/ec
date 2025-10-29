@@ -103,10 +103,42 @@ turb.drdf!(evaldf4, periodwise=false)
 #remove unrealistic values
 #t2vent.vent_air_temp[.!(-30 .< replace!(t2vent.vent_air_temp, missing => NaN) .< 30)] .= NaN
 #t3vent.vent_air_temp[.!(-30 .< replace!(t3vent.vent_air_temp, missing => NaN) .< 30)] .= NaN
-#=
+
 ######################################################
 ###                   PLOTTING                     ###
 ######################################################
+##
+#plot u,v,w,T components to visually inspect data
+evaldf = evaldf1
+skip_n = 200  # Plot every nth data point
+
+fig, (ax1, ax2, ax3, ax4) = PyPlot.subplots(4, 1, figsize=(10, 12), sharex=true)
+
+# Plot u component
+ax1.plot(evaldf.time[1:skip_n:end], evaldf.u[1:skip_n:end])
+ax1.set_ylabel(L"u~\mathrm{[m~s^{-1}]}")
+ax1.grid(true)
+
+# Plot v component
+ax2.plot(evaldf.time[1:skip_n:end], evaldf.v[1:skip_n:end])
+ax2.set_ylabel(L"v~\mathrm{[m~s^{-1}]}")
+ax2.grid(true)
+
+# Plot w component
+ax3.plot(evaldf.time[1:skip_n:end], evaldf.w[1:skip_n:end])
+ax3.set_ylabel(L"w~\mathrm{[m~s^{-1}]}")
+ax3.grid(true)
+
+# Plot T component
+ax4.plot(evaldf.time[1:skip_n:end], evaldf.T[1:skip_n:end])
+ax4.set_ylabel(L"T~\mathrm{[K]}")
+ax4.grid(true)
+
+# Adjust layout to prevent overlapping
+fig.tight_layout()
+##
+#=
+#######################################################
 #plot histograms to determine outliers
 
 quantity1 = filter(!isnan, skipmissing(evaldf1.T))
