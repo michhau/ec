@@ -36,11 +36,13 @@ function movingaverage(X::Vector, numofele::Integer)
         elseif firstnonnan > 1
             Y[1:firstnonnan-1] .= NaN
         end
-        if len < length(X)
-            Y[len:end] .= NaN
-        end
-        if (len - firstnonnan) +1 <= numofele
-            return Y.* mean(filter(!isnan, X))
+        if !isnothing(len)
+            if len < length(X)
+                Y[len:end] .= NaN
+            end
+            if (len - firstnonnan) +1 <= numofele
+                return Y.* mean(filter(!isnan, X))
+            end
         end
         n = firstnonnan
         summed = sum(filter(!isnan, X[(0:ForwardDelta-1).+n]))
@@ -66,36 +68,38 @@ function movingaverage(X::Vector, numofele::Integer)
             end
         end
         n = BackDelta - firstnonnan + 1
-        for n in (BackDelta+firstnonnan+1):(len-ForwardDelta)
-            #@info("Loop2")
-            curr_nans += vec_isnan[n+ForwardDelta]
-            curr_nans -= vec_isnan[n-BackDelta-1]
-            curr_nonnans += !vec_isnan[n+ForwardDelta]
-            curr_nonnans -= !vec_isnan[n-BackDelta-1]
-            if !vec_isnan[n+ForwardDelta]
-                summed += X[n+ForwardDelta]
+        if !isnothing(len)
+            for n in (BackDelta+firstnonnan+1):(len-ForwardDelta)
+                #@info("Loop2")
+                curr_nans += vec_isnan[n+ForwardDelta]
+                curr_nans -= vec_isnan[n-BackDelta-1]
+                curr_nonnans += !vec_isnan[n+ForwardDelta]
+                curr_nonnans -= !vec_isnan[n-BackDelta-1]
+                if !vec_isnan[n+ForwardDelta]
+                    summed += X[n+ForwardDelta]
+                end
+                if !vec_isnan[n-BackDelta-1]
+                    summed -= X[n-BackDelta-1]
+                end
+                if curr_nonnans > 0
+                    Y[n] = summed / curr_nonnans
+                else
+                    Y[n] = NaN
+                end
             end
-            if !vec_isnan[n-BackDelta-1]
-                summed -= X[n-BackDelta-1]
-            end
-            if curr_nonnans > 0
-                Y[n] = summed / curr_nonnans
-            else
-                Y[n] = NaN
-            end
-        end
-        n = len - ForwardDelta
-        for n in len-ForwardDelta+1:len
-            #@info("Loop3")
-            curr_nans -= vec_isnan[n-BackDelta-1]
-            curr_nonnans -= !vec_isnan[n-BackDelta-1]
-            if !vec_isnan[n-BackDelta-1]
-                summed -= X[n-BackDelta-1]
-            end
-            if curr_nonnans > 0
-                Y[n] = summed / curr_nonnans
-            else
-                Y[n] = NaN
+            n = len - ForwardDelta
+            for n in len-ForwardDelta+1:len
+                #@info("Loop3")
+                curr_nans -= vec_isnan[n-BackDelta-1]
+                curr_nonnans -= !vec_isnan[n-BackDelta-1]
+                if !vec_isnan[n-BackDelta-1]
+                    summed -= X[n-BackDelta-1]
+                end
+                if curr_nonnans > 0
+                    Y[n] = summed / curr_nonnans
+                else
+                    Y[n] = NaN
+                end
             end
         end
     end
