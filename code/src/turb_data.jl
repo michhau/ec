@@ -1129,13 +1129,14 @@ Calculate turbulent flux and Obukhov length
 """
 function turbflux(data::DataFrame, reyavgtime::Period, p_over_p0::Float64=1013 / 798)::DataFrame
     leng = size(data, 1)
-    fluxout = DataFrame("time" => data.time, "wT" => fill(NaN, leng), "wq" => fill(NaN, leng),
+    fluxout = DataFrame("time" => Vector{DateTime}(undef, size(data,1)), "wT" => fill(NaN, leng), "wq" => fill(NaN, leng),
         "uw" => fill(NaN, leng), "vw" => fill(NaN, leng), "uT" => fill(NaN, leng),
         "u_star" => fill(NaN, leng), "uu" => fill(NaN, leng), "vv" => fill(NaN, leng),
         "ww" => fill(NaN, leng), "TT" => fill(NaN, leng), "tke" => fill(NaN, leng), "T_pot_20Hz" => fill(NaN, leng),
         "L_highfreq" => fill(NaN, leng))
 
-    timestep = data.time[2] - data.time[1]
+    fluxout.time = data.time
+    timestep = fluxout.time[2] - fluxout.time[1]
     #check
     checkidx = round(Int, (size(data, 1) - 1) * rand()) + 1
     timestepcheck = data.time[checkidx] - data.time[checkidx-1]
@@ -1290,7 +1291,6 @@ function avgflux(data::DataFrame, peri::Period, nanmask::Bool=false, nan_thresho
             # Compute quality mask for this variable
             compute_quality_mask!(quality_mask, .!isnan.(data[:, iname]), half_window, leng, nan_threshold)
 
-            println(count(quality_mask) , " valid points for ", iname)
             # Calculate moving average
             fluxavg[:, iname] = gen.movingaverage(data[:, iname], ele)
             
