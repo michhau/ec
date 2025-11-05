@@ -16,9 +16,9 @@ import FastRunningMedian
 
 include( "general.jl")
 import .gen
-export readperiodfile, nan2missing!, missing2nan!, loadt1raw, loadt2raw, loadkaijoraw,
+export readperiodfile, nan2missing!, missing2nan!, loadrawgeneric, loadt1raw, loadt2raw, loadkaijoraw,
     createtimestamped3Dwind, csvtodataframe, saveturbasnetcdf, readturbasnetcdf,
-    makecontinuous, findnearest, extendtofinertimeseries!, splitdaynight, simplewinddir, qualcontrolflags!,
+    makecontinuous, findnearest, extendtofinertimeseries!, splitdaynight, simplewinddir, qualcontrolflags, qualcontrolflagCSAT3,
     sonicqualcontrol, despiking, printmissstats, repositionnanmask!, drdf!, doublerotation,
     detrend, parametersblocksplitting, blockevaluation, interpolatemissing, winddir,
     detectgaps, blockapply, OSHD_SHF, contflux, turbflux, turbfluxdrperperiod, avgflux, advect
@@ -69,6 +69,25 @@ function missing2nan!(data::DataFrame)
     end
 end
 
+#########     generic I/O for EC data        ########
+"""
+    loadrawgeneric(source::String)
+
+Read-in raw turbulence data
+"""
+function loadrawgeneric(source::String)
+    @info("Loading generic eddy covariance raw data")
+    labelsfromfile = readlines(source)[2]
+    println("Column labels: ", labelsfromfile)
+    @info("You need to assign those labels properly in the next step. Time as first column is already extracted.")
+    df = CSV.File(source; header=0, skipto=5, ntasks=Threads.nthreads()) |> Tables.matrix
+    dateformat = DateFormat("yyyy-mm-dd HH:MM:SS.ss")
+    timeofmeasure = DateTime.(df[:, 1], dateformat)
+    println("Done")
+    return timeofmeasure, df[:, 2:end]
+    # return df[:,1], df[:,8:end]
+end
+
 #########       I/O for tower 1/2 data        ########
 """
     loadt1raw(source::String)
@@ -77,7 +96,7 @@ Read-in raw turbulence data from tower 1
 """
 function loadt1raw(source::String)
     @info("Loading tower 1 turbulence raw data")
-    df = CSV.File(source; header=0, skipto=5, tasks=Threads.nthreads()) |> Tables.matrix
+    df = CSV.File(source; header=0, skipto=5, ntasks=Threads.nthreads()) |> Tables.matrix
     dateformat = DateFormat("yyyy-mm-dd HH:MM:SS.ss")
     timeofmeasure = DateTime.(df[:, 1], dateformat)
     println("Done")
@@ -92,8 +111,8 @@ Read-in raw turbulence data from tower 2
 """
 function loadt2raw(source::String)
     @info("Loading tower 2 turbulence raw data")
-    #df = CSV.File(source; header=0, skipto=5, tasks = Threads.nthreads())|> Tables.matrix
-    df = CSV.File(source; header=0, tasks=Threads.nthreads()) |> Tables.matrix
+    #df = CSV.File(source; header=0, skipto=5, ntasks = Threads.nthreads())|> Tables.matrix
+    df = CSV.File(source; header=0, ntasks=Threads.nthreads()) |> Tables.matrix
     #dateformat = DateFormat("yyyy-mm-dd HH:MM:SS.ss")
     #timeofmeasure = DateTime.(df[:,1], dateformat)
     println("Done")
@@ -109,7 +128,7 @@ Load 3D-ultrasonic rawdata from Kaijo and return timestamps and data.
 function loadkaijoraw(source::String)
     @info("Loading Kaijo raw data from ", source)
     @warn("Be careful with axis rotation!! Check image for possible reorientation.")
-    df = CSV.File(source; header=0, skipto=5, tasks=Threads.nthreads()) |> Tables.matrix
+    df = CSV.File(source; header=0, skipto=5, ntasks=Threads.nthreads()) |> Tables.matrix
     dateformat = DateFormat("yyyy-mm-dd HH:MM:SS.ss")
     timeofmeasure = DateTime.(df[:, 1], dateformat)
     println("Done")
@@ -124,7 +143,7 @@ Not exposed. Load 3D-ultrasonic rawdata into a Float-Array.
 """
 function load3Dwindraw(source::String)::Array
     @info("Loading ultrasonic raw data from ", source)
-    df = CSV.File(source; header=0, skipto=5, tasks=Threads.nthreads()) |> Tables.matrix
+    df = CSV.File(source; header=0, skipto=5, ntasks=Threads.nthreads()) |> Tables.matrix
     #df = readdlm(source, ',', Float64, '\n'; skipstart = 4, use_mmap = true)
     #row of first 0 (referrs to corresponding entry in the timestamp file)
     rowfirstzero = findfirst(df[:, 1] .== 0)
@@ -399,18 +418,45 @@ end
 """
     qualcontrolflags!(evaldf::DataFrame)
 
-Replace bad data with missing according to sonic and gas analyser
-diagnostic flags and unphysical data
+CSAT3B and IRGASON: Replace bad data with missing according to sonic and gas analyser
+diagnostic flags
+See manual CSAT3B table 7-6
 """
-function qualcontrolflags!(evaldf::DataFrame)
+function qualcontrolflags(evaldf::DataFrame)
+    flaghigh_sonic = []
+    flaghigh_irg = []
     if count(x -> x == "diagsonic", names(evaldf)) > 0
-        evaldf[findall(x -> x > 42, collect(skipmissing(evaldf.diagsonic))), 2:end] .= missing
+        flaghigh_sonic = findall(x -> x>=1, skipmissing(evaldf.diagsonic))
+        evaldf[flaghigh_sonic, ["u", "v", "w", "T", "diagsonic"]] .= missing
         @info("Sonic diagnostic flag found and used for quality control")
     end
     if count(x -> x == "diagirg", names(evaldf)) > 0
-        evaldf[findall(x -> x > 42, collect(skipmissing(evaldf.diagirg))), 2:end] .= missing
+        flaghigh_irg = findall(x -> x >= 1, skipmissing(evaldf.diagirg))
+        evaldf[flaghigh_irg, ["co2", "h2o", "diagirg", "co2signalstrength", "h2osignalstrength"]] .= missing
         @info("Gas Analyser diagnostic flag found and used for quality control")
     end
+    flaghigh_total = unique(vcat(flaghigh_sonic, flaghigh_irg))
+    println("Ratio rejected due to sonic flag high: ", round((length(flaghigh_sonic))*1000/size(evaldf, 1), digits=2), "‰")
+    println("Ratio rejected due to gas flag high: ", round((length(flaghigh_irg))*1000/size(evaldf, 1), digits=2), "‰")
+    println("Total ratio rejected ", round((length(flaghigh_total))*1000/size(evaldf, 1), digits=2), "‰")
+    return evaldf
+end
+
+"""
+    qualcontrolflagCSAT3!(evaldf::DataFrame)
+
+For old CSAT3 only! Replace bad data with missing according to sonic diagnostic flag
+Check manual B.4 for further information. Data rejected if any of bits 12 -15 is set high
+"""
+function qualcontrolflagCSAT3(evaldf::DataFrame)
+    @warn("Use this function only for the 'old' CSAT3. Otherwise use 'qualcontrolflags'")
+    if count(x -> x == "diagsonic", names(evaldf)) > 0
+        flaghigh = findall(x -> x>=2^12, skipmissing(evaldf.diagsonic))
+        evaldf[flaghigh, 2:end] .= missing
+        @info("CSAT3: Sonic diagnostic flag found and used for quality control")
+        println("Ratio rejected due to high flag: ", round(length(flaghigh)*1000/size(evaldf, 1), digits=2), "‰")
+    end
+    return evaldf
 end
 
 """
@@ -421,16 +467,18 @@ end
 Quality control of the ultrasonic data based on threshold value.
 Set to missing
 """
-function sonicqualcontrol(data::DataFrame, umin=-15.00001, umax=15.00001,
-    vmin=-15.00001, vmax=15.00001, wmin=-2.500001, wmax=2.500001, Tmin=-7.00001,
-    Tmax=21.00001, qh2omin=0, qh2omax=25)
+function sonicqualcontrol(data::DataFrame, umin=-20.00001, umax=20.00001,
+    vmin=-20.00001, vmax=20.00001, wmin=-3.000001, wmax=3.000001, Tmin=-10.00001,
+    Tmax=10.00001, qh2omin=0, qh2omax=25)
     @info("Quality control for u,v,w,T...")
     k = 0
     for i in 1:size(data, 1)
-        if isless(umax, data.u[i]) || isless(vmax, data.v[i]) || isless(wmax, data.w[i]) || isless(Tmax, data.T[i]) ||
-           isless(data.u[i], umin) || isless(data.v[i], vmin) || isless(data.w[i], wmin) || isless(data.T[i], Tmin)
-            data[i, 2:end] .= missing
-            k = k + 1
+        if (isless(umax, data.u[i]) || isless(vmax, data.v[i]) || isless(wmax, data.w[i]) || isless(Tmax, data.T[i]) ||
+           isless(data.u[i], umin) || isless(data.v[i], vmin) || isless(data.w[i], wmin) || isless(data.T[i], Tmin))
+           if (!ismissing(data.u[i]) || !ismissing(data.v[i]) || !ismissing(data.w[i]) || !ismissing(data.T[i]))
+                data[i, 2:end] .= missing
+                k = k + 1
+           end
         end
     end
     println(k, " rows set to missing (", round(k / size(data, 1) * 1000, digits=2), "‰)")
@@ -438,8 +486,10 @@ function sonicqualcontrol(data::DataFrame, umin=-15.00001, umax=15.00001,
         @info("IRGASON detected")
         nrirgmis = 0
         for i in 1:size(data, 1)
-            cond = isless(data.h2o[i], qh2omin) || isless(qh2omax, data.h2o[i])
-            data[i, [:h2o, :co2]] .= missing
+            cond = (isless(data.h2o[i], qh2omin) || isless(qh2omax, data.h2o[i])) && !ismissing(data.h2o[i])
+            if cond
+                data[i, [:h2o, :co2]] .= missing
+            end
             nrirgmis = count(cond)
         end
         println("IRG: ", nrirgmis, " rows (only :h2o and :co2) set to missing (", round(nrirgmis / size(data, 1) * 1000, digits=2), "‰)")
@@ -476,7 +526,7 @@ function despiking(datain::DataFrame, windowwidth=6000, maxsteps=10, breakcrit=1
     fill!(tolook, 1)
 
     if any(names(datain) .== "h2o")
-        colstodespike = [:u, :v, :w, :T, :h2o]
+        colstodespike = [:u, :v, :w, :T, :h2o, :co2]
     else
         colstodespike = [:u, :v, :w, :T]
     end
@@ -546,7 +596,7 @@ function despiking(datain::DataFrame, windowwidth=6000, maxsteps=10, breakcrit=1
         end
         datain[spike, [:u, :v, :w, :T]] .= NaN
         if nrspikesirg[nrsteps] != 0
-            datain[spikeirg, :h2o] .= NaN
+            datain[spikeirg, [:h2o, :co2]] .= NaN
         end
         if nrsteps > 1 && nrspikestot[nrsteps] / nrspikestot[nrsteps-1] < breakcrit
             nrsteps = maxsteps + 1 # break
@@ -561,10 +611,10 @@ end
 Show percentages for u,v,w,T for missing data
 """
 function printmissstats(df::DataFrame)
-    missingu = count(x -> ismissing(x), df.u)
-    missingv = count(x -> ismissing(x), df.v)
-    missingw = count(x -> ismissing(x), df.w)
-    missingT = count(x -> ismissing(x), df.T)
+    missingu = count(x -> (ismissing(x) || isnan(x)), df.u)
+    missingv = count(x -> (ismissing(x) || isnan(x)), df.v)
+    missingw = count(x -> (ismissing(x) || isnan(x)), df.w)
+    missingT = count(x -> (ismissing(x) || isnan(x)), df.T)
     println("Missing data (u,v,w,T [‰])")
     println(round(1000 * missingu / size(df, 1), digits=2), ", ",
         round(1000 * missingv / size(df, 1), digits=2), ", ",
