@@ -132,7 +132,7 @@ function completemrd(data::DataFrame, col1::String, col2::String, M::Integer, sh
     gapidx = 1
     nrblocks = 0
     normfct = 1.0
-    p = ProgressUnknown("MRD blocks:")
+    p = ProgressUnknown(; desc = "MRD blocks:")
     while endidx + shift <= size(data, 1)
         if nrblocks != 0
             startidx += shift
@@ -1251,7 +1251,7 @@ function read2dmrdfromnetcdf(source::String)
 end
 
 """
-    instrumentnamefromsourcefile(sourcefile::String, regexp=r"\/[a-zA-Z0-9]*\.nc")::String
+    instrumentnamefromsourcefile(sourcefile::String, regex see below)::String
 
 Extract instrument name from source file
 """
