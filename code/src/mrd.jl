@@ -70,14 +70,14 @@ function mrd(data_a::Vector, data_b::Vector, M::Integer, Mx::Integer)
         wmeans_b = similar(wmeans_a)
         for i in 1:nw
             k = round(Int, (i - 1) * l + 1)
-            wmeans_a[i] = mean(data_a2[k:i*l])
-            wmeans_b[i] = mean(data_b2[k:i*l])
+            wmeans_a[i] = mean(filter(!isnan, data_a2[k:i*l]))
+            wmeans_b[i] = mean(filter(!isnan, data_b2[k:i*l]))
             data_a2[k:i*l] .-= wmeans_a[i]
             data_b2[k:i*l] .-= wmeans_b[i]
         end
         if nw > 1
-            D[ms+1] = mean(wmeans_a .* wmeans_b)
-            Dstd[ms+1] = std(wmeans_a .* wmeans_b, mean=D[ms+1])
+            D[ms+1] = mean(filter(!isnan, wmeans_a .* wmeans_b))
+            Dstd[ms+1] = std(filter(!isnan, wmeans_a .* wmeans_b), mean=D[ms+1])
         end
     end
     return D, Dstd
