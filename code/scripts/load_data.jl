@@ -34,6 +34,9 @@ timestep = Millisecond(50)
 #outfile_stam = joinpath(datapath, "WindSonic_Duerrboden_2005xx/tjk_sonic_200504-200514")
 #tower_outfile_stam = joinpath(datapath, "tower", "preproc")
 #ventair_stam = joinpath(datapath, "tower", "vent_air")
+nanfile_stam = "/home/haugened/Documents/data/CONTRASTS/nan_periods"
+nanfiles = joinpath.(nanfile_stam, ["t1irg_nan.csv", "t1csat_nan.csv", "t2irg_nan.csv", "t2csat_nan.csv"])
+
 ######################################################
 
 println()
@@ -47,10 +50,10 @@ evalstart = DateTime(2025, 05, 14, 18, 00, 00)
 evalend   = DateTime(2025, 09, 17, 11, 00, 00)
 #evalend = evalstart + Day(10)
 
-evaldf1 = turb.readturbasnetcdf(joinpath(datapath, "2a_t1_irg_proc.nc"), evalstart, evalend)
-evaldf2 = turb.readturbasnetcdf(joinpath(datapath, "2a_t1_csat_proc.nc"), evalstart, evalend)
-evaldf3 = turb.readturbasnetcdf(joinpath(datapath, "2a_t2_irg_proc.nc"), evalstart, evalend)
-evaldf4 = turb.readturbasnetcdf(joinpath(datapath, "2a_t2_csat_proc.nc"), evalstart, evalend)
+evaldf1 = turb.readturbasnetcdf(joinpath(datapath, "2b_t1_irg_proc.nc"), evalstart, evalend)
+evaldf2 = turb.readturbasnetcdf(joinpath(datapath, "2b_t1_csat_proc.nc"), evalstart, evalend)
+evaldf3 = turb.readturbasnetcdf(joinpath(datapath, "2b_t2_irg_proc.nc"), evalstart, evalend)
+evaldf4 = turb.readturbasnetcdf(joinpath(datapath, "2b_t2_csat_proc.nc"), evalstart, evalend)
 #evaldf5 = turb.readturbasnetcdf(string(kaijo_outfile_stam, ".nc"), evalstart, evalend)
 #evaldf6 = turb.readturbasnetcdf(joinpath(tower_outfile_stam, "tjkdf.nc"), evalstart, evalend)
 
@@ -87,6 +90,20 @@ turb.drdf!(evaldf3, periodwise=false)
 turb.drdf!(evaldf4, periodwise=false)
 #turb.drdf!(evaldf5)
 #turb.drdf!(evaldf6, periodwise=false)
+
+#CONTRASTS: apply manual nan-mask
+manual_period_1 = turb.read_nantimes_csv(nanfiles[1]);
+manual_period_2 = turb.read_nantimes_csv(nanfiles[2]);
+manual_period_3 = turb.read_nantimes_csv(nanfiles[3]);
+manual_period_4 = turb.read_nantimes_csv(nanfiles[4]);
+isbad_quality_1 = turb.manual_nanmask(manual_period_1, evaldf1.time);
+isbad_quality_2 = turb.manual_nanmask(manual_period_2, evaldf2.time);
+isbad_quality_3 = turb.manual_nanmask(manual_period_3, evaldf3.time);
+isbad_quality_4 = turb.manual_nanmask(manual_period_4, evaldf4.time);
+evaldf1[isbad_quality_1, ["u", "v", "w", "T"]] .= NaN;
+evaldf2[isbad_quality_2, ["u", "v", "w", "T"]] .= NaN;
+evaldf3[isbad_quality_3, ["u", "v", "w", "T"]] .= NaN;
+evaldf4[isbad_quality_4, ["u", "v", "w", "T"]] .= NaN;
 
 #turb.saveturbasnetcdf(evaldf5, "/home/haugened/Documents/openfoam/duerr_les/scripts/src/kaijotmp.nc")
 

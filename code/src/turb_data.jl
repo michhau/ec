@@ -16,10 +16,10 @@ import FastRunningMedian
 
 include( "general.jl")
 import .gen
-export readperiodfile, nan2missing!, missing2nan!, loadt1raw, loadt2raw, loadkaijoraw,
+export readperiodfile, read_nantimes_csv, nan2missing!, missing2nan!, loadt1raw, loadt2raw, loadkaijoraw,
     createtimestamped3Dwind, csvtodataframe, saveturbasnetcdf, readturbasnetcdf,
     makecontinuous, findnearest, extendtofinertimeseries!, splitdaynight, simplewinddir, qualcontrolflags, qualcontrolflagCSAT3,
-    sonicqualcontrol, despiking, printmissstats, repositionnanmask!, drdf!, doublerotation,
+    sonicqualcontrol, despiking, printmissstats, repositionnanmask!, manual_nanmask, drdf!, doublerotation,
     detrend, parametersblocksplitting, blockevaluation, interpolatemissing, winddir,
     detectgaps, blockapply, OSHD_SHF, contflux, turbflux, turbfluxdrperperiod, avgflux, advect
 
@@ -40,6 +40,68 @@ function readperiodfile(file::String)::DataFrame
         comment=intercsv[:, 3])
     println("Done")
     return df
+end
+
+
+"""
+    read_datetime_csv(filename::String) -> Array{DateTime, 2}
+
+Read a CSV file with two DateTime columns separated by double commas.
+Each DateTime is in format yyyy,mm,dd,HH,MM,SS,ss where ss is centiseconds.
+
+# Arguments
+- `filename::String`: Path to the CSV file
+
+# Returns
+- `Array{DateTime, 2}`: A 2-column array with n rows, where n is the number of data rows
+"""
+function read_nantimes_csv(filename::String)
+    # Read all lines from the file
+    lines = readlines(filename)
+    
+    # Filter out empty lines
+    lines = filter(!isempty, lines)
+    
+    # Pre-allocate array for the two datetime columns
+    n_rows = length(lines)
+    result = Array{DateTime}(undef, n_rows, 2)
+    
+    # Process each line
+    for (i, line) in enumerate(lines)
+        # Split by double comma
+        parts = split(line, ",,")
+        
+        if length(parts) != 2
+            error("Line $i does not contain exactly one double comma separator")
+        end
+        
+        # Parse each datetime
+        for (j, part) in enumerate(parts)
+            # Split the datetime components
+            components = split(strip(part), ",")
+            
+            if length(components) != 7
+                error("Line $i, column $j does not have 7 datetime components")
+            end
+            
+            # Parse components
+            year = parse(Int, components[1])
+            month = parse(Int, components[2])
+            day = parse(Int, components[3])
+            hour = parse(Int, components[4])
+            minute = parse(Int, components[5])
+            second = parse(Int, components[6])
+            centisecond = parse(Int, components[7])
+            
+            # Convert centiseconds to milliseconds
+            millisecond = centisecond * 10
+            
+            # Create DateTime object
+            result[i, j] = DateTime(year, month, day, hour, minute, second, millisecond)
+        end
+    end
+    
+    return result
 end
 
 """
@@ -640,6 +702,41 @@ function repositionnanmask!(data::DataFrame; timetoreposition=Minute(45))
         end
     end
 end
+
+"""
+    manual_nanmask(interval_array::Array{DateTime, 2}, datetime_vec::Vector{DateTime}) -> Vector{Bool}
+
+Create a boolean mask for NaN (bad data) periods based on datetime intervals.
+
+# Arguments
+- `interval_array::Array{DateTime, 2}`: A 2-column array where each row defines an interval [a, b]
+- `datetime_vec::Vector{DateTime}`: Vector of datetime values to check against the intervals
+
+# Returns
+- `Vector{Bool}`: Boolean vector of same length as `datetime_vec`
+  - `true` (1) indicates NaN/bad data (datetime falls within at least one interval [a, b])
+  - `false` (0) indicates good data (datetime does not fall within any interval)
+
+# Description
+For each row in `interval_array` with values a (column 1) and b (column 2), all entries in the 
+output vector corresponding to datetimes in `datetime_vec` where a ≤ datetime ≤ b are set to 
+`true` (marked as NaN/bad data).
+"""
+function manual_nanmask(interval_array::Array{DateTime, 2}, datetime_vec::Vector{DateTime})::Vector{Bool}
+    # Initialize output vector with all false (all good data)
+    mask = falses(length(datetime_vec))
+
+    # Check if dt falls within any interval
+    for row in 1:size(interval_array, 1)
+        a = interval_array[row, 1]
+        b = interval_array[row, 2]
+        
+        mask[a .<= datetime_vec .<= b] .= true
+    end
+    
+    return mask
+end
+
 
 """
     drdf!(data::DataFrame; blockdur=Minute(30), periodwise=true, gapthresh=Minute(10))
@@ -1274,9 +1371,10 @@ end
 
 Average the turbulent fluxes in the DataFrame
 """
-function avgflux(data::DataFrame, peri::Period, nanmask::Bool=false, nan_threshold=0.3)::DataFrame
+function avgflux(data::DataFrame, peri::Period, nanmask::Bool=false, nan_threshold=0.3, median::Bool=false)::DataFrame
     ele = round(Int, Millisecond(peri) / Millisecond(50))
     fluxavg = similar(data)
+    fluxavg[:,2:end] .= NaN
     fluxavg.time = data.time
     
     if nanmask
@@ -1292,14 +1390,24 @@ function avgflux(data::DataFrame, peri::Period, nanmask::Bool=false, nan_thresho
             compute_quality_mask!(quality_mask, .!isnan.(data[:, iname]), half_window, leng, nan_threshold)
 
             # Calculate moving average
-            fluxavg[:, iname] = gen.movingaverage(data[:, iname], ele)
+            if median
+                atmp = FastRunningMedian.running_median(data[:, iname], ele, nan=:ignore)
+                fluxavg[1:length(atmp), iname] = atmp
+            else   
+                fluxavg[:, iname] = gen.movingaverage(data[:, iname], ele)
+            end
             
             # Set values to NaN where quality threshold is not met
             fluxavg[.!quality_mask, iname] .= NaN
         end
     else
         for iname in names(data)[2:end]
-            fluxavg[:, iname] = gen.movingaverage(data[:, iname], ele)
+            if median
+                atmp = FastRunningMedian.running_median(data[:, iname], ele, nan=:ignore)
+                fluxavg[1:length(atmp), iname] = atmp
+            else
+                fluxavg[:, iname] = gen.movingaverage(data[:, iname], ele)
+            end
         end
     end
     
