@@ -14,7 +14,7 @@ using Dates, PyCall, DataFrames, Statistics, LaTeXStrings, ProgressMeter, Distri
 import PyPlot, CSV
 pydates = pyimport("matplotlib.dates")
 
-datapath = "/home/haugened/Documents/data/CONTRASTS/EC_offline_preproc/"
+datapath = "/home/haugened/Documents/data/CONTRASTS/EC_offline_preproc/cut/"
 #datapath = "/home/michi/Documents/slf/CONTRASTS25/data/processed/preproc/"
 #tjkpath = "/home/haugened/Documents/data/tjk/tjk_data.csv"
 importdir = joinpath(@__DIR__, "..")
@@ -46,14 +46,14 @@ println("-----------S-T-A-R-T-------------")
 ###            LOADING & PREPROCESSING             ###
 ######################################################
 #select data and measurement period to be evaluated
-evalstart = DateTime(2025, 05, 14, 18, 00, 00)
-evalend   = DateTime(2025, 09, 17, 11, 00, 00)
+evalstart = DateTime(2024, 07, 01, 10, 15, 00)
+evalend   = DateTime(2026, 08, 31, 15, 10, 00)
 #evalend = evalstart + Day(10)
 
-evaldf1 = turb.readturbasnetcdf(joinpath(datapath, "2b_t1_irg_proc.nc"), evalstart, evalend)
-evaldf2 = turb.readturbasnetcdf(joinpath(datapath, "2b_t1_csat_proc.nc"), evalstart, evalend)
-evaldf3 = turb.readturbasnetcdf(joinpath(datapath, "2b_t2_irg_proc.nc"), evalstart, evalend)
-evaldf4 = turb.readturbasnetcdf(joinpath(datapath, "2b_t2_csat_proc.nc"), evalstart, evalend)
+evaldf1 = turb.readturbasnetcdf(joinpath(datapath, "3d_t1_irg_proc_cut.nc"), evalstart, evalend)
+evaldf2 = turb.readturbasnetcdf(joinpath(datapath, "3d_t1_csat_proc_cut.nc"), evalstart, evalend)
+evaldf3 = turb.readturbasnetcdf(joinpath(datapath, "3d_t2_irg_proc_cut.nc"), evalstart, evalend)
+evaldf4 = turb.readturbasnetcdf(joinpath(datapath, "3d_t2_csat_proc_cut.nc"), evalstart, evalend)
 #evaldf5 = turb.readturbasnetcdf(string(kaijo_outfile_stam, ".nc"), evalstart, evalend)
 #evaldf6 = turb.readturbasnetcdf(joinpath(tower_outfile_stam, "tjkdf.nc"), evalstart, evalend)
 
