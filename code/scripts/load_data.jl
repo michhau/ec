@@ -254,14 +254,14 @@ wd4 = turb.winddir(evaldf4);
 #block average
 block_length = Minute(1)
 (ws1_block_time, ws1_block) = gen.block_average(evaldf1.time, ws1, block_length)
-(ws1_block_time, ws2_block) = gen.block_average(evaldf2.time, ws2, block_length)
-(ws1_block_time, ws3_block) = gen.block_average(evaldf3.time, ws3, block_length)
-(ws1_block_time, ws4_block) = gen.block_average(evaldf4.time, ws4, block_length)
+(ws2_block_time, ws2_block) = gen.block_average(evaldf2.time, ws2, block_length)
+(ws3_block_time, ws3_block) = gen.block_average(evaldf3.time, ws3, block_length)
+(ws4_block_time, ws4_block) = gen.block_average(evaldf4.time, ws4, block_length)
 
 (wd1_block_time, wd1_block) = gen.block_average(wd1.time, wd1.α, block_length)
-(wd1_block_time, wd2_block) = gen.block_average(wd2.time, wd2.α, block_length)
-(wd1_block_time, wd3_block) = gen.block_average(wd3.time, wd3.α, block_length)
-(wd1_block_time, wd4_block) = gen.block_average(wd4.time, wd4.α, block_length)
+(wd2_block_time, wd2_block) = gen.block_average(wd2.time, wd2.α, block_length)
+(wd3_block_time, wd3_block) = gen.block_average(wd3.time, wd3.α, block_length)
+(wd4_block_time, wd4_block) = gen.block_average(wd4.time, wd4.α, block_length)
 
 #plot
 # Assuming you have your block-averaged data ready
