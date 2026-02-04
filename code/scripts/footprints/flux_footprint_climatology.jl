@@ -29,7 +29,7 @@ PyPlot.pygui(true)
 
 #variables
 names = [:evaldf1, :evaldf2, :evaldf3, :evaldf4]#, :evaldf5, :evaldf6]
-meas_heights = [1.1, 2.1, 1.25, 2.25]#, 0.3, 5]
+meas_heights = [1.15, 2.2, 1.3, 2.1]#, 0.3, 5]
 pbl_height = 1000.0
 fluxes = [:fx1, :fx2, :fx3, :fx4]#, :fx5, :fx6]
 #Ls = [:L1, :L2, :L3, :L4]#, :L5, :L6]
@@ -82,7 +82,7 @@ for ix in 1:size(names, 1)
         sigmav[j] = std(filter(!isnan, ecdata.v[six:eix]))
         ustar[j] = mean(filter(!isnan, fluxdata.u_star[six:eix]))
         wind_dir[j] = mean(filter(!isnan, wd_tmp[ecdata.time[six] .<= wd_tmp.time .< ecdata.time[eix], :α]))
-        wind_dir[j] = (wind_dir[j]+300)%360
+        wind_dir[j] = (wind_dir[j]+(360-132))%360
     end
 
     output = py"FFP_climatology"(meas_heights[ix], nothing, PyVector(umean), PyVector(h), PyVector(ol),
@@ -101,23 +101,23 @@ end
 ###############################################
 #plotting the footprint on the ortho-mosaic
 
-fileorthomosaic = "/home/haugened/Documents/data/CONTRASTS/pics/setups/2a/karte 140725_cut.jpg"
+fileorthomosaic = "/home/haugened/Documents/data/CONTRASTS/pics/setups/1a/karte 11072025_cut.jpg"
 orthomosaic = mpimg.imread(fileorthomosaic)
 #PyPlot.imshow(orthomosaic)
 #location of flux measurements 1-6 in original image
 #[row-location, col-location]
-fluxloc = [1806 1821; 1806 1821; 1666 1585; 1666 1585]#; 1416 1387; 940 1474]
+fluxloc = [1024 1050; 1024 1050; 879 1222; 879 1222]#; 1416 1387; 940 1474]
 
 #extend of background [row, col]
-bgextend_m = [214.8, 218.7] #in m from measuring in GIS: 279.9
-bgextend_pxl = [3942, 4487] #[size(orthomosaic, 1), size(orthomosaic, 2)] #in pxl
+bgextend_m = [97.7, 133.5] #in m from measuring in GIS: 279.9
+bgextend_pxl = [1643, 2145] #[size(orthomosaic, 1), size(orthomosaic, 2)] #in pxl
 
 #calculate m/pxl from it
 meterperpxl_row = bgextend_m[1] / bgextend_pxl[1]
 meterperpxl_col = bgextend_m[2] / bgextend_pxl[2]
 
 #origin of figure
-figorigin = [1666 1585] #tower 2
+figorigin = [1024 1050] #tower 2
 
 #calculate fluxloc in new coordinates [m]
 fluxloc_final = Array{Float64}(undef, size(fluxloc, 1), size(fluxloc, 2))
@@ -149,9 +149,9 @@ locfx3 = ax1.plot(fluxloc_final[3, 2], fluxloc_final[3, 1], ".", color=ctab10(2)
 #locfx5 = ax1.plot(fluxloc_final[5, 2], fluxloc_final[5, 1], ".", color=ctab10(4))#, label="Kaijo")
 #locfx6 = ax1.plot(fluxloc_final[6, 2], fluxloc_final[6, 1], ".", color=ctab10(5))#, label="TJK")
 fp1 = ax1.plot(ffp1["xr"][end-1] .+ fluxloc_final[1, 2], ffp1["yr"][end-1] .+ fluxloc_final[1, 1], color=ctab10(0), label = "T1IRG")
-fp2 = ax1.plot(ffp2["xr"][end-1] .+ fluxloc_final[2, 2], ffp2["yr"][end-1] .+ fluxloc_final[2, 1], color=ctab10(1), label = "T1CSAT")
+#fp2 = ax1.plot(ffp2["xr"][end-1] .+ fluxloc_final[2, 2], ffp2["yr"][end-1] .+ fluxloc_final[2, 1], color=ctab10(1), label = "T1CSAT")
 fp3 = ax1.plot(ffp3["xr"][end-1] .+ fluxloc_final[3, 2], ffp3["yr"][end-1] .+ fluxloc_final[3, 1], color=ctab10(2), label = "T2IRG")
-fp4 = ax1.plot(ffp4["xr"][end-1] .+ fluxloc_final[4, 2], ffp4["yr"][end-1] .+ fluxloc_final[4, 1], color=ctab10(3), label = "T2CSAT")
+#fp4 = ax1.plot(ffp4["xr"][end-1] .+ fluxloc_final[4, 2], ffp4["yr"][end-1] .+ fluxloc_final[4, 1], color=ctab10(3), label = "T2CSAT")
 #fp5 = ax1.plot(ffp5["xr"][:, end-1] .+ fluxloc_final[5, 2], ffp5["yr"][:, end-1] .+ fluxloc_final[5, 1], color=ctab10(4), label = "Kaijo")
 #fp6 = ax1.plot(ffp6["xr"][end-2] .+ fluxloc_final[6, 2], ffp6["yr"][end-2] .+ fluxloc_final[6, 1], color=ctab10(5), label = "TJK")
 ax1.legend()
