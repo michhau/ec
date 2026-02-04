@@ -10,7 +10,7 @@ module gen
 
 using CSV, DataFrames, Dates, StatsBase
 
-export movingaverage, backlookingmovavg, getinstrumentheights
+export movingaverage, backlookingmovavg, getinstrumentheights, block_average
 
 """
     movingaverage(X::Vector, numofele::Integer)
@@ -158,5 +158,58 @@ function backlookingmovavg(X::Vector, numofele::Integer)::Vector
         end
     end
     return Y
+end
+
+"""
+    block_average(time::Vector{DateTime}, data::Vector{<:Real}, blockdur::Period)
+
+Compute block averages of `data` over intervals of duration `blockdur`.
+
+# Arguments
+- `time`: Vector of DateTime timestamps
+- `data`: Vector of numeric data (NaN values are ignored in averaging)
+- `blockdur`: Duration of each averaging block (e.g., `Minute(30)`, `Hour(1)`)
+
+# Returns
+- `time_out`: Vector of DateTimes at the center of each block
+- `data_out`: Vector of block-averaged values (NaN if block contains only NaNs)
+"""
+function block_average(time::Vector{DateTime}, data::Vector{<:Real}, blockdur::Period)
+    
+    isempty(time) && return DateTime[], Float64[]
+    
+    t_start = first(time)
+    t_end = last(time)
+    
+    # Build block edges
+    edges = DateTime[]
+    t = t_start
+    while t <= t_end
+        push!(edges, t)
+        t += blockdur
+    end
+    push!(edges, t)  # Final edge to capture last block
+    
+    n_blocks = length(edges) - 1
+    time_out = Vector{DateTime}(undef, n_blocks)
+    data_out = Vector{Float64}(undef, n_blocks)
+    
+    for i in 1:n_blocks
+        t0, t1 = edges[i], edges[i+1]
+        
+        # Find indices within this block: t0 <= time < t1
+        block_data = data[t0 .<= time .< t1]
+        
+        # Filter out NaNs
+        valid = filter(!isnan, block_data)
+        
+        # Compute mean or NaN
+        data_out[i] = isempty(valid) ? NaN : mean(valid)
+        
+        # Block center time
+        time_out[i] = t0 + blockdur ÷ 2
+    end
+    
+    return time_out, data_out
 end
 end #module
