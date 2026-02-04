@@ -47,13 +47,13 @@ println("-----------S-T-A-R-T-------------")
 ######################################################
 #select data and measurement period to be evaluated
 evalstart = DateTime(2024, 07, 01, 10, 15, 00)
-evalend   = DateTime(2026, 08, 31, 15, 10, 00)
+evalend   = DateTime(2027, 07, 10, 16, 00, 00)
 #evalend = evalstart + Day(10)
 
-evaldf1 = turb.readturbasnetcdf(joinpath(datapath, "3d_t1_irg_proc_cut.nc"), evalstart, evalend)
-evaldf2 = turb.readturbasnetcdf(joinpath(datapath, "3d_t1_csat_proc_cut.nc"), evalstart, evalend)
-evaldf3 = turb.readturbasnetcdf(joinpath(datapath, "3d_t2_irg_proc_cut.nc"), evalstart, evalend)
-evaldf4 = turb.readturbasnetcdf(joinpath(datapath, "3d_t2_csat_proc_cut.nc"), evalstart, evalend)
+evaldf1 = turb.readturbasnetcdf(joinpath(datapath, "2a_t1_irg_proc_cut.nc"), evalstart, evalend)
+evaldf2 = turb.readturbasnetcdf(joinpath(datapath, "2a_t1_csat_proc_cut.nc"), evalstart, evalend)
+evaldf3 = turb.readturbasnetcdf(joinpath(datapath, "2a_t2_irg_proc_cut.nc"), evalstart, evalend)
+evaldf4 = turb.readturbasnetcdf(joinpath(datapath, "2a_t2_csat_proc_cut.nc"), evalstart, evalend)
 #evaldf5 = turb.readturbasnetcdf(string(kaijo_outfile_stam, ".nc"), evalstart, evalend)
 #evaldf6 = turb.readturbasnetcdf(joinpath(tower_outfile_stam, "tjkdf.nc"), evalstart, evalend)
 
@@ -82,6 +82,11 @@ evaldf4 = turb.interpolatemissing(evaldf4);
 #    @warn("Kaijo DataFrame empty")
 #end
 #evaldf6 = turb.interpolatemissing(evaldf6)
+
+wd1 = turb.winddir(evaldf1)
+wd2 = turb.winddir(evaldf2)
+wd3 = turb.winddir(evaldf3)
+wd4 = turb.winddir(evaldf4)
 
 #double rotation
 turb.drdf!(evaldf1, periodwise=false)
@@ -124,6 +129,7 @@ evaldf4[isbad_quality_4, ["u", "v", "w", "T"]] .= NaN;
 ######################################################
 ###                   PLOTTING                     ###
 ######################################################
+#=
 ##
 #plot u,v,w,T components to visually inspect data
 evaldf = evaldf1
@@ -154,6 +160,120 @@ ax4.grid(true)
 # Adjust layout to prevent overlapping
 fig.tight_layout()
 ##
+=#
+#######################################################
+#plot wind roses for CONTRASTS
+
+windrose = pyimport("windrose")
+np = pyimport("numpy")
+
+
+"""
+    plot_windrose_panel(wd1, ws1, wd2, ws2, wd3, ws3, wd4, ws4; 
+                        bins=nothing, cmap=nothing, figsize=(10, 10))
+
+Create a 2x2 panel of wind roses.
+
+Layout:
+    [upper left: tower 1 CSAT]  [upper right: tower 2 CSAT]
+    [lower left: tower 1 IRG]   [lower right: tower 2 IRG]
+
+# Arguments
+- `wd1, ws1`: Wind direction/speed for tower 1 IRG (lower left)
+- `wd2, ws2`: Wind direction/speed for tower 1 CSAT (upper left)
+- `wd3, ws3`: Wind direction/speed for tower 2 IRG (lower right)
+- `wd4, ws4`: Wind direction/speed for tower 2 CSAT (upper right)
+- `bins`: Wind speed bins (default: automatic)
+- `cmap`: Colormap (default: "viridis")
+- `figsize`: Figure size tuple
+
+# Returns
+- `fig`: Matplotlib figure object
+"""
+function plot_windrose_panel(wd1, ws1, wd2, ws2, wd3, ws3, wd4, ws4;
+                             bins=nothing, cmap=nothing, figsize=(10, 10))
+    
+    # Set defaults
+    isnothing(cmap) && (cmap = PyPlot.cm.viridis)
+    
+    # Data and labels for each panel: (row, col, wd, ws, title)
+    panels = [
+        (1, 1, wd2, ws2, "tower 1 CSAT"),  # upper left
+        (1, 2, wd4, ws4, "tower 2 CSAT"),  # upper right
+        (2, 1, wd1, ws1, "tower 1 IRG"),   # lower left
+        (2, 2, wd3, ws3, "tower 2 IRG"),   # lower right
+    ]
+    
+    fig = PyPlot.figure(figsize=figsize)
+    
+    for (row, col, wd, ws, title) in panels
+        # Calculate subplot index (1-based, row-major)
+        idx = (row - 1) * 2 + col
+        
+        # Filter out NaN values
+        valid_mask = .!isnan.(wd) .& .!isnan.(ws)
+        wd_clean = np.array(wd[valid_mask])
+        ws_clean = np.array(ws[valid_mask])
+        
+        # Create WindroseAxes
+        ax = fig.add_subplot(2, 2, idx, projection="windrose")
+        
+        # Plot stacked histogram with percentage normalization
+        if isnothing(bins)
+            ax.bar(wd_clean, ws_clean, normed=true, opening=0.8, edgecolor="white", cmap=cmap)
+        else
+            ax.bar(wd_clean, ws_clean, normed=true, opening=0.8, edgecolor="white", 
+                   bins=bins, cmap=cmap)
+        end
+        
+        ax.set_title(title, fontweight="bold")
+        ax.set_legend(loc="lower right", fontsize=8)
+    end
+
+    fig.suptitle("Station 3d", fontsize=14, fontweight="bold")
+    PyPlot.tight_layout()
+    
+    return fig
+end
+
+##
+@info("No double rotation before wind rose plot!")
+
+#calculate wind speeds
+ws1 = sqrt.(evaldf1.u .^2 + evaldf1.v .^2 + evaldf1.w .^2);
+ws2 = sqrt.(evaldf2.u .^2 + evaldf2.v .^2 + evaldf2.w .^2);
+ws3 = sqrt.(evaldf3.u .^2 + evaldf3.v .^2 + evaldf3.w .^2);
+ws4 = sqrt.(evaldf4.u .^2 + evaldf4.v .^2 + evaldf4.w .^2);
+
+#wind directions
+wd1 = turb.winddir(evaldf1);
+wd2 = turb.winddir(evaldf2);
+wd3 = turb.winddir(evaldf3);
+wd4 = turb.winddir(evaldf4);
+
+#block average
+block_length = Minute(1)
+(ws1_block_time, ws1_block) = gen.block_average(evaldf1.time, ws1, block_length)
+(ws1_block_time, ws2_block) = gen.block_average(evaldf2.time, ws2, block_length)
+(ws1_block_time, ws3_block) = gen.block_average(evaldf3.time, ws3, block_length)
+(ws1_block_time, ws4_block) = gen.block_average(evaldf4.time, ws4, block_length)
+
+(wd1_block_time, wd1_block) = gen.block_average(wd1.time, wd1.α, block_length)
+(wd1_block_time, wd2_block) = gen.block_average(wd2.time, wd2.α, block_length)
+(wd1_block_time, wd3_block) = gen.block_average(wd3.time, wd3.α, block_length)
+(wd1_block_time, wd4_block) = gen.block_average(wd4.time, wd4.α, block_length)
+
+#plot
+# Assuming you have your block-averaged data ready
+fig = plot_windrose_panel(wd1_block, ws1_block, wd2_block, ws2_block, wd3_block, ws3_block, wd4_block, ws4_block;
+                          bins=collect(0:2:10),  # optional custom bins
+                          figsize=(12, 10))
+
+output_folder = "/home/haugened/Documents/data/CONTRASTS/plots/wind_roses"
+PyPlot.savefig(joinpath(output_folder, "3d.pdf"), bbox_inches="tight")
+
+##
+#######################################################
 #=
 #######################################################
 #plot histograms to determine outliers
