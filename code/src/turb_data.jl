@@ -462,14 +462,8 @@ function winddir(datain::DataFrame)::DataFrame
     alpha = zeros(Float64, size(datain, 1))
     for idx in 1:size(datain, 1)
         if !(ismissing(datain.u[idx]) || ismissing(datain.v[idx]))
-            abshorwind = sqrt(datain.u[idx]^2 + datain.v[idx]^2)
-            beta1 = rad2deg(acos(datain.u[idx] / abshorwind))
-            beta2 = rad2deg(asin(datain.v[idx] / abshorwind))
-            if beta2 < 0
-                alpha[idx] = 360 - beta1
-            else
-                alpha[idx] = beta1
-            end
+            # atan(-v, u) gives angle from positive u-axis, clockwise
+            alpha[idx] = mod(rad2deg(atan(-datain.v[idx], datain.u[idx])), 360)
         else
             alpha[idx] = NaN
         end
