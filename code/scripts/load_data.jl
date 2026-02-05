@@ -47,13 +47,13 @@ println("-----------S-T-A-R-T-------------")
 ######################################################
 #select data and measurement period to be evaluated
 evalstart = DateTime(2024, 07, 01, 10, 15, 00)
-evalend   = DateTime(2027, 07, 10, 16, 00, 00)
+evalend   = DateTime(2025, 07, 10, 16, 00, 00)
 #evalend = evalstart + Day(10)
 
-evaldf1 = turb.readturbasnetcdf(joinpath(datapath, "2a_t1_irg_proc_cut.nc"), evalstart, evalend)
-evaldf2 = turb.readturbasnetcdf(joinpath(datapath, "2a_t1_csat_proc_cut.nc"), evalstart, evalend)
-evaldf3 = turb.readturbasnetcdf(joinpath(datapath, "2a_t2_irg_proc_cut.nc"), evalstart, evalend)
-evaldf4 = turb.readturbasnetcdf(joinpath(datapath, "2a_t2_csat_proc_cut.nc"), evalstart, evalend)
+evaldf1 = turb.readturbasnetcdf(joinpath(datapath, "1a_t1_irg_proc_cut.nc"), evalstart, evalend)
+evaldf2 = turb.readturbasnetcdf(joinpath(datapath, "1a_t1_csat_proc_cut.nc"), evalstart, evalend)
+evaldf3 = turb.readturbasnetcdf(joinpath(datapath, "1a_t2_irg_proc_cut.nc"), evalstart, evalend)
+evaldf4 = turb.readturbasnetcdf(joinpath(datapath, "1a_t2_csat_proc_cut.nc"), evalstart, evalend)
 #evaldf5 = turb.readturbasnetcdf(string(kaijo_outfile_stam, ".nc"), evalstart, evalend)
 #evaldf6 = turb.readturbasnetcdf(joinpath(tower_outfile_stam, "tjkdf.nc"), evalstart, evalend)
 
