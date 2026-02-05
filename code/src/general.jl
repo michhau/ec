@@ -10,7 +10,8 @@ module gen
 
 using CSV, DataFrames, Dates, StatsBase
 
-export movingaverage, backlookingmovavg, getinstrumentheights, block_average
+export movingaverage, backlookingmovavg, getinstrumentheights, block_average,
+block_stats
 
 """
     movingaverage(X::Vector, numofele::Integer)
@@ -211,5 +212,74 @@ function block_average(time::Vector{DateTime}, data::Vector{<:Real}, blockdur::P
     end
     
     return time_out, data_out
+end
+
+"""
+    block_stats(time::Vector{DateTime}, data::Vector{<:Real}, blockdur::Period; 
+                percentiles=(5, 95))
+
+Compute block statistics (mean and percentiles) for a time series.
+Structure follows gen.block_average for consistency.
+
+# Arguments
+- `time`: Vector of DateTime values
+- `data`: Vector of data values
+- `blockdur`: Period for block averaging (e.g., Minute(10))
+- `percentiles`: Tuple of lower and upper percentiles (default: (5, 95))
+
+# Returns
+- `time_out`: Center times of each block
+- `mean_out`: Mean values per block
+- `lower_out`: Lower percentile values per block
+- `upper_out`: Upper percentile values per block
+"""
+function block_stats(time::Vector{DateTime}, data::Vector{<:Real}, blockdur::Period; 
+                     percentiles=(5, 95))
+    
+    isempty(time) && return DateTime[], Float64[], Float64[], Float64[]
+    
+    t_start = first(time)
+    t_end = last(time)
+    
+    # Build block edges
+    edges = DateTime[]
+    t = t_start
+    while t <= t_end
+        push!(edges, t)
+        t += blockdur
+    end
+    push!(edges, t)  # Final edge to capture last block
+    
+    n_blocks = length(edges) - 1
+    time_out = Vector{DateTime}(undef, n_blocks)
+    mean_out = Vector{Float64}(undef, n_blocks)
+    lower_out = Vector{Float64}(undef, n_blocks)
+    upper_out = Vector{Float64}(undef, n_blocks)
+    
+    for i in 1:n_blocks
+        t0, t1 = edges[i], edges[i+1]
+        
+        # Find indices within this block: t0 <= time < t1
+        block_data = data[t0 .<= time .< t1]
+        
+        # Filter out NaNs
+        valid = filter(!isnan, block_data)
+        
+        # Compute stats or NaN
+        if isempty(valid)
+            mean_out[i] = NaN
+            lower_out[i] = NaN
+            upper_out[i] = NaN
+        else
+            mean_out[i] = mean(valid)
+            lower_out[i] = percentile(valid, percentiles[1])
+            upper_out[i] = percentile(valid, percentiles[2])
+        end
+        
+        # Block center time
+        time_out[i] = t0 + blockdur ÷ 2
+    end
+    
+    return time_out, mean_out, lower_out, upper_out
 end
 end #module
