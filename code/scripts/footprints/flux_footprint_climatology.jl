@@ -29,7 +29,7 @@ PyPlot.pygui(true)
 
 #variables
 names = [:evaldf1, :evaldf2, :evaldf3, :evaldf4]#, :evaldf5, :evaldf6]
-meas_heights = [1.15, 2.2, 1.3, 2.1]#, 0.3, 5]
+meas_heights = [0.9, 2.0, 1.1, 2.0]#, 0.3, 5]
 pbl_height = 1000.0
 fluxes = [:fx1, :fx2, :fx3, :fx4]#, :fx5, :fx6]
 #Ls = [:L1, :L2, :L3, :L4]#, :L5, :L6]
@@ -82,7 +82,7 @@ for ix in 1:size(names, 1)
         sigmav[j] = std(filter(!isnan, ecdata.v[six:eix]))
         ustar[j] = mean(filter(!isnan, fluxdata.u_star[six:eix]))
         wind_dir[j] = mean(filter(!isnan, wd_tmp[ecdata.time[six] .<= wd_tmp.time .< ecdata.time[eix], :α]))
-        wind_dir[j] = (wind_dir[j]+(360-132))%360
+        wind_dir[j] = (wind_dir[j]+(74))%360
     end
 
     output = py"FFP_climatology"(meas_heights[ix], nothing, PyVector(umean), PyVector(h), PyVector(ol),
@@ -101,23 +101,23 @@ end
 ###############################################
 #plotting the footprint on the ortho-mosaic
 
-fileorthomosaic = "/home/haugened/Documents/data/CONTRASTS/pics/setups/1a/karte 11072025_cut.jpg"
+fileorthomosaic = "/home/haugened/Documents/data/CONTRASTS/pics/setups/3a/karte 220725_cut.jpg"
 orthomosaic = mpimg.imread(fileorthomosaic)
 #PyPlot.imshow(orthomosaic)
 #location of flux measurements 1-6 in original image
 #[row-location, col-location]
-fluxloc = [1024 1050; 1024 1050; 879 1222; 879 1222]#; 1416 1387; 940 1474]
+fluxloc = [1345 2286; 1345 2286; 1222 2538; 1222 2538]#; 1416 1387; 940 1474]
 
 #extend of background [row, col]
-bgextend_m = [97.7, 133.5] #in m from measuring in GIS: 279.9
-bgextend_pxl = [1643, 2145] #[size(orthomosaic, 1), size(orthomosaic, 2)] #in pxl
+bgextend_m = [257.5, 218.5] #in m from measuring in GIS: 279.9
+bgextend_pxl = [3834, 3284] #[size(orthomosaic, 1), size(orthomosaic, 2)] #in pxl
 
 #calculate m/pxl from it
 meterperpxl_row = bgextend_m[1] / bgextend_pxl[1]
 meterperpxl_col = bgextend_m[2] / bgextend_pxl[2]
 
 #origin of figure
-figorigin = [1024 1050] #tower 2
+figorigin = [1345 2286] #tower 2
 
 #calculate fluxloc in new coordinates [m]
 fluxloc_final = Array{Float64}(undef, size(fluxloc, 1), size(fluxloc, 2))
