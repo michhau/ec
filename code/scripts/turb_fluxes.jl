@@ -1353,39 +1353,39 @@ ax.grid()
 #Scatter plot fluxes CONTRASTS
 mpl_scatter_density = pyimport("mpl_scatter_density")
 
-scatter1a = fx1.wT[.!isnan.(fx1.wT) .&& .!isnan.(fx3.wT)]
-scatter1b = fx3.wT[.!isnan.(fx1.wT) .&& .!isnan.(fx3.wT)]
+scatter1b = fx1.wT[.!isnan.(fx1.wT) .&& .!isnan.(fx3.wT)]
+scatter1a = fx3.wT[.!isnan.(fx1.wT) .&& .!isnan.(fx3.wT)]
 
 scatter1a .*= ρ_air .* c_p
 scatter1b .*= ρ_air .* c_p
 
-scatter2a = fx1.wq[.!isnan.(fx1.wq) .&& .!isnan.(fx3.wq)]
-scatter2b = fx3.wq[.!isnan.(fx1.wq) .&& .!isnan.(fx3.wq)]
+scatter2b = fx1.wq[.!isnan.(fx1.wq) .&& .!isnan.(fx3.wq)]
+scatter2a = fx3.wq[.!isnan.(fx1.wq) .&& .!isnan.(fx3.wq)]
 
 scatter2a .*= L_v .* 1e-3
 scatter2b .*= L_v .* 1e-3
 
-scatter3a = fx2.wT[.!isnan.(fx2.wT) .&& .!isnan.(fx4.wT)]
-scatter3b = fx4.wT[.!isnan.(fx2.wT) .&& .!isnan.(fx4.wT)]
+scatter3b = fx2.wT[.!isnan.(fx2.wT) .&& .!isnan.(fx4.wT)]
+scatter3a = fx4.wT[.!isnan.(fx2.wT) .&& .!isnan.(fx4.wT)]
 
 scatter3a .*= ρ_air .* c_p
 scatter3b .*= ρ_air .* c_p
 
 ##
 fig = PyPlot.figure(figsize=(12,4.5))
-fig.suptitle("3a across ridge - 20.07.2025 to 22.07.2025")
+fig.suptitle("1b position 1 pond - 25.07.2025 to 27.07.2025")
 gs = gridspec.GridSpec(1, 3)
 ax1 = fig.add_subplot(gs[1, 1], projection="scatter_density")
 ax1.set_title("1m Sensible Heat Fluxes")
 ax1.axhline(0, color="grey", alpha=0.6)
 ax1.axvline(0, color="grey", alpha=0.6)
 ax1.plot([-25,25], [-25,25], color="grey", alpha=0.3)
-ax1.scatter_density(scatter1a, scatter1b, color="black", vmin=00, vmax=1500)
-ax1.set_xlim(-25,10)
-ax1.set_ylim(-5,15)
-#ax1.set_yticks(collect(-20:10:20))
-ax1.set_xlabel(L"\overline{w'T'}_{floe~side}~\mathrm{[W~m^{-2}]}")
-ax1.set_ylabel(L"\overline{w'T'}_{lead~side}~\mathrm{[W~m^{-2}]}")
+ax1.scatter_density(scatter1a, scatter1b, color="black", vmin=00, vmax=2000)
+ax1.set_xlim(0, 10)
+ax1.set_ylim(-5,10)
+#ax1.set_yticks(collect(-10:5:10))
+ax1.set_xlabel(L"\overline{w'T'}_{ice}~\mathrm{[W~m^{-2}]}")
+ax1.set_ylabel(L"\overline{w'T'}_{pond}~\mathrm{[W~m^{-2}]}")
 ax1.grid()
 ax1.set_aspect("equal")
 ax2 = fig.add_subplot(gs[1, 2], projection="scatter_density")
@@ -1393,25 +1393,25 @@ ax2.set_title("1m Latent Heat Fluxes")
 ax2.axhline(0, color="grey")
 ax2.axvline(0, color="grey")
 ax2.plot([-25,25], [-25,25], color="grey", alpha=0.3)
-ax2.scatter_density(scatter2a, scatter2b, color="blue", vmin=0, vmax=1500)
-ax2.set_xlim(-5,5)
-ax2.set_ylim(-5,5)
+ax2.scatter_density(scatter2a, scatter2b, color="blue", vmin=0, vmax=2000)
+ax2.set_xlim(0,7)
+ax2.set_ylim(0,7)
 #ax2.set_yticks(collect(-10:5:10))
-ax2.set_xlabel(L"\overline{w'q'}_{floe~side}~\mathrm{[W~m^{-2}]}")
-ax2.set_ylabel(L"\overline{w'q'}_{lead~side}~\mathrm{[W~m^{-2}]}")
+ax2.set_xlabel(L"\overline{w'q'}_{ice}~\mathrm{[W~m^{-2}]}")
+ax2.set_ylabel(L"\overline{w'q'}_{pond}~\mathrm{[W~m^{-2}]}")
 ax2.grid()
 ax2.set_aspect("equal")
 ax3 = fig.add_subplot(gs[1, 3], projection="scatter_density")
 ax3.plot([-25,30], [-25,30], color="grey", alpha=0.3)
-ax3.scatter_density(scatter3a, scatter3b, color="black", vmin=0, vmax=1500)
+ax3.scatter_density(scatter3a, scatter3b, color="black", vmin=0, vmax=2000)
 ax3.set_title("2m Sensible Heat Fluxes")
 ax3.axhline(0, color="grey")
 ax3.axvline(0, color="grey")
-ax3.set_xlim(-10,15)
-ax3.set_ylim(-5,10)
-ax3.set_yticks(collect(-5:5:10))
-ax3.set_xlabel(L"\overline{w'T'}_{floe~side}~\mathrm{[W~m^{-2}]}")
-ax3.set_ylabel(L"\overline{w'T'}_{lead~side}~\mathrm{[W~m^{-2}]}")
+ax3.set_xlim(-10,10)
+ax3.set_ylim(-10,10)
+#ax3.set_yticks(collect(-5:5:10))
+ax3.set_xlabel(L"\overline{w'T'}_{ice}~\mathrm{[W~m^{-2}]}")
+ax3.set_ylabel(L"\overline{w'T'}_{pond}~\mathrm{[W~m^{-2}]}")
 ax3.grid()
 ax3.set_aspect("equal")
 PyPlot.tight_layout()
