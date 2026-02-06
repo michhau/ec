@@ -274,7 +274,7 @@ PyPlot.savefig(joinpath(output_folder, "3d.pdf"), bbox_inches="tight")
 ##
 #########################################################
 ##
-block_length = Minute(1)
+block_length = Minute(10)
 percentiles = (5, 95) #for max/min shading
 
 # Calculate wind speeds
@@ -300,7 +300,9 @@ h2o1_time, h2o1_mean, h2o1_lo, h2o1_hi = gen.block_stats(evaldf1.time, evaldf1.h
 h2o3_time, h2o3_mean, h2o3_lo, h2o3_hi = gen.block_stats(evaldf3.time, evaldf3.h2o, block_length; percentiles=percentiles)
 
 # Block average wind direction (CSAT sensors only)
+wd1_time, wd1_avg = gen.block_average(wd1.time, wd1.α, block_length)
 wd2_time, wd2_avg = gen.block_average(wd2.time, wd2.α, block_length)
+wd3_time, wd3_avg = gen.block_average(wd3.time, wd3.α, block_length)
 wd4_time, wd4_avg = gen.block_average(wd4.time, wd4.α, block_length)
 
 # Create figure with 5x2 subplots
