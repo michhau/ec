@@ -81,7 +81,8 @@ for ix in 1:size(names, 1)
         ol[j] = mean(filter(!isnan, obukl[six:eix]))
         sigmav[j] = std(filter(!isnan, ecdata.v[six:eix]))
         ustar[j] = mean(filter(!isnan, fluxdata.u_star[six:eix]))
-        wind_dir[j] = mean(filter(!isnan, wd_tmp[ecdata.time[six] .<= wd_tmp.time .< ecdata.time[eix], :α]))
+        wind_dir_raw = filter(!isnan, wd_tmp[ecdata.time[six] .<= wd_tmp.time .< ecdata.time[eix], :α])
+        wind_dir[j] = turb.mean_winddir(wind_dir_raw)
         wind_dir[j] = (wind_dir[j]+(74))%360
     end
 

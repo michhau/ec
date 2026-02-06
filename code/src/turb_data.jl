@@ -20,7 +20,7 @@ export readperiodfile, read_nantimes_csv, nan2missing!, missing2nan!, loadt1raw,
     createtimestamped3Dwind, csvtodataframe, saveturbasnetcdf, readturbasnetcdf,
     makecontinuous, findnearest, extendtofinertimeseries!, splitdaynight, simplewinddir, qualcontrolflags, qualcontrolflagCSAT3,
     sonicqualcontrol, despiking, printmissstats, repositionnanmask!, manual_nanmask, drdf!, doublerotation,
-    detrend, parametersblocksplitting, blockevaluation, interpolatemissing, winddir,
+    detrend, parametersblocksplitting, blockevaluation, interpolatemissing, winddir, mean_winddir,
     detectgaps, blockapply, OSHD_SHF, contflux, turbflux, turbfluxdrperperiod, avgflux, advect
 
 ######################################################
@@ -469,6 +469,33 @@ function winddir(datain::DataFrame)::DataFrame
         end
     end
     return DataFrame(time=datain.time, α=alpha)
+end
+
+"""
+    mean_winddir(α::Vector{<:Real})
+
+Compute the circular (spherical) mean of wind directions.
+
+# Arguments
+- `α`: Vector of wind directions in degrees [0, 360)
+
+# Returns
+- Mean wind direction in degrees [0, 360)
+"""
+function mean_winddir(α::Vector{<:Real})
+    # Filter out NaNs
+    α_valid = filter(!isnan, α)
+    isempty(α_valid) && return NaN
+    
+    # Convert to radians
+    α_rad = deg2rad.(α_valid)
+    
+    # Average unit vector components
+    u_mean = mean(sin.(α_rad))  # east component
+    v_mean = mean(cos.(α_rad))  # north component
+    
+    # Convert back to angle
+    return mod(rad2deg(atan(u_mean, v_mean)), 360)
 end
 
 """
