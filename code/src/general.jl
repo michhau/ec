@@ -11,7 +11,7 @@ module gen
 using CSV, DataFrames, Dates, StatsBase
 
 export movingaverage, backlookingmovavg, getinstrumentheights, block_average,
-block_stats
+block_stats, block_average_winddir
 
 """
     movingaverage(X::Vector, numofele::Integer)
@@ -281,5 +281,23 @@ function block_stats(time::Vector{DateTime}, data::Vector{<:Real}, blockdur::Per
     end
     
     return time_out, mean_out, lower_out, upper_out
+end
+
+function block_average_winddir(time::Vector{DateTime}, α::Vector{<:Real}, blockdur::Period)
+    # Convert degrees to radians
+    α_rad = deg2rad.(α)
+    
+    # Decompose into unit vector components
+    u = sin.(α_rad)  # east component
+    v = cos.(α_rad)  # north component
+    
+    # Average the components
+    time_out, u_avg = gen.block_average(time, u, blockdur)
+    _, v_avg = gen.block_average(time, v, blockdur)
+    
+    # Convert back to angle (atan2 handles quadrants correctly)
+    α_avg = mod.(rad2deg.(atan.(u_avg, v_avg)), 360)
+    
+    return time_out, α_avg
 end
 end #module
