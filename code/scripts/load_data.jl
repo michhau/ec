@@ -46,8 +46,8 @@ println("-----------S-T-A-R-T-------------")
 ###            LOADING & PREPROCESSING             ###
 ######################################################
 #select data and measurement period to be evaluated
-evalstart = DateTime(2024, 07, 01, 10, 15, 00)
-evalend   = DateTime(2025, 07, 27, 09, 10, 00)
+evalstart = DateTime(2025, 07, 27, 10, 10, 00)
+evalend   = DateTime(2027, 07, 27, 09, 10, 00)
 #evalend = evalstart + Day(10)
 
 evaldf1 = turb.readturbasnetcdf(joinpath(datapath, "1b_t1_irg_proc_cut.nc"), evalstart, evalend)
@@ -352,7 +352,9 @@ end
 
 # Plot wind direction panel (bottom left)
 ax_wd = axes[5, 1]
+ax_wd.scatter(wd1_time, wd1_avg, s=8, color=colors[1], label="Tower 1 IRG", alpha=0.7)
 ax_wd.scatter(wd2_time, wd2_avg, s=8, color=colors[2], label="Tower 1 CSAT", alpha=0.7)
+ax_wd.scatter(wd3_time, wd3_avg, s=8, color=colors[3], label="Tower 2 IRG", alpha=0.7)
 ax_wd.scatter(wd4_time, wd4_avg, s=8, color=colors[4], label="Tower 2 CSAT", alpha=0.7)
 ax_wd.set_ylabel(L"\alpha~\mathrm{[°]}")
 ax_wd.set_ylim(0, 360)

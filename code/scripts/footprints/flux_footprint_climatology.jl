@@ -82,11 +82,7 @@ for ix in 1:size(names, 1)
         sigmav[j] = std(filter(!isnan, ecdata.v[six:eix]))
         ustar[j] = mean(filter(!isnan, fluxdata.u_star[six:eix]))
         wind_dir[j] = mean(filter(!isnan, wd_tmp[ecdata.time[six] .<= wd_tmp.time .< ecdata.time[eix], :α]))
-        if j in [1,2]
-            wind_dir[j] = (wind_dir[j]+(360-55))%360
-        else
-            wind_dir[j] = (wind_dir[j]+360-15)%360
-        end
+        wind_dir[j] = (wind_dir[j]+(360))%360
     end
 
     output = py"FFP_climatology"(meas_heights[ix], nothing, PyVector(umean), PyVector(h), PyVector(ol),
@@ -110,7 +106,7 @@ orthomosaic = mpimg.imread(fileorthomosaic)
 #PyPlot.imshow(orthomosaic)
 #location of flux measurements 1-6 in original image
 #[row-location, col-location]
-fluxloc = [820 1294; 820 1294; 900 1343; 900 1343]#; 1416 1387; 940 1474]
+fluxloc = [627 1381; 627 1381; 549 1486; 549 1486]#; 1416 1387; 940 1474]
 
 #extend of background [row, col]
 bgextend_m = [263.182, 316.09] #in m from measuring in GIS: 279.9
@@ -121,7 +117,7 @@ meterperpxl_row = bgextend_m[1] / bgextend_pxl[1]
 meterperpxl_col = bgextend_m[2] / bgextend_pxl[2]
 
 #origin of figure
-figorigin = [820 1294] #tower 2
+figorigin = [627 1381] #tower 1
 
 #calculate fluxloc in new coordinates [m]
 fluxloc_final = Array{Float64}(undef, size(fluxloc, 1), size(fluxloc, 2))
@@ -153,9 +149,9 @@ locfx3 = ax1.plot(fluxloc_final[3, 2], fluxloc_final[3, 1], ".", color=ctab10(2)
 #locfx5 = ax1.plot(fluxloc_final[5, 2], fluxloc_final[5, 1], ".", color=ctab10(4))#, label="Kaijo")
 #locfx6 = ax1.plot(fluxloc_final[6, 2], fluxloc_final[6, 1], ".", color=ctab10(5))#, label="TJK")
 fp1 = ax1.plot(ffp1["xr"][end-1] .+ fluxloc_final[1, 2], ffp1["yr"][end-1] .+ fluxloc_final[1, 1], color=ctab10(0), label = "T1IRG")
-#fp2 = ax1.plot(ffp2["xr"][end-1] .+ fluxloc_final[2, 2], ffp2["yr"][end-1] .+ fluxloc_final[2, 1], color=ctab10(1), label = "T1CSAT")
+fp2 = ax1.plot(ffp2["xr"][end-1] .+ fluxloc_final[2, 2], ffp2["yr"][end-1] .+ fluxloc_final[2, 1], color=ctab10(1), label = "T1CSAT")
 fp3 = ax1.plot(ffp3["xr"][end-1] .+ fluxloc_final[3, 2], ffp3["yr"][end-1] .+ fluxloc_final[3, 1], color=ctab10(2), label = "T2IRG")
-#fp4 = ax1.plot(ffp4["xr"][end-1] .+ fluxloc_final[4, 2], ffp4["yr"][end-1] .+ fluxloc_final[4, 1], color=ctab10(3), label = "T2CSAT")
+fp4 = ax1.plot(ffp4["xr"][end-1] .+ fluxloc_final[4, 2], ffp4["yr"][end-1] .+ fluxloc_final[4, 1], color=ctab10(3), label = "T2CSAT")
 #fp5 = ax1.plot(ffp5["xr"][:, end-1] .+ fluxloc_final[5, 2], ffp5["yr"][:, end-1] .+ fluxloc_final[5, 1], color=ctab10(4), label = "Kaijo")
 #fp6 = ax1.plot(ffp6["xr"][end-2] .+ fluxloc_final[6, 2], ffp6["yr"][end-2] .+ fluxloc_final[6, 1], color=ctab10(5), label = "TJK")
 ax1.legend()
