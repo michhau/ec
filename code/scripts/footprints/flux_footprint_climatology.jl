@@ -83,7 +83,11 @@ for ix in 1:size(names, 1)
         ustar[j] = mean(filter(!isnan, fluxdata.u_star[six:eix]))
         wind_dir_raw = filter(!isnan, wd_tmp[ecdata.time[six] .<= wd_tmp.time .< ecdata.time[eix], :α])
         wind_dir[j] = turb.mean_winddir(wind_dir_raw)
-        wind_dir[j] = (wind_dir[j]+(360))%360
+        if ix in [1,2]
+            wind_dir[j] = (wind_dir[j]+(360-55))%360
+        else
+            wind_dir[j] = (wind_dir[j]+(360-15))%360
+        end
     end
 
     output = py"FFP_climatology"(meas_heights[ix], nothing, PyVector(umean), PyVector(h), PyVector(ol),
