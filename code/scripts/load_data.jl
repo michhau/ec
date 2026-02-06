@@ -271,8 +271,128 @@ fig = plot_windrose_panel(wd1_block, ws1_block, wd2_block, ws2_block, wd3_block,
 
 output_folder = "/home/haugened/Documents/data/CONTRASTS/plots/wind_roses"
 PyPlot.savefig(joinpath(output_folder, "3d.pdf"), bbox_inches="tight")
+##
+#########################################################
+##
+block_length = Minute(10)
+percentiles = (5, 95) #for max/min shading
+
+# Calculate wind speeds
+ws1 = sqrt.(evaldf1.u .^ 2 .+ evaldf1.v .^ 2 .+ evaldf1.w .^ 2)
+ws2 = sqrt.(evaldf2.u .^ 2 .+ evaldf2.v .^ 2 .+ evaldf2.w .^ 2)
+ws3 = sqrt.(evaldf3.u .^ 2 .+ evaldf3.v .^ 2 .+ evaldf3.w .^ 2)
+ws4 = sqrt.(evaldf4.u .^ 2 .+ evaldf4.v .^ 2 .+ evaldf4.w .^ 2)
+
+# Compute block statistics for wind speed
+ws1_time, ws1_mean, ws1_lo, ws1_hi = gen.block_stats(evaldf1.time, ws1, block_length; percentiles=percentiles)
+ws2_time, ws2_mean, ws2_lo, ws2_hi = gen.block_stats(evaldf2.time, ws2, block_length; percentiles=percentiles)
+ws3_time, ws3_mean, ws3_lo, ws3_hi = gen.block_stats(evaldf3.time, ws3, block_length; percentiles=percentiles)
+ws4_time, ws4_mean, ws4_lo, ws4_hi = gen.block_stats(evaldf4.time, ws4, block_length; percentiles=percentiles)
+
+# Compute block statistics for sonic temperature
+T1_time, T1_mean, T1_lo, T1_hi = gen.block_stats(evaldf1.time, evaldf1.T, block_length; percentiles=percentiles)
+T2_time, T2_mean, T2_lo, T2_hi = gen.block_stats(evaldf2.time, evaldf2.T, block_length; percentiles=percentiles)
+T3_time, T3_mean, T3_lo, T3_hi = gen.block_stats(evaldf3.time, evaldf3.T, block_length; percentiles=percentiles)
+T4_time, T4_mean, T4_lo, T4_hi = gen.block_stats(evaldf4.time, evaldf4.T, block_length; percentiles=percentiles)
+
+# Compute block statistics for water vapor (IRG sensors only)
+h2o1_time, h2o1_mean, h2o1_lo, h2o1_hi = gen.block_stats(evaldf1.time, evaldf1.h2o, block_length; percentiles=percentiles)
+h2o3_time, h2o3_mean, h2o3_lo, h2o3_hi = gen.block_stats(evaldf3.time, evaldf3.h2o, block_length; percentiles=percentiles)
+
+# Block average wind direction (CSAT sensors only)
+wd1_time, wd1_avg = gen.block_average_winddir(wd1.time, wd1.α, block_length)
+wd2_time, wd2_avg = gen.block_average_winddir(wd2.time, wd2.α, block_length)
+wd3_time, wd3_avg = gen.block_average_winddir(wd3.time, wd3.α, block_length)
+wd4_time, wd4_avg = gen.block_average_winddir(wd4.time, wd4.α, block_length)
+
+# Create figure with 5x2 subplots
+fig, axes = PyPlot.subplots(5, 2, figsize=(16, 12), sharex=true)
+
+# Color scheme
+cmap = PyPlot.get_cmap("tab10")
+colors = [cmap(0), cmap(1), cmap(2), cmap(3)]
+
+# Panel data for wind speed (left column): (ax, time, mean, lower, upper, title, color)
+ws_panels = [
+    (axes[1, 1], ws1_time, ws1_mean, ws1_lo, ws1_hi, "Tower 1 IRG", colors[1]),
+    (axes[2, 1], ws2_time, ws2_mean, ws2_lo, ws2_hi, "Tower 1 CSAT", colors[2]),
+    (axes[3, 1], ws3_time, ws3_mean, ws3_lo, ws3_hi, "Tower 2 IRG", colors[3]),
+    (axes[4, 1], ws4_time, ws4_mean, ws4_lo, ws4_hi, "Tower 2 CSAT", colors[4]),
+]
+
+# Panel data for sonic temperature (right column)
+T_panels = [
+    (axes[1, 2], T1_time, T1_mean, T1_lo, T1_hi, "Tower 1 IRG", colors[1]),
+    (axes[2, 2], T2_time, T2_mean, T2_lo, T2_hi, "Tower 1 CSAT", colors[2]),
+    (axes[3, 2], T3_time, T3_mean, T3_lo, T3_hi, "Tower 2 IRG", colors[3]),
+    (axes[4, 2], T4_time, T4_mean, T4_lo, T4_hi, "Tower 2 CSAT", colors[4]),
+]
+
+# Plot wind speed panels (left column)
+for (ax, t, m, lo, hi, title, col) in ws_panels
+    ax.fill_between(t, lo, hi, alpha=0.3, color=col, 
+                    label="$(percentiles[1])th-$(percentiles[2])th pctl.")
+    ax.plot(t, m, color=col, linewidth=1.0, label="mean")
+    ax.set_ylabel(L"U~\mathrm{[m~s^{-1}]}")
+    ax.set_title(title, fontsize=10, loc="left")
+    ax.grid(true, alpha=0.3)
+    ax.legend(fontsize=7, loc="upper right")
+end
+
+# Plot sonic temperature panels (right column)
+for (ax, t, m, lo, hi, title, col) in T_panels
+    ax.fill_between(t, lo, hi, alpha=0.3, color=col,
+                    label="$(percentiles[1])th-$(percentiles[2])th pctl.")
+    ax.plot(t, m, color=col, linewidth=1.0, label="mean")
+    ax.set_ylabel(L"T_{sonic}~\mathrm{[^\circ C]}")
+    ax.set_title(title, fontsize=10, loc="left")
+    ax.grid(true, alpha=0.3)
+    ax.legend(fontsize=7, loc="upper right")
+end
+
+# Plot wind direction panel (bottom left)
+ax_wd = axes[5, 1]
+ax_wd.scatter(wd1_time, wd1_avg, s=8, color=colors[1], label="Tower 1 IRG", alpha=0.7)
+ax_wd.scatter(wd2_time, wd2_avg, s=8, color=colors[2], label="Tower 1 CSAT", alpha=0.7)
+ax_wd.scatter(wd3_time, wd3_avg, s=8, color=colors[3], label="Tower 2 IRG", alpha=0.7)
+ax_wd.scatter(wd4_time, wd4_avg, s=8, color=colors[4], label="Tower 2 CSAT", alpha=0.7)
+ax_wd.set_ylabel(L"\alpha~\mathrm{[°]}")
+ax_wd.set_ylim(0, 360)
+ax_wd.set_yticks([0, 90, 180, 270, 360])
+ax_wd.set_title("Wind Direction (in sensor coordinates!)", fontsize=10, loc="left")
+ax_wd.grid(true, alpha=0.3)
+ax_wd.legend(fontsize=7, loc="upper right")
+ax_wd.set_xlabel("Time")
+
+# Plot water vapor panel (bottom right)
+ax_h2o = axes[5, 2]
+ax_h2o.fill_between(h2o1_time, h2o1_lo, h2o1_hi, alpha=0.3, color=colors[1])
+ax_h2o.plot(h2o1_time, h2o1_mean, color=colors[1], linewidth=1.0, label="Tower 1 IRG")
+ax_h2o.fill_between(h2o3_time, h2o3_lo, h2o3_hi, alpha=0.3, color=colors[3])
+ax_h2o.plot(h2o3_time, h2o3_mean, color=colors[3], linewidth=1.0, label="Tower 2 IRG")
+ax_h2o.set_ylabel(L"\rho_{H_2O}~\mathrm{[g~m^{-3}]}")
+ax_h2o.set_title("Water Vapor Density", fontsize=10, loc="left")
+ax_h2o.grid(true, alpha=0.3)
+ax_h2o.legend(fontsize=7, loc="upper right")
+ax_h2o.set_xlabel("Time")
+
+# Auto-format dates
+fig.autofmt_xdate()
+
+# Add overall title
+#fig.suptitle("Wind Speed, Temperature, and Humidity ($(block_length) averages)", 
+#             fontsize=12, fontweight="bold")
+
+PyPlot.tight_layout()
 
 ##
+# Save the figure
+output_folder = "/home/haugened/Documents/data/CONTRASTS/plots/wind_temperature/"
+PyPlot.savefig(joinpath(output_folder, "3d.pdf"), bbox_inches="tight")
+#PyPlot.savefig(joinpath(output_folder, "3a.png"), dpi=150, bbox_inches="tight")
+
+##
+
 #######################################################
 #=
 #######################################################
