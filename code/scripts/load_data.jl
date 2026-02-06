@@ -300,8 +300,10 @@ h2o1_time, h2o1_mean, h2o1_lo, h2o1_hi = gen.block_stats(evaldf1.time, evaldf1.h
 h2o3_time, h2o3_mean, h2o3_lo, h2o3_hi = gen.block_stats(evaldf3.time, evaldf3.h2o, block_length; percentiles=percentiles)
 
 # Block average wind direction (CSAT sensors only)
-wd2_time, wd2_avg = gen.block_average(wd2.time, wd2.α, block_length)
-wd4_time, wd4_avg = gen.block_average(wd4.time, wd4.α, block_length)
+wd1_time, wd1_avg = gen.block_average_winddir(wd1.time, wd1.α, block_length)
+wd2_time, wd2_avg = gen.block_average_winddir(wd2.time, wd2.α, block_length)
+wd3_time, wd3_avg = gen.block_average_winddir(wd3.time, wd3.α, block_length)
+wd4_time, wd4_avg = gen.block_average_winddir(wd4.time, wd4.α, block_length)
 
 # Create figure with 5x2 subplots
 fig, axes = PyPlot.subplots(5, 2, figsize=(16, 12), sharex=true)
