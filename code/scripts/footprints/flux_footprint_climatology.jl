@@ -29,7 +29,7 @@ PyPlot.pygui(true)
 
 #variables
 names = [:evaldf1, :evaldf2, :evaldf3, :evaldf4]#, :evaldf5, :evaldf6]
-meas_heights = [1.15, 2.2, 1.3, 2.1]#, 0.3, 5]
+meas_heights = [0.98, 2.06, 1.15, 2.18]#, 0.3, 5]
 pbl_height = 1000.0
 fluxes = [:fx1, :fx2, :fx3, :fx4]#, :fx5, :fx6]
 #Ls = [:L1, :L2, :L3, :L4]#, :L5, :L6]
@@ -106,23 +106,23 @@ end
 ###############################################
 #plotting the footprint on the ortho-mosaic
 
-fileorthomosaic = "/home/haugened/Documents/data/CONTRASTS/pics/setups/1a/karte 11072025_cut.jpg"
+fileorthomosaic = "/home/haugened/Documents/data/CONTRASTS/pics/setups/1b/map 270725_cut.jpg"
 orthomosaic = mpimg.imread(fileorthomosaic)
 #PyPlot.imshow(orthomosaic)
 #location of flux measurements 1-6 in original image
 #[row-location, col-location]
-fluxloc = [1024 1050; 1024 1050; 879 1222; 879 1222]#; 1416 1387; 940 1474]
+fluxloc = [614 1402; 614 1402; 526 1512; 526 1512]#; 1416 1387; 940 1474]
 
 #extend of background [row, col]
-bgextend_m = [97.7, 133.5] #in m from measuring in GIS: 279.9
-bgextend_pxl = [1643, 2145] #[size(orthomosaic, 1), size(orthomosaic, 2)] #in pxl
+bgextend_m = [263.182, 316.09] #in m from measuring in GIS: 279.9
+bgextend_pxl = [2165, 2204] #[size(orthomosaic, 1), size(orthomosaic, 2)] #in pxl
 
 #calculate m/pxl from it
 meterperpxl_row = bgextend_m[1] / bgextend_pxl[1]
 meterperpxl_col = bgextend_m[2] / bgextend_pxl[2]
 
 #origin of figure
-figorigin = [1024 1050] #tower 2
+figorigin = [614 1402] #tower 1
 
 #calculate fluxloc in new coordinates [m]
 fluxloc_final = Array{Float64}(undef, size(fluxloc, 1), size(fluxloc, 2))
