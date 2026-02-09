@@ -140,6 +140,7 @@ dayend = Time(18, 00, 00)
 ###                    PLOTS                       ###
 ######################################################
 ##
+#=
 #flux time series
 fig = PyPlot.figure()
 ax = fig.add_subplot(111)
@@ -170,6 +171,7 @@ ax.xaxis_date()
 ax.grid()
 ax.legend()
 ##
+=#
 ######################################################
 # Flux time series with dual subplots for latent and sensible heat fluxes (CONTRASTS)
 ##
@@ -182,11 +184,11 @@ colors = ["C0", "C1", "C2", "C3"]  # Default matplotlib color cycle
 step = 20*60 #every 1min
 
 #y-axis limits
-wT_limits = (-50, 50)
-wq_limits = wT_limits
+wT_limits = (-15, 35)
+wq_limits = (-1, 20)#wT_limits
 
 # Upper subplot - Buoyancy fluxes (sensible heat)
-ax1.set_title("1c Turbulent Heat Fluxes")
+ax1.set_title("2b Turbulent Heat Fluxes")
 wt1 = ax1.plot(fx1.time[1:step:end], fx1.wT[1:step:end] .* (ρ_air * c_p), color=colors[1])
 wt2 = ax1.plot(fx2.time[1:step:end], fx2.wT[1:step:end] .* (ρ_air * c_p), color=colors[2])
 wt3 = ax1.plot(fx3.time[1:step:end], fx3.wT[1:step:end] .* (ρ_air * c_p), color=colors[3])
@@ -206,7 +208,7 @@ ax2.set_ylim(wq_limits)
 
 # Create a single legend for the entire figure
 handles = [wt1[1], wt2[1], wt3[1], wt4[1]]  # Get line objects
-labels = ["ice 1.1m", "ice 2.2m", "lead 1.1m", "lead 2.3m"]
+labels = ["pond 1.1m", "pond 2.2m", "ice 1.2m", "ice 2.2m"]
 ax1.legend(handles, labels)#, loc="upper right", bbox_to_anchor=(1.0, 1))
 
 # Optional: Uncomment these lines if you want to set specific time limits
@@ -223,6 +225,8 @@ ax1.legend(handles, labels)#, loc="upper right", bbox_to_anchor=(1.0, 1))
 
 PyPlot.tight_layout()
 ##
+output_folder = "/home/haugened/Documents/data/CONTRASTS/plots/wT_wq/"
+PyPlot.savefig(joinpath(output_folder, "2b.pdf"), bbox_inches="tight")
 ######################################################
 ##
 #understanding fluxes - plot components
