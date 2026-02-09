@@ -1375,10 +1375,16 @@ scatter3a = fx4.wT[.!isnan.(fx2.wT) .&& .!isnan.(fx4.wT)]
 scatter3a .*= ρ_air .* c_p
 scatter3b .*= ρ_air .* c_p
 
+ratio1 = scatter1b ./ scatter1a
+ratio2 = scatter2b ./ scatter2a
+ratio3 = scatter3b ./ scatter3a
+
 ##
-fig = PyPlot.figure(figsize=(12,4.5))
-fig.suptitle("1b position 1 pond - 25.07.2025 to 27.07.2025")
-gs = gridspec.GridSpec(1, 3)
+fig = PyPlot.figure(figsize=(12, 9.5))
+fig.suptitle("3a across ridge - 20.07.2025 to 22.07.2025")
+gs = gridspec.GridSpec(3, 3, height_ratios=(2, 1, 1))
+
+# --- Row 1: Scatter density (unchanged) ---
 ax1 = fig.add_subplot(gs[1, 1], projection="scatter_density")
 ax1.set_title("1m Sensible Heat Fluxes")
 ax1.axhline(0, color="grey", alpha=0.6)
@@ -1392,6 +1398,7 @@ ax1.set_xlabel(L"\overline{w'T'}_{ice}~\mathrm{[W~m^{-2}]}")
 ax1.set_ylabel(L"\overline{w'T'}_{pond}~\mathrm{[W~m^{-2}]}")
 ax1.grid()
 ax1.set_aspect("equal")
+
 ax2 = fig.add_subplot(gs[1, 2], projection="scatter_density")
 ax2.set_title("1m Latent Heat Fluxes")
 ax2.axhline(0, color="grey")
@@ -1405,6 +1412,7 @@ ax2.set_xlabel(L"\overline{w'q'}_{ice}~\mathrm{[W~m^{-2}]}")
 ax2.set_ylabel(L"\overline{w'q'}_{pond}~\mathrm{[W~m^{-2}]}")
 ax2.grid()
 ax2.set_aspect("equal")
+
 ax3 = fig.add_subplot(gs[1, 3], projection="scatter_density")
 ax3.plot([-25,30], [-25,30], color="grey", alpha=0.3)
 ax3.scatter_density(scatter3a, scatter3b, color="black", vmin=0, vmax=2000)
@@ -1419,33 +1427,48 @@ ax3.set_ylabel(L"\overline{w'T'}_{pond}~\mathrm{[W~m^{-2}]}")
 ax3.grid()
 ax3.set_aspect("equal")
 
-# --- Row 2: Histograms of ratios ---
+# --- Row 2: Overlaid histograms of individual fluxes ---
 ax4 = fig.add_subplot(gs[2, 1])
-ax4.hist(ratio1, bins=collect(-3.0:0.01:3.0), color="black", alpha=0.7, density=true)#, edgecolor="white", linewidth=0.3)
-ax4.axvline(1, color="red", linestyle="--", alpha=0.3, label="1:1")
-#ax4.set_xlim(hist_min, hist_max)
-ax4.set_xlabel(L"\left(\overline{w'T'}_{lead~side} ~/~\overline{w'T'}_{floe~side}\right)_{IRG}")
+ax4.hist(scatter1a, bins=collect(-25:0.1:10), color="grey", alpha=0.5, density=true, label="floe side")
+ax4.hist(scatter1b, bins=collect(-25:0.1:10), color="orange", alpha=0.5, density=true, label="lead side")
+ax4.set_xlabel(L"\overline{w'T'}~\mathrm{[W~m^{-2}]}")
 ax4.set_ylabel("PDF")
-#ax4.legend()
+ax4.legend()
 ax4.grid(alpha=0.3)
 
 ax5 = fig.add_subplot(gs[2, 2])
-ax5.hist(ratio2, bins=collect(-4.0:0.01:4.0), color="blue", alpha=0.7, density=true)#, edgecolor="white", linewidth=0.3)
-ax5.axvline(1, color="red", linestyle="--", alpha=0.3, label="1:1")
-#ax5.set_xlim(hist_min, hist_max)
-ax5.set_xlabel(L"\left(\overline{w'q'}_{lead~side} ~/~ \overline{w'q'}_{floe~side}\right)_{CSAT}")
-#ax5.set_ylabel("PDF")
-#ax5.legend()
+ax5.hist(scatter2a, bins=collect(-5:0.1:5), color="grey", alpha=0.5, density=true, label="floe side")
+ax5.hist(scatter2b, bins=collect(-5:0.1:5), color="orange", alpha=0.5, density=true, label="lead side")
+ax5.set_xlabel(L"\overline{w'q'}~\mathrm{[W~m^{-2}]}")
+ax5.legend()
 ax5.grid(alpha=0.3)
 
 ax6 = fig.add_subplot(gs[2, 3])
-ax6.hist(ratio3, bins=collect(-4.0:0.01:4.0), color="black", alpha=0.7, density=true)#, edgecolor="white", linewidth=0.3)
-ax6.axvline(1, color="red", linestyle="--", alpha=0.3, label="1:1")
-#ax6.set_xlim(hist_min, hist_max)
-ax6.set_xlabel(L"\left(\overline{w'T'}_{lead~side} ~/~\overline{w'T'}_{floe~side}\right)_{CSAT}")
-#ax6.set_ylabel("PDF")
-#ax6.legend()
+ax6.hist(scatter3a, bins=collect(-10:0.1:15), color="grey", alpha=0.5, density=true, label="floe side")
+ax6.hist(scatter3b, bins=collect(-10:0.1:15), color="orange", alpha=0.5, density=true, label="lead side")
+ax6.set_xlabel(L"\overline{w'T'}~\mathrm{[W~m^{-2}]}")
+ax6.legend()
 ax6.grid(alpha=0.3)
+
+# --- Row 3: Histograms of ratios ---
+ax7 = fig.add_subplot(gs[3, 1])
+ax7.hist(ratio1, bins=collect(-3.0:0.01:3.0), color="black", alpha=0.7, density=true)
+ax7.axvline(1, color="red", linestyle="--", alpha=0.3, label="1:1")
+ax7.set_xlabel(L"\left(\overline{w'T'}_{lead~side} ~/~\overline{w'T'}_{floe~side}\right)_{IRG}")
+ax7.set_ylabel("PDF")
+ax7.grid(alpha=0.3)
+
+ax8 = fig.add_subplot(gs[3, 2])
+ax8.hist(ratio2, bins=collect(-4.0:0.01:4.0), color="blue", alpha=0.7, density=true)
+ax8.axvline(1, color="red", linestyle="--", alpha=0.3, label="1:1")
+ax8.set_xlabel(L"\left(\overline{w'q'}_{lead~side} ~/~ \overline{w'q'}_{floe~side}\right)_{CSAT}")
+ax8.grid(alpha=0.3)
+
+ax9 = fig.add_subplot(gs[3, 3])
+ax9.hist(ratio3, bins=collect(-4.0:0.01:4.0), color="black", alpha=0.7, density=true)
+ax9.axvline(1, color="red", linestyle="--", alpha=0.3, label="1:1")
+ax9.set_xlabel(L"\left(\overline{w'T'}_{lead~side} ~/~\overline{w'T'}_{floe~side}\right)_{CSAT}")
+ax9.grid(alpha=0.3)
 
 PyPlot.tight_layout()
 ##
