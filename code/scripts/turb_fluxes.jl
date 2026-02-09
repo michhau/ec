@@ -1418,6 +1418,35 @@ ax3.set_xlabel(L"\overline{w'T'}_{ice}~\mathrm{[W~m^{-2}]}")
 ax3.set_ylabel(L"\overline{w'T'}_{pond}~\mathrm{[W~m^{-2}]}")
 ax3.grid()
 ax3.set_aspect("equal")
+
+# --- Row 2: Histograms of ratios ---
+ax4 = fig.add_subplot(gs[2, 1])
+ax4.hist(ratio1, bins=collect(-3.0:0.01:3.0), color="black", alpha=0.7, density=true)#, edgecolor="white", linewidth=0.3)
+ax4.axvline(1, color="red", linestyle="--", alpha=0.3, label="1:1")
+#ax4.set_xlim(hist_min, hist_max)
+ax4.set_xlabel(L"\left(\overline{w'T'}_{lead~side} ~/~\overline{w'T'}_{floe~side}\right)_{IRG}")
+ax4.set_ylabel("PDF")
+#ax4.legend()
+ax4.grid(alpha=0.3)
+
+ax5 = fig.add_subplot(gs[2, 2])
+ax5.hist(ratio2, bins=collect(-4.0:0.01:4.0), color="blue", alpha=0.7, density=true)#, edgecolor="white", linewidth=0.3)
+ax5.axvline(1, color="red", linestyle="--", alpha=0.3, label="1:1")
+#ax5.set_xlim(hist_min, hist_max)
+ax5.set_xlabel(L"\left(\overline{w'q'}_{lead~side} ~/~ \overline{w'q'}_{floe~side}\right)_{CSAT}")
+#ax5.set_ylabel("PDF")
+#ax5.legend()
+ax5.grid(alpha=0.3)
+
+ax6 = fig.add_subplot(gs[2, 3])
+ax6.hist(ratio3, bins=collect(-4.0:0.01:4.0), color="black", alpha=0.7, density=true)#, edgecolor="white", linewidth=0.3)
+ax6.axvline(1, color="red", linestyle="--", alpha=0.3, label="1:1")
+#ax6.set_xlim(hist_min, hist_max)
+ax6.set_xlabel(L"\left(\overline{w'T'}_{lead~side} ~/~\overline{w'T'}_{floe~side}\right)_{CSAT}")
+#ax6.set_ylabel("PDF")
+#ax6.legend()
+ax6.grid(alpha=0.3)
+
 PyPlot.tight_layout()
 ##
 
