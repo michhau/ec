@@ -1422,4 +1422,16 @@ using NaNStatistics
 cor1 = nancor(fx1.wT, fx3.wT)
 cor2 = nancor(fx1.wq, fx3.wq)
 cor3 = nancor(fx2.wT, fx4.wT)
+
+#calculating mean bias
+scatter1a_mean = nanmean(scatter1a)
+scatter1b_mean = nanmean(scatter1b)
+scatter2a_mean = nanmean(scatter2a)
+scatter2b_mean = nanmean(scatter2b)
+scatter3a_mean = nanmean(scatter3a)
+scatter3b_mean = nanmean(scatter3b)
+
+mad_irg_wT = scatter1a_mean - scatter1b_mean
+mad_irg_wq = scatter2a_mean - scatter2b_mean
+mad_csat_wT = scatter3a_mean - scatter3b_mean
 ######################################################
