@@ -367,10 +367,10 @@ ratio1 = scatter1b ./ scatter1a
 ratio2 = scatter2b ./ scatter2a
 ratio3 = scatter3b ./ scatter3a
 
-## Plot
-fig = PyPlot.figure(figsize=(12, 7))
+##
+fig = PyPlot.figure(figsize=(12, 9.5))
 fig.suptitle("1b position 1 pond - 25.07.2025 to 27.07.2025")
-gs = gridspec.GridSpec(2, 3, height_ratios=(2,1))
+gs = gridspec.GridSpec(3, 3, height_ratios=(2, 1, 1))
 
 # --- Row 1: Scatter density (unchanged) ---
 ax1 = fig.add_subplot(gs[1, 1], projection="scatter_density")
@@ -386,6 +386,7 @@ ax1.set_xlabel(L"\overline{w'T'}_{ice}~\mathrm{[W~m^{-2}]}")
 ax1.set_ylabel(L"\overline{w'T'}_{pond}~\mathrm{[W~m^{-2}]}")
 ax1.grid()
 ax1.set_aspect("equal")
+
 
 ax2 = fig.add_subplot(gs[1, 2], projection="scatter_density")
 ax2.set_title("1m Latent Heat Fluxes")
@@ -415,32 +416,27 @@ ax3.set_ylabel(L"\overline{w'T'}_{pond}~\mathrm{[W~m^{-2}]}")
 ax3.grid()
 ax3.set_aspect("equal")
 
-# --- Row 2: Histograms of ratios ---
+# --- Row 2: Overlaid histograms of individual fluxes ---
 ax4 = fig.add_subplot(gs[2, 1])
-ax4.hist(ratio1, bins=collect(-3.0:0.01:3.0), color="black", alpha=0.7, density=true)#, edgecolor="white", linewidth=0.3)
-ax4.axvline(1, color="red", linestyle="--", alpha=0.3, label="1:1")
-#ax4.set_xlim(hist_min, hist_max)
-ax4.set_xlabel(L"\left(\overline{w'T'}_{lead} ~/~\overline{w'T'}_{ice}\right)_{IRG}")
+ax4.hist(scatter1a, bins=collect(-15:0.1:10), color="grey", alpha=0.5, density=true, label="ice")
+ax4.hist(scatter1b, bins=collect(-15:0.1:10), color="orange", alpha=0.5, density=true, label="pond")
+ax4.set_xlabel(L"\overline{w'T'}~\mathrm{[W~m^{-2}]}")
 ax4.set_ylabel("PDF")
-#ax4.legend()
+ax4.legend()
 ax4.grid(alpha=0.3)
 
 ax5 = fig.add_subplot(gs[2, 2])
-ax5.hist(ratio2, bins=collect(-4.0:0.01:4.0), color="blue", alpha=0.7, density=true)#, edgecolor="white", linewidth=0.3)
-ax5.axvline(1, color="red", linestyle="--", alpha=0.3, label="1:1")
-#ax5.set_xlim(hist_min, hist_max)
-ax5.set_xlabel(L"\left(\overline{w'q'}_{lead} ~/~ \overline{w'q'}_{ice}\right)_{CSAT}")
-#ax5.set_ylabel("PDF")
-#ax5.legend()
+ax5.hist(scatter2a, bins=collect(-10:0.1:10), color="grey", alpha=0.5, density=true, label="ice")
+ax5.hist(scatter2b, bins=collect(-10:0.1:10), color="orange", alpha=0.5, density=true, label="pond")
+ax5.set_xlabel(L"\overline{w'q'}~\mathrm{[W~m^{-2}]}")
+ax5.legend()
 ax5.grid(alpha=0.3)
 
 ax6 = fig.add_subplot(gs[2, 3])
-ax6.hist(ratio3, bins=collect(-4.0:0.01:4.0), color="black", alpha=0.7, density=true)#, edgecolor="white", linewidth=0.3)
-ax6.axvline(1, color="red", linestyle="--", alpha=0.3, label="1:1")
-#ax6.set_xlim(hist_min, hist_max)
-ax6.set_xlabel(L"\left(\overline{w'T'}_{lead} ~/~\overline{w'T'}_{ice}\right)_{CSAT}")
-#ax6.set_ylabel("PDF")
-#ax6.legend()
+ax6.hist(scatter3a, bins=collect(-20:0.1:15), color="grey", alpha=0.5, density=true, label="ice")
+ax6.hist(scatter3b, bins=collect(-20:0.1:15), color="orange", alpha=0.5, density=true, label="pond")
+ax6.set_xlabel(L"\overline{w'T'}~\mathrm{[W~m^{-2}]}")
+ax6.legend()
 ax6.grid(alpha=0.3)
 
 
@@ -485,6 +481,26 @@ ax9 = fig.add_subplot(gs[3, 3])
 ax9.hist(ratio3, bins=collect(-4.0:0.01:4.0), color="black", alpha=0.7, density=true)
 ax9.axvline(1, color="red", linestyle="--", alpha=0.3, label="1:1")
 ax9.set_xlabel(L"\left(\overline{w'T'}_{lead~side} ~/~\overline{w'T'}_{floe~side}\right)_{CSAT}")
+ax9.grid(alpha=0.3)
+
+# --- Row 3: Histograms of ratios ---
+ax7 = fig.add_subplot(gs[3, 1])
+ax7.hist(ratio1, bins=collect(-2.0:0.01:4.0), color="black", alpha=0.7, density=true)
+ax7.axvline(1, color="red", linestyle="--", alpha=0.3, label="1:1")
+ax7.set_xlabel(L"\left(\overline{w'T'}_{pond} ~/~\overline{w'T'}_{ice}\right)_{IRG}")
+ax7.set_ylabel("PDF")
+ax7.grid(alpha=0.3)
+
+ax8 = fig.add_subplot(gs[3, 2])
+ax8.hist(ratio2, bins=collect(-1.0:0.01:2.0), color="blue", alpha=0.7, density=true)
+ax8.axvline(1, color="red", linestyle="--", alpha=0.3, label="1:1")
+ax8.set_xlabel(L"\left(\overline{w'q'}_{pond} ~/~ \overline{w'q'}_{ice}\right)_{CSAT}")
+ax8.grid(alpha=0.3)
+
+ax9 = fig.add_subplot(gs[3, 3])
+ax9.hist(ratio3, bins=collect(-2.0:0.01:3.0), color="black", alpha=0.7, density=true)
+ax9.axvline(1, color="red", linestyle="--", alpha=0.3, label="1:1")
+ax9.set_xlabel(L"\left(\overline{w'T'}_{pond} ~/~\overline{w'T'}_{ice}\right)_{CSAT}")
 ax9.grid(alpha=0.3)
 
 PyPlot.tight_layout()
