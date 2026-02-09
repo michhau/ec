@@ -84,9 +84,9 @@ for ix in 1:size(names, 1)
         wind_dir_raw = filter(!isnan, wd_tmp[ecdata.time[six] .<= wd_tmp.time .< ecdata.time[eix], :α])
         wind_dir[j] = turb.mean_winddir(wind_dir_raw)
         if ix in [1,2]
-            wind_dir[j] = (wind_dir[j]+(360-125))%360
+            wind_dir[j] = (wind_dir[j]+(360-130))%360
         else
-            wind_dir[j] = (wind_dir[j]+(360-145))%360
+            wind_dir[j] = (wind_dir[j]+(360-125))%360
         end
     end
 
@@ -111,7 +111,7 @@ orthomosaic = mpimg.imread(fileorthomosaic)
 #PyPlot.imshow(orthomosaic)
 #location of flux measurements 1-6 in original image
 #[row-location, col-location]
-fluxloc = [614 1402; 614 1402; 526 1512; 526 1512]#; 1416 1387; 940 1474]
+fluxloc = [619 1402; 619 1402; 526 1512; 526 1512]#; 1416 1387; 940 1474]
 
 #extend of background [row, col]
 bgextend_m = [263.182, 316.09] #in m from measuring in GIS: 279.9

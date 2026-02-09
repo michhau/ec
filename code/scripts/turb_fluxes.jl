@@ -182,11 +182,11 @@ colors = ["C0", "C1", "C2", "C3"]  # Default matplotlib color cycle
 step = 20*60 #every 1min
 
 #y-axis limits
-wT_limits = (-50, 50)
-wq_limits = wT_limits
+wT_limits = (-25, 20)
+wq_limits = (-7,10) #wT_limits
 
 # Upper subplot - Buoyancy fluxes (sensible heat)
-ax1.set_title("1c Turbulent Heat Fluxes")
+ax1.set_title("1b-2 Turbulent Heat Fluxes")
 wt1 = ax1.plot(fx1.time[1:step:end], fx1.wT[1:step:end] .* (ρ_air * c_p), color=colors[1])
 wt2 = ax1.plot(fx2.time[1:step:end], fx2.wT[1:step:end] .* (ρ_air * c_p), color=colors[2])
 wt3 = ax1.plot(fx3.time[1:step:end], fx3.wT[1:step:end] .* (ρ_air * c_p), color=colors[3])
@@ -206,7 +206,7 @@ ax2.set_ylim(wq_limits)
 
 # Create a single legend for the entire figure
 handles = [wt1[1], wt2[1], wt3[1], wt4[1]]  # Get line objects
-labels = ["ice 1.1m", "ice 2.2m", "lead 1.1m", "lead 2.3m"]
+labels = ["pond 1.0m", "pond 2.1m", "ice 1.2m", "ice 2.2m"]
 ax1.legend(handles, labels)#, loc="upper right", bbox_to_anchor=(1.0, 1))
 
 # Optional: Uncomment these lines if you want to set specific time limits
@@ -1373,16 +1373,16 @@ scatter3b .*= ρ_air .* c_p
 
 ##
 fig = PyPlot.figure(figsize=(12,4.5))
-fig.suptitle("1a - 09.07.2025 to 10.07.2025 16:00")
+fig.suptitle("1b-2 - 27.7.2025 10:10 to 10.07.2025 16:00")
 gs = gridspec.GridSpec(1, 3)
 ax1 = fig.add_subplot(gs[1, 1], projection="scatter_density")
 ax1.set_title("1m Sensible Heat Fluxes")
 ax1.axhline(0, color="grey", alpha=0.6)
 ax1.axvline(0, color="grey", alpha=0.6)
 ax1.plot([-25,25], [-25,25], color="grey", alpha=0.3)
-ax1.scatter_density(scatter1a, scatter1b, color="black", vmin=00, vmax=1000)
-ax1.set_xlim(0,25)
-ax1.set_ylim(0,25)
+ax1.scatter_density(scatter1a, scatter1b, color="black", vmin=00, vmax=500)
+ax1.set_xlim(-15,10)
+ax1.set_ylim(-15,10)
 #ax1.set_yticks(collect(-20:10:20))
 ax1.set_xlabel(L"\overline{w'T'}_{ice}~\mathrm{[W~m^{-2}]}")
 ax1.set_ylabel(L"\overline{w'T'}_{pond}~\mathrm{[W~m^{-2}]}")
@@ -1394,8 +1394,8 @@ ax2.axhline(0, color="grey")
 ax2.axvline(0, color="grey")
 ax2.plot([-25,25], [-25,25], color="grey", alpha=0.3)
 ax2.scatter_density(scatter2a, scatter2b, color="blue", vmin=0, vmax=1000)
-ax2.set_xlim(0,25)
-ax2.set_ylim(0,25)
+ax2.set_xlim(-10,10)
+ax2.set_ylim(-10,10)
 #ax2.set_yticks(collect(-10:5:10))
 ax2.set_xlabel(L"\overline{w'q'}_{ice}~\mathrm{[W~m^{-2}]}")
 ax2.set_ylabel(L"\overline{w'q'}_{pond}~\mathrm{[W~m^{-2}]}")
@@ -1403,12 +1403,12 @@ ax2.grid()
 ax2.set_aspect("equal")
 ax3 = fig.add_subplot(gs[1, 3], projection="scatter_density")
 ax3.plot([-25,30], [-25,30], color="grey", alpha=0.3)
-ax3.scatter_density(scatter3a, scatter3b, color="black", vmin=0, vmax=1000)
+ax3.scatter_density(scatter3a, scatter3b, color="black", vmin=0, vmax=500)
 ax3.set_title("2m Sensible Heat Fluxes")
 ax3.axhline(0, color="grey")
 ax3.axvline(0, color="grey")
-ax3.set_xlim(0,25)
-ax3.set_ylim(0,25)
+ax3.set_ylim(-20,15)
+ax3.set_xlim(-20,15)
 #ax3.set_yticks(collect(-20:10:10))
 ax3.set_xlabel(L"\overline{w'T'}_{ice}~\mathrm{[W~m^{-2}]}")
 ax3.set_ylabel(L"\overline{w'T'}_{pond}~\mathrm{[W~m^{-2}]}")
