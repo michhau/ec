@@ -47,7 +47,7 @@ println("-----------S-T-A-R-T-------------")
 ######################################################
 #select data and measurement period to be evaluated
 evalstart = DateTime(2024, 07, 01, 10, 15, 00)
-evalend   = DateTime(2025, 07, 10, 16, 00, 00)
+evalend   = DateTime(2027, 07, 10, 16, 00, 00)
 #evalend = evalstart + Day(10)
 
 evaldf1 = turb.readturbasnetcdf(joinpath(datapath, "1a_t1_irg_proc_cut.nc"), evalstart, evalend)
