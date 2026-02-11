@@ -29,7 +29,7 @@ PyPlot.pygui(true)
 
 #variables
 names = [:evaldf1, :evaldf2, :evaldf3, :evaldf4]#, :evaldf5, :evaldf6]
-meas_heights = [1.0, 2.1, 1.2, 2.2]#, 0.3, 5]
+meas_heights = [1.10, 2.20, 1.11, 2.15]#, 0.3, 5]
 pbl_height = 1000.0
 fluxes = [:fx1, :fx2, :fx3, :fx4]#, :fx5, :fx6]
 #Ls = [:L1, :L2, :L3, :L4]#, :L5, :L6]
@@ -83,7 +83,11 @@ for ix in 1:size(names, 1)
         ustar[j] = mean(filter(!isnan, fluxdata.u_star[six:eix]))
         wind_dir_raw = filter(!isnan, wd_tmp[ecdata.time[six] .<= wd_tmp.time .< ecdata.time[eix], :α])
         wind_dir[j] = turb.mean_winddir(wind_dir_raw)
-        wind_dir[j] = (wind_dir[j]+(360))%360
+        if ix in [1,2] #tower 1 at lead
+            wind_dir[j] = (wind_dir[j]+(360-134))%360
+        else #tower 2 at floe side
+            wind_dir[j] = (wind_dir[j]+(360-121))%360
+        end
     end
 
     output = py"FFP_climatology"(meas_heights[ix], nothing, PyVector(umean), PyVector(h), PyVector(ol),
@@ -102,23 +106,23 @@ end
 ###############################################
 #plotting the footprint on the ortho-mosaic
 
-fileorthomosaic = "/home/haugened/Documents/data/CONTRASTS/pics/setups/1b/map 270725_cut.jpg"
+fileorthomosaic = "/home/haugened/Documents/data/CONTRASTS/pics/setups/3c/karte 180825_cut.jpg"
 orthomosaic = mpimg.imread(fileorthomosaic)
 #PyPlot.imshow(orthomosaic)
 #location of flux measurements 1-6 in original image
 #[row-location, col-location]
-fluxloc = [627 1381; 627 1381; 549 1486; 549 1486]#; 1416 1387; 940 1474]
+fluxloc = [692 324; 692 324; 564 560; 564 560]#; 1416 1387; 940 1474]
 
 #extend of background [row, col]
-bgextend_m = [263.182, 316.09] #in m from measuring in GIS: 279.9
-bgextend_pxl = [2165, 2204] #[size(orthomosaic, 1), size(orthomosaic, 2)] #in pxl
+bgextend_m = [209.45, 168.1] #in m from measuring in GIS: 279.9
+bgextend_pxl = [1170, 946] #[size(orthomosaic, 1), size(orthomosaic, 2)] #in pxl
 
 #calculate m/pxl from it
 meterperpxl_row = bgextend_m[1] / bgextend_pxl[1]
 meterperpxl_col = bgextend_m[2] / bgextend_pxl[2]
 
 #origin of figure
-figorigin = [627 1381] #tower 1
+figorigin = [564 560] #tower 1
 
 #calculate fluxloc in new coordinates [m]
 fluxloc_final = Array{Float64}(undef, size(fluxloc, 1), size(fluxloc, 2))
