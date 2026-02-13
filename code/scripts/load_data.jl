@@ -116,58 +116,14 @@ evaldf2[isbad_quality_2, ["u", "v", "w", "T"]] .= NaN;
 evaldf3[isbad_quality_3, ["u", "v", "w", "T"]] .= NaN;
 evaldf4[isbad_quality_4, ["u", "v", "w", "T"]] .= NaN;
 
-#turb.saveturbasnetcdf(evaldf5, "/home/haugened/Documents/openfoam/duerr_les/scripts/src/kaijotmp.nc")
-
 ######################################################
 ###               LOADING SLOW DATA                ###
 ######################################################
 
-#tjkmeteodata = turb.csvtodataframe(tjkpath)
-#tjkmeteodata = tjkmeteodata[evalstart.<=tjkmeteodata.time.<=evalend, :]
-
-#t2vent = turb.readturbasnetcdf(joinpath(ventair_stam, "t2.nc"), evalstart, evalend)
-#t3vent = turb.readturbasnetcdf(joinpath(ventair_stam, "t3.nc"), evalstart, evalend)
-
-#remove unrealistic values
-#t2vent.vent_air_temp[.!(-30 .< replace!(t2vent.vent_air_temp, missing => NaN) .< 30)] .= NaN
-#t3vent.vent_air_temp[.!(-30 .< replace!(t3vent.vent_air_temp, missing => NaN) .< 30)] .= NaN
-
 ######################################################
 ###                   PLOTTING                     ###
 ######################################################
-#=
-##
-#plot u,v,w,T components to visually inspect data
-evaldf = evaldf1
-skip_n = 200  # Plot every nth data point
 
-fig, (ax1, ax2, ax3, ax4) = PyPlot.subplots(4, 1, figsize=(10, 12), sharex=true)
-
-# Plot u component
-ax1.plot(evaldf.time[1:skip_n:end], evaldf.u[1:skip_n:end])
-ax1.set_ylabel(L"u~\mathrm{[m~s^{-1}]}")
-ax1.grid(true)
-
-# Plot v component
-ax2.plot(evaldf.time[1:skip_n:end], evaldf.v[1:skip_n:end])
-ax2.set_ylabel(L"v~\mathrm{[m~s^{-1}]}")
-ax2.grid(true)
-
-# Plot w component
-ax3.plot(evaldf.time[1:skip_n:end], evaldf.w[1:skip_n:end])
-ax3.set_ylabel(L"w~\mathrm{[m~s^{-1}]}")
-ax3.grid(true)
-
-# Plot T component
-ax4.plot(evaldf.time[1:skip_n:end], evaldf.T[1:skip_n:end])
-ax4.set_ylabel(L"T~\mathrm{[K]}")
-ax4.grid(true)
-
-# Adjust layout to prevent overlapping
-fig.tight_layout()
-##
-=#
-#######################################################
 #plot wind roses for CONTRASTS
 
 windrose = pyimport("windrose")
@@ -279,6 +235,7 @@ output_folder = "/home/haugened/Documents/data/CONTRASTS/plots/wind_roses"
 PyPlot.savefig(joinpath(output_folder, "3d.pdf"), bbox_inches="tight")
 ##
 #########################################################
+#Plot wind speed, direction, sonic temperature, and water vapor density
 ##
 block_length = Minute(10)
 percentiles = (5, 95) #for max/min shading
@@ -394,76 +351,4 @@ PyPlot.tight_layout()
 ##
 # Save the figure
 output_folder = "/home/haugened/Documents/data/CONTRASTS/plots/wind_temperature/"
-PyPlot.savefig(joinpath(output_folder, "3d.pdf"), bbox_inches="tight")
-#PyPlot.savefig(joinpath(output_folder, "3a.png"), dpi=150, bbox_inches="tight")
-
-##
-
-#######################################################
-#=
-#######################################################
-#plot histograms to determine outliers
-
-quantity1 = filter(!isnan, skipmissing(evaldf1.T))
-quantity2 = filter(!isnan, skipmissing(evaldf2.T))
-quantity3 = filter(!isnan, skipmissing(evaldf3.T))
-quantity4 = filter(!isnan, skipmissing(evaldf4.T))
-quantity5 = filter(!isnan, skipmissing(evaldf5.w))
-binmin = -8
-binmax = 8
-
-##
-comap = PyPlot.get_cmap("tab10");
-hist = PyPlot.figure()
-axh = hist.add_subplot(111)
-axh.set_title("Kajio measurements (raw)")
-axh.set_xlabel(L"w~\mathrm{[m~s^{-1}]}")
-axh.grid()
-PyPlot.yscale("log")
-#axh.hist(vec(quantity1), bins=collect(binmin:binmax), density=true, label="T1IRG", alpha=0.5, color=comap(0))
-#axh.hist(vec(quantity2), bins=collect(binmin:binmax), density=true, label="T2IRG", alpha=0.5, color=comap(1))
-#axh.hist(vec(quantity3), bins=collect(binmin:binmax), density=true, label="T2LCSAT", alpha=0.5, color=comap(2))
-#axh.hist(vec(quantity4), bins=collect(binmin:binmax), density=true, label="T2UCSAT", alpha=0.5, color=comap(3))
-axh.hist(vec(quantity5), bins=collect(binmin:0.01:binmax), density=true, label="KAIJO", color=comap(4))
-axh.legend()
-##
-
-##
-#plot single parameter (e.g. u)
-turb.missing2nan!(evaldf2)
-turb.missing2nan!(evaldf4)
-sifig = PyPlot.figure()
-siax = sifig.add_subplot(111)
-#siax.set_title(L"\mathrm{1~min~gliding~average}", fontsize=12)
-siax.set_xlabel("03.06.2021")
-siax.set_ylabel("winddir (w/o DR)")
-#siax.set_ylabel(L"\overline{u}~\mathrm{[m~s^{-1}]}")
-#siax.plot(evaldf1.time, gen.movingaverage(evaldf1.u,20*60), label="T1IRG")
-siax.plot(evaldf2.time, gen.movingaverage(turb.simplewinddir.(evaldf2.u, evaldf2.v), 20*600), label="T2IRG, 10min avg")
-#siax.plot(evaldf3.time, gen.movingaverage(evaldf3.u,20*60), label="T2LCSAT")
-siax.plot(evaldf4.time, gen.movingaverage(turb.simplewinddir.(evaldf4.u, evaldf4.v), 20*600), label="T2UCSAT 10min avg")
-#siax.plot(evaldf5.time, gen.movingaverage(evaldf5.u,20*60), label="KAIJO")
-majorlocator = pydates.HourLocator(interval=1)
-minorlocator = pydates.MinuteLocator([15,30,45])
-siax.xaxis.set_major_locator(majorlocator)
-siax.xaxis.set_minor_locator(minorlocator)
-date_format = pydates.DateFormatter("%H:%M")
-siax.xaxis.set_major_formatter(date_format)
-#sifig.autofmt_xdate()
-siax.grid()
-siax.legend()
-##
-=#
-#=
-#plot time series with moving average
-fig = PyPlot.figure()
-ax = fig.add_subplot(111)
-ax.plot(evaldf2.time[1:40:end], gen.movingaverage(evaldf2.u,40)[1:40:end], label="1m")
-ax.plot(evaldf3.time[1:40:end], gen.movingaverage(evaldf3.u,40)[1:40:end], label="2m")
-ax.plot(evaldf4.time[1:40:end], gen.movingaverage(evaldf4.u,40)[1:40:end], label="3m")
-ax.plot(evaldf5.time[1:40:end], gen.movingaverage(evaldf5.u,40)[1:40:end], label="0.3m")
-ax.plot(evaldf6.time[1:40:end], gen.movingaverage(evaldf6.u,40)[1:40:end], label="5m")
-ax.set_ylabel(L"u~\mathrm{[m~s^{-1}]}")
-ax.grid()
-ax.legend()
-=#
+#PyPlot.savefig(joinpath(output_folder, "1b_2.pdf"), bbox_inches="tight")
