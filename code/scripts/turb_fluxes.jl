@@ -135,8 +135,48 @@ ax1.legend(handles, labels)#, loc="upper right", bbox_to_anchor=(1.0, 1))
 # fig.autofmt_xdate()
 
 PyPlot.tight_layout()
+output_folder_wT = output_folder = "/home/haugened/Documents/data/CONTRASTS/plots/wT_wq/"
+#PyPlot.savefig(joinpath(output_folder_wT, "1b_2.pdf"), bbox_inches="tight")
 ##
-######################################################
+##
+# Momentum fluxes and friction velocity plot
+fig, (ax1, ax2) = PyPlot.subplots(2, 1, figsize=(10, 8), sharex=true)
+
+# Define colors for consistent legend
+colors = ["C0", "C1", "C2", "C3"]
+
+# Define plotting step size
+step = 20*60  # every 1min
+
+# Upper subplot - Vertical momentum fluxes
+ax1.set_title("Vertical Momentum Fluxes and Friction Velocity")
+uw1 = ax1.plot(fx1.time[1:step:end], fx1.uw[1:step:end], color=colors[1])
+uw2 = ax1.plot(fx2.time[1:step:end], fx2.uw[1:step:end], color=colors[2])
+uw3 = ax1.plot(fx3.time[1:step:end], fx3.uw[1:step:end], color=colors[3])
+uw4 = ax1.plot(fx4.time[1:step:end], fx4.uw[1:step:end], color=colors[4])
+ax1.set_ylabel(L"\overline{u'w'} ~\mathrm{[m^2~s^{-2}]}")
+ax1.grid()
+
+# Lower subplot - Friction velocity
+us1 = ax2.plot(fx1.time[1:step:end], fx1.u_star[1:step:end], color=colors[1])
+us2 = ax2.plot(fx2.time[1:step:end], fx2.u_star[1:step:end], color=colors[2])
+us3 = ax2.plot(fx3.time[1:step:end], fx3.u_star[1:step:end], color=colors[3])
+us4 = ax2.plot(fx4.time[1:step:end], fx4.u_star[1:step:end], color=colors[4])
+ax2.set_ylabel(L"u_*~\mathrm{[m~s^{-1}]}")
+ax2.set_xlabel("Time")
+ax2.xaxis_date()
+ax2.grid()
+
+# Create a single legend for the entire figure
+handles = [uw1[1], uw2[1], uw3[1], uw4[1]]
+#labels same as above
+ax1.legend(handles, labels)
+
+PyPlot.tight_layout()
+output_folder_uw = output_folder = "/home/haugened/Documents/data/CONTRASTS/plots/uw_ustar/"
+#PyPlot.savefig(joinpath(output_folder_uw, "1b_2.pdf"), bbox_inches="tight")
+##
+##########################################################
 #=
 ##
 #understanding fluxes - plot components
