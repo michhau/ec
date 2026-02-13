@@ -380,7 +380,9 @@ axgb.hist(x, bins=collect(xmin:xstep:xmax), density=true)
 axgb.tick_params(axis="y", labelleft=false)
 =#
 ######################################################
-#Scatter plot fluxes CONTRASTS
+###         Scatter plot fluxes CONTRASTS          ###
+######################################################
+##
 mpl_scatter_density = pyimport("mpl_scatter_density")
 
 # Heat flux scatter data preparation
