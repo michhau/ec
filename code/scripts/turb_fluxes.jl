@@ -379,6 +379,7 @@ axgb.tick_params(axis="y", labelleft=false)
 ######################################################
 ###         Scatter plot fluxes CONTRASTS          ###
 ######################################################
+##
 mpl_scatter_density = pyimport("mpl_scatter_density")
 
 # Scatter data preparation, such that "ice" is always the "a" part, effect for heat and momentum
