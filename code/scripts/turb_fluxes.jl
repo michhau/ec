@@ -455,12 +455,12 @@ ax2.grid()
 ax2.set_aspect("equal")
 
 ax3 = fig.add_subplot(gs[1, 3], projection="scatter_density")
-ax3.plot([-25,30], [-25,30], color="grey", alpha=0.3)
+ax3.plot([-25,25], [-25,25], color="grey", alpha=0.3)
 ax3.scatter_density(scatter3a, scatter3b, color="black", vmin=0, vmax=2000)
 ax3.set_title("2m Sensible Heat Fluxes")
 ax3.axhline(0, color="grey")
 ax3.axvline(0, color="grey")
-lim_3 = (-20, 15)
+lim_3 = (-10, 10)
 ax3.set_xlim(lim_3)
 ax3.set_ylim(lim_3)
 #ax3.set_yticks(collect(-20:10:10))
@@ -517,8 +517,8 @@ ax9.grid(alpha=0.3)
 
 PyPlot.tight_layout()
 ##
-output_folder = "/home/haugened/Documents/data/CONTRASTS/plots/correlation_heat/"
-#PyPlot.savefig(joinpath(output_folder, "1b_1.pdf"), bbox_inches="tight")
+output_folder_heat = "/home/haugened/Documents/data/CONTRASTS/plots/correlation_heat/"
+PyPlot.savefig(joinpath(output_folder_heat, "1b_1.pdf"), bbox_inches="tight")
 
 #calculating correlations
 using NaNStatistics
@@ -562,7 +562,7 @@ ratio_mom3 = scatter_mom3b ./ scatter_mom3a
 ratio_mom4 = scatter_mom4b ./ scatter_mom4a
 
 fig_mom = PyPlot.figure(figsize=(16, 9.5))
-fig_mom.suptitle("1b-2 - Friction Velocity")
+fig_mom.suptitle("1b-1 - Friction Velocity")
 gs_mom = gridspec.GridSpec(3, 4, height_ratios=(2, 1, 1))
 
 # --- Row 1: Scatter density plots ---
@@ -574,7 +574,7 @@ ax_m1.scatter_density(scatter_mom1a, scatter_mom1b, color="red", vmin=0, vmax=10
 ax_m1.set_xlabel("\$u_{*,$(srf_type[sc_lbl_idx[1]])}~\\mathrm{[m~s^{-1}]}\$")
 ax_m1.set_ylabel("\$u_{*,$(srf_type[sc_lbl_idx[2]])}~\\mathrm{[m~s^{-1}]}\$")
 ax_m1.grid()
-lim_m1 = (0.3, 0.8)
+lim_m1 = (0.15, 0.55)
 ax_m1.set_xlim(lim_m1)
 ax_m1.set_ylim(lim_m1)
 ax_m1.set_aspect("equal")
@@ -587,7 +587,7 @@ ax_m2.scatter_density(scatter_mom2a, scatter_mom2b, color="red", vmin=0, vmax=10
 ax_m2.set_xlabel("\$u_{*,$(srf_type[sc_lbl_idx[3]])}~\\mathrm{[m~s^{-1}]}\$")
 ax_m2.set_ylabel("\$u_{*,$(srf_type[sc_lbl_idx[4]])}~\\mathrm{[m~s^{-1}]}\$")
 ax_m2.grid()
-lim_m2 = (0.4, 0.9)
+lim_m2 = (0.15, 0.6)
 ax_m2.set_xlim(lim_m2)
 ax_m2.set_ylim(lim_m2)
 ax_m2.set_aspect("equal")
@@ -600,7 +600,7 @@ ax_m3.scatter_density(scatter_mom3a, scatter_mom3b, color="red", vmin=0, vmax=10
 ax_m3.set_xlabel("\$u_{*,$(heights[1])m}~\\mathrm{[m~s^{-1}]}\$")
 ax_m3.set_ylabel("\$u_{*,$(heights[2])m}~\\mathrm{[m~s^{-1}]}\$")
 ax_m3.grid()
-lim_m3 = (0.3, 0.9)
+lim_m3 = (0.15, 0.6)
 ax_m3.set_xlim(lim_m3)
 ax_m3.set_ylim(lim_m3)
 ax_m3.set_aspect("equal")
@@ -613,7 +613,7 @@ ax_m4.scatter_density(scatter_mom4a, scatter_mom4b, color="red", vmin=0, vmax=10
 ax_m4.set_xlabel("\$u_{*,$(heights[3])m}~\\mathrm{[m~s^{-1}]}\$")
 ax_m4.set_ylabel("\$u_{*,$(heights[4])m}~\\mathrm{[m~s^{-1}]}\$")
 ax_m4.grid()
-lim_m4 = (0.3, 0.9)
+lim_m4 = (0.15, 0.6)
 ax_m4.set_xlim(lim_m4)
 ax_m4.set_ylim(lim_m4)
 ax_m4.set_aspect("equal")
@@ -654,14 +654,14 @@ ax_m8.grid(alpha=0.3)
 
 # --- Row 3: Histograms of ratios ---
 ax_m9 = fig_mom.add_subplot(gs_mom[3, 1])
-ax_m9.hist(ratio_mom1, bins=collect(0.9:0.001:1.1), color="red", alpha=0.7, density=true)
+ax_m9.hist(ratio_mom1, bins=collect(0.8:0.001:1.2), color="red", alpha=0.7, density=true)
 ax_m9.axvline(1, color="black", linestyle="--", alpha=0.3, label="1:1")
 ax_m9.set_xlabel("\$\\left(u_{*,$(srf_type[sc_lbl_idx[2]])} ~/~ u_{*,$(srf_type[sc_lbl_idx[1]])}\\right)_{1m}\$")
 ax_m9.set_ylabel("PDF")
 ax_m9.grid(alpha=0.3)
 
 ax_m10 = fig_mom.add_subplot(gs_mom[3, 2])
-ax_m10.hist(ratio_mom2, bins=collect(0.9:0.001:1.1), color="red", alpha=0.7, density=true)
+ax_m10.hist(ratio_mom2, bins=collect(0.8:0.001:1.2), color="red", alpha=0.7, density=true)
 ax_m10.axvline(1, color="black", linestyle="--", alpha=0.3, label="1:1")
 ax_m10.set_xlabel("\$\\left(u_{*,$(srf_type[sc_lbl_idx[4]])} ~/~ u_{*,$(srf_type[sc_lbl_idx[3]])}\\right)_{2m}\$")
 ax_m10.grid(alpha=0.3)
@@ -673,7 +673,7 @@ ax_m11.set_xlabel("\$\\left(u_{*,$(heights[2])m} ~/~ u_{*,$(heights[1])m}\\right
 ax_m11.grid(alpha=0.3)
 
 ax_m12 = fig_mom.add_subplot(gs_mom[3, 4])
-ax_m12.hist(ratio_mom4, bins=collect(0.9:0.001:1.2), color="red", alpha=0.7, density=true)
+ax_m12.hist(ratio_mom4, bins=collect(0.9:0.001:1.3), color="red", alpha=0.7, density=true)
 ax_m12.axvline(1, color="black", linestyle="--", alpha=0.3, label="1:1")
 ax_m12.set_xlabel("\$\\left(u_{*,$(heights[4])m} ~/~ u_{*,$(heights[3])m}\\right)_{$(srf_type[3])}\$")
 ax_m12.grid(alpha=0.3)
@@ -681,7 +681,7 @@ ax_m12.grid(alpha=0.3)
 PyPlot.tight_layout()
 ##
 output_folder_mom = "/home/haugened/Documents/data/CONTRASTS/plots/correlation_momentum/"
-#PyPlot.savefig(joinpath(output_folder_mom, "1b_2.pdf"), bbox_inches="tight")
+#PyPlot.savefig(joinpath(output_folder_mom, "1b_1.pdf"), bbox_inches="tight")
 
 #calculating correlations for momentum
 cor_mom1 = nancor(var1a.u_star, var1b.u_star)
