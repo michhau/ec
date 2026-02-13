@@ -379,16 +379,21 @@ axgb.set_xlabel(xlabel)
 axgb.hist(x, bins=collect(xmin:xstep:xmax), density=true)
 axgb.tick_params(axis="y", labelleft=false)
 =#
+
 ######################################################
-#Scatter plot fluxes CONTRASTS
+###         Scatter plot fluxes CONTRASTS          ###
+######################################################
 mpl_scatter_density = pyimport("mpl_scatter_density")
 
-# Heat flux scatter data preparation
+# Scatter data preparation, such that "ice" is always the "a" part, effect for heat and momentum
 var1a = fx3
 var1b = fx1
 var3a = fx4
 var3b = fx2
 sc_lbl_idx = [3, 1, 4, 2] #indexing for labels
+
+##################
+#Heat fluxes
 
 scatter1a = var1a.wT[.!isnan.(fx1.wT) .&& .!isnan.(fx3.wT)]
 scatter1b = var1b.wT[.!isnan.(fx1.wT) .&& .!isnan.(fx3.wT)]
@@ -424,8 +429,9 @@ ax1.axhline(0, color="grey", alpha=0.6)
 ax1.axvline(0, color="grey", alpha=0.6)
 ax1.plot([-100,100], [-100,100], color="grey", alpha=0.3)
 ax1.scatter_density(scatter1a, scatter1b, color="black", vmin=00, vmax=1000)
-ax1.set_xlim(0,25)
-ax1.set_ylim(0,25)
+lim_1 = (0, 25)
+ax1.set_xlim(lim_1)
+ax1.set_ylim(lim_1)
 #ax1.set_yticks(collect(-20:10:20))
 ax1.set_xlabel("\$\\overline{w'T'}_{$(srf_type[sc_lbl_idx[1]])}~\\mathrm{[W~m^{-2}]}\$")
 ax1.set_ylabel("\$\\overline{w'T'}_{$(srf_type[sc_lbl_idx[2]])}~\\mathrm{[W~m^{-2}]}\$")
@@ -437,9 +443,10 @@ ax2.set_title("1m Latent Heat Fluxes")
 ax2.axhline(0, color="grey")
 ax2.axvline(0, color="grey")
 ax2.plot([-100,100], [-100,100], color="grey", alpha=0.3)
-ax2.scatter_density(scatter2a, scatter2b, color="blue", vmin=0, vmax=1500)
-ax2.set_xlim(-15,25)
-ax2.set_ylim(-15,25)
+ax2.scatter_density(scatter2a, scatter2b, color="blue", vmin=0, vmax=1000)
+lim_2 = (-15, 25)
+ax2.set_xlim(lim_2)
+ax2.set_ylim(lim_2)
 #ax2.set_yticks(collect(-10:5:10))
 ax2.set_xlabel("\$\\overline{w'q'}_{$(srf_type[sc_lbl_idx[1]])}~\\mathrm{[W~m^{-2}]}\$")
 ax2.set_ylabel("\$\\overline{w'q'}_{$(srf_type[sc_lbl_idx[2]])}~\\mathrm{[W~m^{-2}]}\$")
@@ -452,8 +459,9 @@ ax3.scatter_density(scatter3a, scatter3b, color="black", vmin=0, vmax=2000)
 ax3.set_title("2m Sensible Heat Fluxes")
 ax3.axhline(0, color="grey")
 ax3.axvline(0, color="grey")
-ax3.set_xlim(-55,30)
-ax3.set_ylim(-55,30)
+lim_3 = (-55, 30)
+ax3.set_xlim(lim_3)
+ax3.set_ylim(lim_3)
 #ax3.set_yticks(collect(-20:10:10))
 ax3.set_xlabel("\$\\overline{w'T'}_{$(srf_type[sc_lbl_idx[3]])}~\\mathrm{[W~m^{-2}]}\$")
 ax3.set_ylabel("\$\\overline{w'T'}_{$(srf_type[sc_lbl_idx[4]])}~\\mathrm{[W~m^{-2}]}\$")
@@ -466,7 +474,7 @@ ax4.hist(scatter1a, bins=collect(-35:0.1:25), color="grey", alpha=0.5, density=t
 ax4.hist(scatter1b, bins=collect(-35:0.1:25), color="orange", alpha=0.5, density=true, label=instr_labels[sc_lbl_idx[2]])
 ax4.set_xlabel(L"\overline{w'T'}~\mathrm{[W~m^{-2}]}")
 ax4.set_ylabel("PDF")
-ax4.set_xlim(-35,25)
+ax4.set_xlim(ax1.get_xlim())
 ax4.legend()
 ax4.grid(alpha=0.3)
 
@@ -474,7 +482,7 @@ ax5 = fig.add_subplot(gs[2, 2])
 ax5.hist(scatter2a, bins=collect(-15:0.1:25), color="grey", alpha=0.5, density=true, label=instr_labels[sc_lbl_idx[1]])
 ax5.hist(scatter2b, bins=collect(-15:0.1:25), color="orange", alpha=0.5, density=true, label=instr_labels[sc_lbl_idx[2]])
 ax5.set_xlabel(L"\overline{w'q'}~\mathrm{[W~m^{-2}]}")
-ax5.set_xlim(-10, 10)
+ax5.set_xlim(ax2.get_xlim())
 ax5.legend()
 ax5.set_xlim(-15,25)
 ax5.grid(alpha=0.3)
@@ -483,7 +491,7 @@ ax6 = fig.add_subplot(gs[2, 3])
 ax6.hist(scatter3a, bins=collect(-55:0.1:30), color="grey", alpha=0.5, density=true, label=instr_labels[sc_lbl_idx[3]])
 ax6.hist(scatter3b, bins=collect(-55:0.1:30), color="orange", alpha=0.5, density=true, label=instr_labels[sc_lbl_idx[4]])
 ax6.set_xlabel(L"\overline{w'T'}~\mathrm{[W~m^{-2}]}")
-ax6.set_xlim(-20, 15)
+ax6.set_xlim(ax3.get_xlim())
 ax6.legend()
 ax6.set_xlim(-55,30)
 ax6.grid(alpha=0.3)
@@ -511,7 +519,7 @@ ax9.grid(alpha=0.3)
 PyPlot.tight_layout()
 ##
 output_folder = "/home/haugened/Documents/data/CONTRASTS/plots/correlation_heat/"
-PyPlot.savefig(joinpath(output_folder, "3c.pdf"), bbox_inches="tight")
+#PyPlot.savefig(joinpath(output_folder, "3c.pdf"), bbox_inches="tight")
 
 #calculating correlations
 using NaNStatistics
