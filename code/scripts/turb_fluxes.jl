@@ -57,12 +57,10 @@ fx4 = turb.avgflux(fx4_raw, ra4, true, 0.1)
 fig = PyPlot.figure()
 ax = fig.add_subplot(111)
 ax.set_title("2a - Turbulent heat fluxes at the lead")
-pt1 = ax.plot(fx1.time[1:20*600:end], fx1.wT[1:20*600:end] .* (ρ_air * c_p), label="CSAT ice")
-pt2 = ax.plot(fx2.time[1:20*60:end], fx2.wq[1:20*60:end].* (L_v * 1e-3), label="IRG ice")
-pt3 = ax.plot(fx3.time[1:20*60:end], fx3.wT[1:20*60:end] .* (ρ_air * c_p), label="CSAT lead")
-pt4 = ax.plot(fx4.time[1:20*60:end], fx4.wq[1:20*60:end].* (L_v * 1e-3), label="IRG lead")
-#pt5 = ax.plot(fx5.time[1:20*60:end], fx5.wT[1:20*60:end], label="KAIJO")
-#pt6 = ax.plot(fx6.time[1:20*60:end], fx6.wT[1:20*60:end], label="TJK")
+pt1 = ax.plot(fx1.time[1:20*600:end], fx1.wT[1:20*600:end] .* (ρ_air * c_p), label = instr_labels[1])
+pt2 = ax.plot(fx2.time[1:20*60:end], fx2.wq[1:20*60:end].* (L_v * 1e-3),     label = instr_labels[2])
+pt3 = ax.plot(fx3.time[1:20*60:end], fx3.wT[1:20*60:end] .* (ρ_air * c_p),   label = instr_labels[3])
+pt4 = ax.plot(fx4.time[1:20*60:end], fx4.wq[1:20*60:end].* (L_v * 1e-3),     label = instr_labels[4])
 #pt2wq = ax.plot(fx2.time[1:20*60:end], fx2.wq[1:20*60:end], label="w'q'(T2IRG)")
 #pt1wq = ax.plot(fx1.time[1:20*600:end], fx1.wq[1:20*600:end], label="w'q'(T1IRG)")
 #ax.set_ylabel(L"u_\ast~\mathrm{[m~s^{-1}]}")
@@ -119,7 +117,7 @@ ax2.set_ylim(wq_limits)
 
 # Create a single legend for the entire figure
 handles = [wt1[1], wt2[1], wt3[1], wt4[1]]  # Get line objects
-labels = ["pond 1.0m", "pond 2.1m", "ice 1.2m", "ice 2.2m"]
+labels = instr_labels
 ax1.legend(handles, labels)#, loc="upper right", bbox_to_anchor=(1.0, 1))
 
 # Optional: Uncomment these lines if you want to set specific time limits
