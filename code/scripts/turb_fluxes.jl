@@ -384,20 +384,27 @@ axgb.tick_params(axis="y", labelleft=false)
 #Scatter plot fluxes CONTRASTS
 mpl_scatter_density = pyimport("mpl_scatter_density")
 
-scatter1a = fx1.wT[.!isnan.(fx1.wT) .&& .!isnan.(fx3.wT)]
-scatter1b = fx3.wT[.!isnan.(fx1.wT) .&& .!isnan.(fx3.wT)]
+# Heat flux scatter data preparation
+var1a = fx1
+var1b = fx3
+var3a = fx2
+var3b = fx4
+sc_lbl_idx = [2, 3, 2, 4] #indexing for labels
+
+scatter1a = var1a.wT[.!isnan.(fx1.wT) .&& .!isnan.(fx3.wT)]
+scatter1b = var1b.wT[.!isnan.(fx1.wT) .&& .!isnan.(fx3.wT)]
 
 scatter1a .*= ρ_air .* c_p
 scatter1b .*= ρ_air .* c_p
 
-scatter2a = fx1.wq[.!isnan.(fx1.wq) .&& .!isnan.(fx3.wq)]
-scatter2b = fx3.wq[.!isnan.(fx1.wq) .&& .!isnan.(fx3.wq)]
+scatter2a = var1a.wq[.!isnan.(fx1.wq) .&& .!isnan.(fx3.wq)]
+scatter2b = var1b.wq[.!isnan.(fx1.wq) .&& .!isnan.(fx3.wq)]
 
 scatter2a .*= L_v .* 1e-3
 scatter2b .*= L_v .* 1e-3
 
-scatter3a = fx2.wT[.!isnan.(fx2.wT) .&& .!isnan.(fx4.wT)]
-scatter3b = fx4.wT[.!isnan.(fx2.wT) .&& .!isnan.(fx4.wT)]
+scatter3a = var3a.wT[.!isnan.(fx2.wT) .&& .!isnan.(fx4.wT)]
+scatter3b = var3b.wT[.!isnan.(fx2.wT) .&& .!isnan.(fx4.wT)]
 
 scatter3a .*= ρ_air .* c_p
 scatter3b .*= ρ_air .* c_p
@@ -411,18 +418,18 @@ fig = PyPlot.figure(figsize=(12, 9.5))
 fig.suptitle("2a - 14.07.2025 to 17.07.2025")
 gs = gridspec.GridSpec(3, 3, height_ratios=(2, 1, 1))
 
-# --- Row 1: Scatter density (unchanged) ---
+# --- Row 1: Scatter density ---
 ax1 = fig.add_subplot(gs[1, 1], projection="scatter_density")
 ax1.set_title("1m Sensible Heat Fluxes")
 ax1.axhline(0, color="grey", alpha=0.6)
 ax1.axvline(0, color="grey", alpha=0.6)
-ax1.plot([-25,15], [-25,15], color="grey", alpha=0.1)
-ax1.scatter_density(scatter1a, scatter1b, color="black", vmin=0, vmax=2500)
+ax1.plot([-25,25], [-25,25], color="grey", alpha=0.3)
+ax1.scatter_density(scatter1a, scatter1b, color="black", vmin=00, vmax=1000)
 ax1.set_xlim(-25,15)
 ax1.set_ylim(-25,15)
-ax1.set_yticks(collect(-20:10:10))
-ax1.set_xlabel(L"\overline{w'T'}_{ice}~\mathrm{[W~m^{-2}]}")
-ax1.set_ylabel(L"\overline{w'T'}_{lead}~\mathrm{[W~m^{-2}]}")
+#ax1.set_yticks(collect(-20:10:20))
+ax1.set_xlabel("\$\\overline{w'T'}_{$(srf_type[sc_lbl_idx[1]])}~\\mathrm{[W~m^{-2}]}\$")
+ax1.set_ylabel("\$\\overline{w'T'}_{$(srf_type[sc_lbl_idx[2]])}~\\mathrm{[W~m^{-2}]}\$")
 ax1.grid()
 ax1.set_aspect("equal")
 
@@ -430,13 +437,13 @@ ax2 = fig.add_subplot(gs[1, 2], projection="scatter_density")
 ax2.set_title("1m Latent Heat Fluxes")
 ax2.axhline(0, color="grey")
 ax2.axvline(0, color="grey")
-ax2.plot([-25,15], [-25,15], color="grey", alpha=0.5)
-ax2.scatter_density(scatter2a, scatter2b, color="blue", vmin=0, vmax=2500)
+ax2.plot([-25,25], [-25,25], color="grey", alpha=0.3)
+ax2.scatter_density(scatter2a, scatter2b, color="blue", vmin=0, vmax=1000)
 ax2.set_xlim(-10,10)
 ax2.set_ylim(-10,10)
-ax2.set_yticks(collect(-10:5:10))
-ax2.set_xlabel(L"\overline{w'q'}_{ice}~\mathrm{[W~m^{-2}]}")
-ax2.set_ylabel(L"\overline{w'q'}_{lead}~\mathrm{[W~m^{-2}]}")
+#ax2.set_yticks(collect(-10:5:10))
+ax2.set_xlabel("\$\\overline{w'q'}_{$(srf_type[sc_lbl_idx[1]])}~\\mathrm{[W~m^{-2}]}\$")
+ax2.set_ylabel("\$\\overline{w'q'}_{$(srf_type[sc_lbl_idx[2]])}~\\mathrm{[W~m^{-2}]}\$")
 ax2.grid()
 ax2.set_aspect("equal")
 
@@ -448,16 +455,16 @@ ax3.axhline(0, color="grey")
 ax3.axvline(0, color="grey")
 ax3.set_xlim(-25,15)
 ax3.set_ylim(-25,15)
-ax3.set_yticks(collect(-20:10:10))
-ax3.set_xlabel(L"\overline{w'T'}_{ice}~\mathrm{[W~m^{-2}]}")
-ax3.set_ylabel(L"\overline{w'T'}_{lead}~\mathrm{[W~m^{-2}]}")
+#ax3.set_yticks(collect(-20:10:10))
+ax3.set_xlabel("\$\\overline{w'T'}_{$(srf_type[sc_lbl_idx[3]])}~\\mathrm{[W~m^{-2}]}\$")
+ax3.set_ylabel("\$\\overline{w'T'}_{$(srf_type[sc_lbl_idx[4]])}~\\mathrm{[W~m^{-2}]}\$")
 ax3.grid()
 ax3.set_aspect("equal")
 
 # --- Row 2: Overlaid histograms of individual fluxes ---
 ax4 = fig.add_subplot(gs[2, 1])
-ax4.hist(scatter1a, bins=collect(-25:0.1:15), color="grey", alpha=0.5, density=true, label="ice")
-ax4.hist(scatter1b, bins=collect(-25:0.1:15), color="orange", alpha=0.5, density=true, label="lead")
+ax4.hist(scatter1a, bins=collect(-25:0.1:15), color="grey", alpha=0.5, density=true, label=instr_labels[sc_lbl_idx[1]])
+ax4.hist(scatter1b, bins=collect(-25:0.1:15), color="orange", alpha=0.5, density=true, label=instr_labels[sc_lbl_idx[2]])
 ax4.set_xlabel(L"\overline{w'T'}~\mathrm{[W~m^{-2}]}")
 ax4.set_ylabel("PDF")
 ax4.set_xlim(-25, 15)
@@ -465,16 +472,16 @@ ax4.legend()
 ax4.grid(alpha=0.3)
 
 ax5 = fig.add_subplot(gs[2, 2])
-ax5.hist(scatter2a, bins=collect(-10:0.1:10), color="grey", alpha=0.5, density=true, label="ice")
-ax5.hist(scatter2b, bins=collect(-10:0.1:10), color="orange", alpha=0.5, density=true, label="lead")
+ax5.hist(scatter2a, bins=collect(-10:0.1:10), color="grey", alpha=0.5, density=true, label=instr_labels[sc_lbl_idx[1]])
+ax5.hist(scatter2b, bins=collect(-10:0.1:10), color="orange", alpha=0.5, density=true, label=instr_labels[sc_lbl_idx[2]])
 ax5.set_xlabel(L"\overline{w'q'}~\mathrm{[W~m^{-2}]}")
 ax5.set_xlim(-10, 10)
 ax5.legend()
 ax5.grid(alpha=0.3)
 
 ax6 = fig.add_subplot(gs[2, 3])
-ax6.hist(scatter3a, bins=collect(-25:0.1:15), color="grey", alpha=0.5, density=true, label="ice")
-ax6.hist(scatter3b, bins=collect(-25:0.1:15), color="orange", alpha=0.5, density=true, label="lead")
+ax6.hist(scatter3a, bins=collect(-25:0.1:15), color="grey", alpha=0.5, density=true, label=instr_labels[sc_lbl_idx[3]])
+ax6.hist(scatter3b, bins=collect(-25:0.1:15), color="orange", alpha=0.5, density=true, label=instr_labels[sc_lbl_idx[4]])
 ax6.set_xlabel(L"\overline{w'T'}~\mathrm{[W~m^{-2}]}")
 ax6.set_xlim(-25, 15)
 ax6.legend()
@@ -484,26 +491,26 @@ ax6.grid(alpha=0.3)
 ax7 = fig.add_subplot(gs[3, 1])
 ax7.hist(ratio1, bins=collect(-1.0:0.01:3.0), color="black", alpha=0.7, density=true)
 ax7.axvline(1, color="red", linestyle="--", alpha=0.3, label="1:1")
-ax7.set_xlabel(L"\left(\overline{w'T'}_{lead} ~/~\overline{w'T'}_{ice}\right)_{IRG}")
+ax7.set_xlabel("\$\\left(\\overline{w'T'}_{$(srf_type[sc_lbl_idx[2]])} ~/~\\overline{w'T'}_{$(srf_type[sc_lbl_idx[1]])}\\right)_{IRG}\$")
 ax7.set_ylabel("PDF")
 ax7.grid(alpha=0.3)
 
 ax8 = fig.add_subplot(gs[3, 2])
 ax8.hist(ratio2, bins=collect(-1.0:0.01:3.0), color="blue", alpha=0.7, density=true)
 ax8.axvline(1, color="red", linestyle="--", alpha=0.3, label="1:1")
-ax8.set_xlabel(L"\left(\overline{w'q'}_{lead} ~/~ \overline{w'q'}_{ice}\right)_{CSAT}")
+ax8.set_xlabel("\$\\left(\\overline{w'q'}_{$(srf_type[sc_lbl_idx[2]])} ~/~ \\overline{w'q'}_{$(srf_type[sc_lbl_idx[1]])}\\right)_{CSAT}\$")
 ax8.grid(alpha=0.3)
 
 ax9 = fig.add_subplot(gs[3, 3])
 ax9.hist(ratio3, bins=collect(-1.0:0.01:3.0), color="black", alpha=0.7, density=true)
 ax9.axvline(1, color="red", linestyle="--", alpha=0.3, label="1:1")
-ax9.set_xlabel(L"\left(\overline{w'T'}_{lead} ~/~\overline{w'T'}_{ice}\right)_{CSAT}")
+ax9.set_xlabel("\$\\left(\\overline{w'T'}_{$(srf_type[sc_lbl_idx[4]])} ~/~\\overline{w'T'}_{$(srf_type[sc_lbl_idx[3]])}\\right)_{CSAT}\$")
 ax9.grid(alpha=0.3)
 
 PyPlot.tight_layout()
 ##
-output_folder = "/home/haugened/Documents/data/CONTRASTS/plots/correlation/"
-PyPlot.savefig(joinpath(output_folder, "2a_n.pdf"), bbox_inches="tight")
+output_folder = "/home/haugened/Documents/data/CONTRASTS/plots/correlation_heat/"
+#PyPlot.savefig(joinpath(output_folder, "2a.pdf"), bbox_inches="tight")
 
 #calculating correlations
 using NaNStatistics
