@@ -564,7 +564,7 @@ ratio_mom3 = scatter_mom3b ./ scatter_mom3a
 ratio_mom4 = scatter_mom4b ./ scatter_mom4a
 
 fig_mom = PyPlot.figure(figsize=(16, 9.5))
-fig_mom.suptitle("1b-2 - Friction Velocity")
+fig_mom.suptitle("3c - Friction Velocity")
 gs_mom = gridspec.GridSpec(3, 4, height_ratios=(2, 1, 1))
 
 # --- Row 1: Scatter density plots ---
@@ -683,7 +683,7 @@ ax_m12.grid(alpha=0.3)
 PyPlot.tight_layout()
 ##
 output_folder_mom = "/home/haugened/Documents/data/CONTRASTS/plots/correlation_momentum/"
-#PyPlot.savefig(joinpath(output_folder_mom, "1b_2.pdf"), bbox_inches="tight")
+#PyPlot.savefig(joinpath(output_folder_mom, "3c.pdf"), bbox_inches="tight")
 
 #calculating correlations for momentum
 cor_mom1 = nancor(var1a.u_star, var1b.u_star)
