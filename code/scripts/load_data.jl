@@ -57,6 +57,12 @@ evaldf4 = turb.readturbasnetcdf(joinpath(datapath, "1b_t2_csat_proc_cut.nc"), ev
 #evaldf5 = turb.readturbasnetcdf(string(kaijo_outfile_stam, ".nc"), evalstart, evalend)
 #evaldf6 = turb.readturbasnetcdf(joinpath(tower_outfile_stam, "tjkdf.nc"), evalstart, evalend)
 
+# Instrument metadata for labeling (corresponds to evaldf1-4 / fx1-4)
+srf_type = ["pond", "pond", "ice", "ice"]
+heights = [1.0, 2.1, 1.2, 2.2]
+# Compose labels from instrument metadata
+instr_labels = ["$(srf_type[i]) $(heights[i])m" for i in 1:4]
+
 #apply NaN-mask to T1 & T2 when repositioned (for DR)
 #turb.repositionnanmask!(evaldf1)
 #turb.repositionnanmask!(evaldf2)
