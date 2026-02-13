@@ -156,6 +156,7 @@ uw1 = ax1.plot(fx1.time[1:step:end], fx1.uw[1:step:end], color=colors[1])
 uw2 = ax1.plot(fx2.time[1:step:end], fx2.uw[1:step:end], color=colors[2])
 uw3 = ax1.plot(fx3.time[1:step:end], fx3.uw[1:step:end], color=colors[3])
 uw4 = ax1.plot(fx4.time[1:step:end], fx4.uw[1:step:end], color=colors[4])
+ax1.set_ylim(-0.15, 0.05)
 ax1.set_ylabel(L"\overline{u'w'} ~\mathrm{[m^2~s^{-2}]}")
 ax1.grid()
 
@@ -176,7 +177,7 @@ ax1.legend(handles, labels)
 
 PyPlot.tight_layout()
 output_folder_uw = output_folder = "/home/haugened/Documents/data/CONTRASTS/plots/uw_ustar/"
-#PyPlot.savefig(joinpath(output_folder_uw, "1b_2.pdf"), bbox_inches="tight")
+#PyPlot.savefig(joinpath(output_folder_uw, "1b_1.pdf"), bbox_inches="tight")
 ##
 ##########################################################
 #=
