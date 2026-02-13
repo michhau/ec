@@ -28,13 +28,12 @@ import .kljun
 PyPlot.pygui(true)
 
 #variables
-names = [:evaldf1, :evaldf2, :evaldf3, :evaldf4]#, :evaldf5, :evaldf6]
-meas_heights = [0.9, 2.0, 1.1, 2.0]#, 0.3, 5]
+names = [:evaldf1, :evaldf2, :evaldf3, :evaldf4]
+meas_heights = heights
 pbl_height = 1000.0
-fluxes = [:fx1, :fx2, :fx3, :fx4]#, :fx5, :fx6]
-#Ls = [:L1, :L2, :L3, :L4]#, :L5, :L6]
+fluxes = [:fx1, :fx2, :fx3, :fx4]
 wd = [:wd1, :wd2, :wd3, :wd4] #wind directions
-outnames = [:ffp1, :ffp2, :ffp3, :ffp4]#, :ffp5, :ffp6]
+outnames = [:ffp1, :ffp2, :ffp3, :ffp4]
 aggtime = Minute(30) #aggregation time
 
 #optional input
@@ -94,11 +93,6 @@ for ix in 1:size(names, 1)
     @eval $(outnames[ix]) = output
 end
 
-#kljun.plot_ffp(ffp6["x_2d"], ffp6["y_2d"], ffp6["fclim_2d"])
-#PyPlot.figure()
-#PyPlot.plot(ffp6["xr"], ffp6["yr"])
-
-
 ###############################################
 #plotting the footprint on the ortho-mosaic
 
@@ -143,18 +137,14 @@ bg = ax1.imshow(orthomosaic, extent=bgextend_final)
 #bg = ax1.pcolormesh(orthomosaic)
 ax1.set_xlabel("meter")
 ax1.set_ylabel("meter")
-locfx1 = ax1.plot(fluxloc_final[1, 2], fluxloc_final[1, 1], ".", color=ctab10(0), ms=15)#, label="T1IRG")
-#locfx2 = ax1.plot(fluxloc_final[2, 2], fluxloc_final[2, 1], ".", color=ctab10(1), ms=15)#, label="T2IRG")
-locfx3 = ax1.plot(fluxloc_final[3, 2], fluxloc_final[3, 1], ".", color=ctab10(2), ms=15)#, label="T2LCSAT")
-#locfx4 = ax1.plot(fluxloc_final[4, 2], fluxloc_final[4, 1], ".", color=ctab10(3), ms=15)#, label="T2UCSAT")
-#locfx5 = ax1.plot(fluxloc_final[5, 2], fluxloc_final[5, 1], ".", color=ctab10(4))#, label="Kaijo")
-#locfx6 = ax1.plot(fluxloc_final[6, 2], fluxloc_final[6, 1], ".", color=ctab10(5))#, label="TJK")
-fp1 = ax1.plot(ffp1["xr"][end-1] .+ fluxloc_final[1, 2], ffp1["yr"][end-1] .+ fluxloc_final[1, 1], color=ctab10(0), label = "T1IRG")
-fp2 = ax1.plot(ffp2["xr"][end-1] .+ fluxloc_final[2, 2], ffp2["yr"][end-1] .+ fluxloc_final[2, 1], color=ctab10(1), label = "T1CSAT")
-fp3 = ax1.plot(ffp3["xr"][end-1] .+ fluxloc_final[3, 2], ffp3["yr"][end-1] .+ fluxloc_final[3, 1], color=ctab10(2), label = "T2IRG")
-fp4 = ax1.plot(ffp4["xr"][end-1] .+ fluxloc_final[4, 2], ffp4["yr"][end-1] .+ fluxloc_final[4, 1], color=ctab10(3), label = "T2CSAT")
-#fp5 = ax1.plot(ffp5["xr"][:, end-1] .+ fluxloc_final[5, 2], ffp5["yr"][:, end-1] .+ fluxloc_final[5, 1], color=ctab10(4), label = "Kaijo")
-#fp6 = ax1.plot(ffp6["xr"][end-2] .+ fluxloc_final[6, 2], ffp6["yr"][end-2] .+ fluxloc_final[6, 1], color=ctab10(5), label = "TJK")
+locfx1 = ax1.plot(fluxloc_final[1, 2], fluxloc_final[1, 1], ".", color=ctab10(0), ms=15)
+#locfx2 = ax1.plot(fluxloc_final[2, 2], fluxloc_final[2, 1], ".", color=ctab10(1), ms=15)
+locfx3 = ax1.plot(fluxloc_final[3, 2], fluxloc_final[3, 1], ".", color=ctab10(2), ms=15)
+#locfx4 = ax1.plot(fluxloc_final[4, 2], fluxloc_final[4, 1], ".", color=ctab10(3), ms=15)
+fp1 = ax1.plot(ffp1["xr"][end-1] .+ fluxloc_final[1, 2], ffp1["yr"][end-1] .+ fluxloc_final[1, 1], color=ctab10(0), label = instr_labels[1])
+fp2 = ax1.plot(ffp2["xr"][end-1] .+ fluxloc_final[2, 2], ffp2["yr"][end-1] .+ fluxloc_final[2, 1], color=ctab10(1), label = instr_labels[2])
+fp3 = ax1.plot(ffp3["xr"][end-1] .+ fluxloc_final[3, 2], ffp3["yr"][end-1] .+ fluxloc_final[3, 1], color=ctab10(2), label = instr_labels[3])
+fp4 = ax1.plot(ffp4["xr"][end-1] .+ fluxloc_final[4, 2], ffp4["yr"][end-1] .+ fluxloc_final[4, 1], color=ctab10(3), label = instr_labels[4])
 ax1.legend()
 PyPlot.tight_layout()
 ##
