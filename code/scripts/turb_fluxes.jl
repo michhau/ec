@@ -135,11 +135,8 @@ ax1.legend(handles, labels)#, loc="upper right", bbox_to_anchor=(1.0, 1))
 # fig.autofmt_xdate()
 
 PyPlot.tight_layout()
-output_folder_wT = output_folder = "/home/haugened/Documents/data/CONTRASTS/plots/wT_wq/"
-#PyPlot.savefig(joinpath(output_folder_wT, "1b_2.pdf"), bbox_inches="tight")
-##
 output_folder = "/home/haugened/Documents/data/CONTRASTS/plots/wT_wq/"
-PyPlot.savefig(joinpath(output_folder, "3a.pdf"), bbox_inches="tight")
+#PyPlot.savefig(joinpath(output_folder, "3a.pdf"), bbox_inches="tight")
 ##
 # Momentum fluxes and friction velocity plot
 fig, (ax1, ax2) = PyPlot.subplots(2, 1, figsize=(10, 8), sharex=true)
