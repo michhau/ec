@@ -701,4 +701,178 @@ mad_mom2 = scatter_mom2b_mean - scatter_mom2a_mean
 mad_mom3 = scatter_mom3b_mean - scatter_mom3a_mean
 mad_mom4 = scatter_mom4b_mean - scatter_mom4a_mean
 ##
+##############################
+#Scatter plot vertical momentum fluxes (u'w') CONTRASTS
+# Vertical momentum flux scatter data preparation
+# Columns 1-2: Tower comparisons using var1a/var1b and var3a/var3b
+scatter_uw1a = var1a.uw[.!isnan.(var1a.uw) .&& .!isnan.(var1b.uw)]
+scatter_uw1b = var1b.uw[.!isnan.(var1a.uw) .&& .!isnan.(var1b.uw)]
+
+scatter_uw2a = var3a.uw[.!isnan.(var3a.uw) .&& .!isnan.(var3b.uw)]
+scatter_uw2b = var3b.uw[.!isnan.(var3a.uw) .&& .!isnan.(var3b.uw)]
+
+# Columns 3-4: Direct comparison of heights at same location
+scatter_uw3a = var1a.uw[.!isnan.(var1a.uw) .&& .!isnan.(var3a.uw)]
+scatter_uw3b = var3a.uw[.!isnan.(var1a.uw) .&& .!isnan.(var3a.uw)]
+
+scatter_uw4a = var1b.uw[.!isnan.(var1b.uw) .&& .!isnan.(var3b.uw)]
+scatter_uw4b = var3b.uw[.!isnan.(var1b.uw) .&& .!isnan.(var3b.uw)]
+
+# Calculate ratios (y/x for each column)
+ratio_uw1 = scatter_uw1b ./ scatter_uw1a
+ratio_uw2 = scatter_uw2b ./ scatter_uw2a
+ratio_uw3 = scatter_uw3b ./ scatter_uw3a
+ratio_uw4 = scatter_uw4b ./ scatter_uw4a
+
+fig_uw = PyPlot.figure(figsize=(16, 9.5))
+fig_uw.suptitle("3a - Vertical Momentum Flux")
+gs_uw = gridspec.GridSpec(3, 4, height_ratios=(2, 1, 1))
+
+# --- Row 1: Scatter density plots ---
+# Column 1: 1m comparison (tower comparison using var1a/var1b)
+ax_uw1 = fig_uw.add_subplot(gs_uw[1, 1], projection="scatter_density")
+ax_uw1.set_title("1m")
+ax_uw1.plot([-1,1], [-1,1], color="grey", alpha=0.3)
+ax_uw1.axhline(0, color="grey", alpha=0.6)
+ax_uw1.axvline(0, color="grey", alpha=0.6)
+ax_uw1.scatter_density(scatter_uw1a, scatter_uw1b, color="green", vmin=0, vmax=2000)
+ax_uw1.set_xlabel("\$\\overline{u'w'}_{$(srf_type[sc_lbl_idx[1]])}~\\mathrm{[m^2~s^{-2}]}\$")
+ax_uw1.set_ylabel("\$\\overline{u'w'}_{$(srf_type[sc_lbl_idx[2]])}~\\mathrm{[m^2~s^{-2}]}\$")
+ax_uw1.grid()
+lim_uw1 = (-0.05, 0.05)
+ax_uw1.set_xlim(lim_uw1)
+ax_uw1.set_ylim(lim_uw1)
+ax_uw1.set_aspect("equal")
+
+# Column 2: 2m comparison (tower comparison using var3a/var3b)
+ax_uw2 = fig_uw.add_subplot(gs_uw[1, 2], projection="scatter_density")
+ax_uw2.set_title("2m")
+ax_uw2.plot([-1,1], [-1,1], color="grey", alpha=0.3)
+ax_uw2.axhline(0, color="grey", alpha=0.6)
+ax_uw2.axvline(0, color="grey", alpha=0.6)
+ax_uw2.scatter_density(scatter_uw2a, scatter_uw2b, color="green", vmin=0, vmax=2000)
+ax_uw2.set_xlabel("\$\\overline{u'w'}_{$(srf_type[sc_lbl_idx[3]])}~\\mathrm{[m^2~s^{-2}]}\$")
+ax_uw2.set_ylabel("\$\\overline{u'w'}_{$(srf_type[sc_lbl_idx[4]])}~\\mathrm{[m^2~s^{-2}]}\$")
+ax_uw2.grid()
+lim_uw2 = (-0.15, 0.02)
+ax_uw2.set_xlim(lim_uw2)
+ax_uw2.set_ylim(lim_uw2)
+ax_uw2.set_aspect("equal")
+
+# Column 3: Height comparison at tower 1 (fx1 vs fx2)
+ax_uw3 = fig_uw.add_subplot(gs_uw[1, 3], projection="scatter_density")
+ax_uw3.set_title("$(srf_type[1]) (tower 1)")
+ax_uw3.plot([-1,1], [-1,1], color="grey", alpha=0.3)
+ax_uw3.axhline(0, color="grey", alpha=0.6)
+ax_uw3.axvline(0, color="grey", alpha=0.6)
+ax_uw3.scatter_density(scatter_uw3a, scatter_uw3b, color="green", vmin=0, vmax=2000)
+ax_uw3.set_xlabel("\$\\overline{u'w'}_{$(heights[1])m}~\\mathrm{[m^2~s^{-2}]}\$")
+ax_uw3.set_ylabel("\$\\overline{u'w'}_{$(heights[2])m}~\\mathrm{[m^2~s^{-2}]}\$")
+ax_uw3.grid()
+lim_uw3 = (-0.15, 0.05)
+ax_uw3.set_xlim(lim_uw3)
+ax_uw3.set_ylim(lim_uw3)
+ax_uw3.set_aspect("equal")
+
+# Column 4: Height comparison at tower 2 (fx3 vs fx4)
+ax_uw4 = fig_uw.add_subplot(gs_uw[1, 4], projection="scatter_density")
+ax_uw4.set_title("$(srf_type[3]) (tower 2)")
+ax_uw4.plot([-1,1], [-1,1], color="grey", alpha=0.3)
+ax_uw4.axhline(0, color="grey", alpha=0.6)
+ax_uw4.axvline(0, color="grey", alpha=0.6)
+ax_uw4.scatter_density(scatter_uw4a, scatter_uw4b, color="green", vmin=0, vmax=2000)
+ax_uw4.set_xlabel("\$\\overline{u'w'}_{$(heights[3])m}~\\mathrm{[m^2~s^{-2}]}\$")
+ax_uw4.set_ylabel("\$\\overline{u'w'}_{$(heights[4])m}~\\mathrm{[m^2~s^{-2}]}\$")
+ax_uw4.grid()
+lim_uw4 = (-0.05, 0.01)
+ax_uw4.set_xlim(lim_uw4)
+ax_uw4.set_ylim(lim_uw4)
+ax_uw4.set_aspect("equal")
+
+# --- Row 2: Overlaid histograms of individual u'w' ---
+ax_uw5 = fig_uw.add_subplot(gs_uw[2, 1])
+ax_uw5.hist(scatter_uw1a, bins=100, color="grey", alpha=0.5, density=true, label=instr_labels[sc_lbl_idx[1]])
+ax_uw5.hist(scatter_uw1b, bins=100, color="orange", alpha=0.5, density=true, label=instr_labels[sc_lbl_idx[2]])
+ax_uw5.set_xlabel(L"\overline{u'w'}~\mathrm{[m^2~s^{-2}]}")
+ax_uw5.set_ylabel("PDF")
+ax_uw5.set_xlim(ax_uw1.get_xlim())
+ax_uw5.legend()
+ax_uw5.grid(alpha=0.3)
+
+ax_uw6 = fig_uw.add_subplot(gs_uw[2, 2])
+ax_uw6.hist(scatter_uw2a, bins=100, color="grey", alpha=0.5, density=true, label=instr_labels[sc_lbl_idx[3]])
+ax_uw6.hist(scatter_uw2b, bins=100, color="orange", alpha=0.5, density=true, label=instr_labels[sc_lbl_idx[4]])
+ax_uw6.set_xlabel(L"\overline{u'w'}~\mathrm{[m^2~s^{-2}]}")
+ax_uw6.set_xlim(ax_uw2.get_xlim())
+ax_uw6.legend()
+ax_uw6.grid(alpha=0.3)
+
+ax_uw7 = fig_uw.add_subplot(gs_uw[2, 3])
+ax_uw7.hist(scatter_uw3a, bins=100, color="grey", alpha=0.5, density=true, label=instr_labels[1])
+ax_uw7.hist(scatter_uw3b, bins=100, color="orange", alpha=0.5, density=true, label=instr_labels[2])
+ax_uw7.set_xlabel(L"\overline{u'w'}~\mathrm{[m^2~s^{-2}]}")
+ax_uw7.set_xlim(ax_uw3.get_xlim())
+ax_uw7.legend()
+ax_uw7.grid(alpha=0.3)
+
+ax_uw8 = fig_uw.add_subplot(gs_uw[2, 4])
+ax_uw8.hist(scatter_uw4a, bins=100, color="grey", alpha=0.5, density=true, label=instr_labels[3])
+ax_uw8.hist(scatter_uw4b, bins=100, color="orange", alpha=0.5, density=true, label=instr_labels[4])
+ax_uw8.set_xlabel(L"\overline{u'w'}~\mathrm{[m^2~s^{-2}]}")
+ax_uw8.set_xlim(ax_uw4.get_xlim())
+ax_uw8.legend()
+ax_uw8.grid(alpha=0.3)
+
+# --- Row 3: Histograms of ratios ---
+ax_uw9 = fig_uw.add_subplot(gs_uw[3, 1])
+ax_uw9.hist(ratio_uw1, bins=collect(-3.0:0.01:3.0), color="green", alpha=0.7, density=true)
+ax_uw9.axvline(1, color="black", linestyle="--", alpha=0.3, label="1:1")
+ax_uw9.set_xlabel("\$\\left(\\overline{u'w'}_{$(srf_type[sc_lbl_idx[2]])} ~/~ \\overline{u'w'}_{$(srf_type[sc_lbl_idx[1]])}\\right)_{1m}\$")
+ax_uw9.set_ylabel("PDF")
+ax_uw9.grid(alpha=0.3)
+
+ax_uw10 = fig_uw.add_subplot(gs_uw[3, 2])
+ax_uw10.hist(ratio_uw2, bins=collect(-2.0:0.01:3.0), color="green", alpha=0.7, density=true)
+ax_uw10.axvline(1, color="black", linestyle="--", alpha=0.3, label="1:1")
+ax_uw10.set_xlabel("\$\\left(\\overline{u'w'}_{$(srf_type[sc_lbl_idx[4]])} ~/~ \\overline{u'w'}_{$(srf_type[sc_lbl_idx[3]])}\\right)_{2m}\$")
+ax_uw10.grid(alpha=0.3)
+
+ax_uw11 = fig_uw.add_subplot(gs_uw[3, 3])
+ax_uw11.hist(ratio_uw3, bins=collect(-5.0:0.01:5.0), color="green", alpha=0.7, density=true)
+ax_uw11.axvline(1, color="black", linestyle="--", alpha=0.3, label="1:1")
+ax_uw11.set_xlabel("\$\\left(\\overline{u'w'}_{$(heights[2])m} ~/~ \\overline{u'w'}_{$(heights[1])m}\\right)_{$(srf_type[1])}\$")
+ax_uw11.grid(alpha=0.3)
+
+ax_uw12 = fig_uw.add_subplot(gs_uw[3, 4])
+ax_uw12.hist(ratio_uw4, bins=collect(-2.0:0.01:5.0), color="green", alpha=0.7, density=true)
+ax_uw12.axvline(1, color="black", linestyle="--", alpha=0.3, label="1:1")
+ax_uw12.set_xlabel("\$\\left(\\overline{u'w'}_{$(heights[4])m} ~/~ \\overline{u'w'}_{$(heights[3])m}\\right)_{$(srf_type[3])}\$")
+ax_uw12.grid(alpha=0.3)
+
+PyPlot.tight_layout()
+##
+output_folder_uw = "/home/haugened/Documents/data/CONTRASTS/plots/correlation_momentum/"
+#PyPlot.savefig(joinpath(output_folder_uw, "3a_uw.pdf"), bbox_inches="tight")
+
+#calculating correlations for vertical momentum flux
+cor_uw1 = nancor(var1a.uw, var1b.uw)
+cor_uw2 = nancor(var3a.uw, var3b.uw)
+cor_uw3 = nancor(fx1.uw, fx2.uw)
+cor_uw4 = nancor(fx3.uw, fx4.uw)
+
+#calculating mean bias for vertical momentum flux
+scatter_uw1a_mean = nanmean(scatter_uw1a)
+scatter_uw1b_mean = nanmean(scatter_uw1b)
+scatter_uw2a_mean = nanmean(scatter_uw2a)
+scatter_uw2b_mean = nanmean(scatter_uw2b)
+scatter_uw3a_mean = nanmean(scatter_uw3a)
+scatter_uw3b_mean = nanmean(scatter_uw3b)
+scatter_uw4a_mean = nanmean(scatter_uw4a)
+scatter_uw4b_mean = nanmean(scatter_uw4b)
+
+mad_uw1 = scatter_uw1b_mean - scatter_uw1a_mean
+mad_uw2 = scatter_uw2b_mean - scatter_uw2a_mean
+mad_uw3 = scatter_uw3b_mean - scatter_uw3a_mean
+mad_uw4 = scatter_uw4b_mean - scatter_uw4a_mean
+##
 ######################################################
