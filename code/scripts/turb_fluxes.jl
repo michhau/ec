@@ -541,6 +541,103 @@ mad_irg_wq = scatter2a_mean - scatter2b_mean
 mad_csat_wT = scatter3a_mean - scatter3b_mean
 ##
 ##############################
+#Scatter plot height comparison heat fluxes CONTRASTS
+# Comparing sensible heat fluxes at different heights for each tower
+
+scatter1 = fx1.wT[.!isnan.(fx1.wT) .&& .!isnan.(fx2.wT)]
+scatter2 = fx2.wT[.!isnan.(fx1.wT) .&& .!isnan.(fx2.wT)]
+scatter3 = fx3.wT[.!isnan.(fx3.wT) .&& .!isnan.(fx4.wT)]
+scatter4 = fx4.wT[.!isnan.(fx3.wT) .&& .!isnan.(fx4.wT)]
+
+scatter1 .*= ρ_air .* c_p
+scatter2 .*= ρ_air .* c_p
+scatter3 .*= ρ_air .* c_p
+scatter4 .*= ρ_air .* c_p
+
+ratio_ht1 = scatter2 ./ scatter1
+ratio_ht2 = scatter4 ./ scatter3
+
+fig_ht = PyPlot.figure(figsize=(8, 9.5))
+fig_ht.suptitle("1a - Sensible Heat Flux Height Comparison")
+gs_ht = gridspec.GridSpec(3, 2, height_ratios=(2, 1, 1))
+
+# --- Row 1: Scatter density ---
+# Column 1: Tower 1 (fx1 vs fx2)
+ax_ht1 = fig_ht.add_subplot(gs_ht[1, 1], projection="scatter_density")
+ax_ht1.set_title("$(srf_type[1]) (tower 1)")
+ax_ht1.axhline(0, color="grey", alpha=0.6)
+ax_ht1.axvline(0, color="grey", alpha=0.6)
+ax_ht1.plot([-25,25], [-25,25], color="grey", alpha=0.3)
+ax_ht1.scatter_density(scatter1, scatter2, color="black", vmin=0, vmax=1500)
+lim_ht1 = (-20, 25)
+ax_ht1.set_xlim(lim_ht1)
+ax_ht1.set_ylim(lim_ht1)
+ax_ht1.set_xlabel("\$\\overline{w'T'}_{$(heights[1])m}~\\mathrm{[W~m^{-2}]}\$")
+ax_ht1.set_ylabel("\$\\overline{w'T'}_{$(heights[2])m}~\\mathrm{[W~m^{-2}]}\$")
+ax_ht1.grid()
+ax_ht1.set_aspect("equal")
+
+# Column 2: Tower 2 (fx3 vs fx4)
+ax_ht2 = fig_ht.add_subplot(gs_ht[1, 2], projection="scatter_density")
+ax_ht2.set_title("$(srf_type[3]) (tower 2)")
+ax_ht2.axhline(0, color="grey", alpha=0.6)
+ax_ht2.axvline(0, color="grey", alpha=0.6)
+ax_ht2.plot([-25,25], [-25,25], color="grey", alpha=0.3)
+ax_ht2.scatter_density(scatter3, scatter4, color="black", vmin=0, vmax=1500)
+lim_ht2 = (-20, 25)
+ax_ht2.set_xlim(lim_ht2)
+ax_ht2.set_ylim(lim_ht2)
+ax_ht2.set_xlabel("\$\\overline{w'T'}_{$(heights[3])m}~\\mathrm{[W~m^{-2}]}\$")
+ax_ht2.set_ylabel("\$\\overline{w'T'}_{$(heights[4])m}~\\mathrm{[W~m^{-2}]}\$")
+ax_ht2.grid()
+ax_ht2.set_aspect("equal")
+
+# --- Row 2: Overlaid histograms ---
+ax_ht3 = fig_ht.add_subplot(gs_ht[2, 1])
+ax_ht3.hist(scatter1, bins=collect(first(lim_ht1):0.1:last(lim_ht1)), color="grey", alpha=0.5, density=true, label=string(heights[1], "m"))
+ax_ht3.hist(scatter2, bins=collect(first(lim_ht1):0.1:last(lim_ht1)), color="orange", alpha=0.5, density=true, label=string(heights[2], "m"))
+ax_ht3.set_xlabel(L"\overline{w'T'}~\mathrm{[W~m^{-2}]}")
+ax_ht3.set_ylabel("PDF")
+ax_ht3.set_xlim(ax_ht1.get_xlim())
+ax_ht3.legend()
+ax_ht3.grid(alpha=0.3)
+
+ax_ht4 = fig_ht.add_subplot(gs_ht[2, 2])
+ax_ht4.hist(scatter3, bins=collect(first(lim_ht2):0.1:last(lim_ht2)), color="grey", alpha=0.5, density=true, label=string(heights[3], "m"))
+ax_ht4.hist(scatter4, bins=collect(first(lim_ht2):0.1:last(lim_ht2)), color="orange", alpha=0.5, density=true, label=string(heights[4], "m"))
+ax_ht4.set_xlabel(L"\overline{w'T'}~\mathrm{[W~m^{-2}]}")
+ax_ht4.set_xlim(ax_ht2.get_xlim())
+ax_ht4.legend()
+ax_ht4.grid(alpha=0.3)
+
+# --- Row 3: Histograms of ratios ---
+ax_ht5 = fig_ht.add_subplot(gs_ht[3, 1])
+ax_ht5.hist(ratio_ht1, bins=collect(-1.0:0.01:2.0), color="black", alpha=0.7, density=true)
+ax_ht5.axvline(1, color="red", linestyle="--", alpha=0.3, label="1:1")
+ax_ht5.set_xlabel("\$\\left(\\overline{w'T'}_{$(heights[2])m} ~/~ \\overline{w'T'}_{$(heights[1])m}\\right)_{$(srf_type[1])}\$")
+ax_ht5.set_ylabel("PDF")
+ax_ht5.grid(alpha=0.3)
+
+ax_ht6 = fig_ht.add_subplot(gs_ht[3, 2])
+ax_ht6.hist(ratio_ht2, bins=collect(-1.0:0.01:2.0), color="black", alpha=0.7, density=true)
+ax_ht6.axvline(1, color="red", linestyle="--", alpha=0.3, label="1:1")
+ax_ht6.set_xlabel("\$\\left(\\overline{w'T'}_{$(heights[4])m} ~/~ \\overline{w'T'}_{$(heights[3])m}\\right)_{$(srf_type[3])}\$")
+ax_ht6.grid(alpha=0.3)
+
+PyPlot.tight_layout()
+##
+output_folder_ht = "/home/haugened/Documents/data/CONTRASTS/plots/correlation_heat/"
+#PyPlot.savefig(joinpath(output_folder_ht, "1a_per_tower.pdf"), bbox_inches="tight")
+
+#calculating correlations for height comparison
+cor_ht1 = nancor(fx1.wT, fx2.wT)
+cor_ht2 = nancor(fx3.wT, fx4.wT)
+
+#calculating mean bias for height comparison
+mad_ht1 = nanmean(scatter2) - nanmean(scatter1)
+mad_ht2 = nanmean(scatter4) - nanmean(scatter3)
+##
+##############################
 #Scatter plot momentum fluxes CONTRASTS
 # Momentum flux (u_star) scatter data preparation
 # Columns 1-2: Use var1a/var1b and var3a/var3b from heat flux setup (tower comparisons)
