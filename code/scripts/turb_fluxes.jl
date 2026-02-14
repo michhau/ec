@@ -136,10 +136,7 @@ ax1.legend(handles, labels)#, loc="upper right", bbox_to_anchor=(1.0, 1))
 
 PyPlot.tight_layout()
 output_folder_wT = output_folder = "/home/haugened/Documents/data/CONTRASTS/plots/wT_wq/"
-#PyPlot.savefig(joinpath(output_folder_wT, "1b_2.pdf"), bbox_inches="tight")
-##
-output_folder = "/home/haugened/Documents/data/CONTRASTS/plots/wT_wq/"
-PyPlot.savefig(joinpath(output_folder, "3b.pdf"), bbox_inches="tight")
+#PyPlot.savefig(joinpath(output_folder_wT, "3b.pdf"), bbox_inches="tight")
 ##
 # Momentum fluxes and friction velocity plot
 fig, (ax1, ax2) = PyPlot.subplots(2, 1, figsize=(10, 8), sharex=true)
@@ -706,6 +703,7 @@ mad_mom3 = scatter_mom3b_mean - scatter_mom3a_mean
 mad_mom4 = scatter_mom4b_mean - scatter_mom4a_mean
 ##
 ##############################
+#=
 #Scatter plot vertical momentum fluxes (u'w') CONTRASTS
 # Vertical momentum flux scatter data preparation
 # Columns 1-2: Tower comparisons using var1a/var1b and var3a/var3b
@@ -856,7 +854,7 @@ ax_uw12.grid(alpha=0.3)
 PyPlot.tight_layout()
 ##
 output_folder_uw = "/home/haugened/Documents/data/CONTRASTS/plots/correlation_momentum/"
-#PyPlot.savefig(joinpath(output_folder_uw, "3a_uw.pdf"), bbox_inches="tight")
+#PyPlot.savefig(joinpath(output_folder_uw, "3b_uw.pdf"), bbox_inches="tight")
 
 #calculating correlations for vertical momentum flux
 cor_uw1 = nancor(var1a.uw, var1b.uw)
@@ -880,3 +878,4 @@ mad_uw3 = scatter_uw3b_mean - scatter_uw3a_mean
 mad_uw4 = scatter_uw4b_mean - scatter_uw4a_mean
 ##
 ######################################################
+=#
