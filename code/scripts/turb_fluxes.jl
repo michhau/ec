@@ -546,11 +546,11 @@ scatter_mom2a = var3a.u_star[.!isnan.(var3a.u_star) .&& .!isnan.(var3b.u_star)]
 scatter_mom2b = var3b.u_star[.!isnan.(var3a.u_star) .&& .!isnan.(var3b.u_star)]
 
 # Columns 3-4: Direct comparison of heights at same location
-scatter_mom3a = fx1.u_star[.!isnan.(fx1.u_star) .&& .!isnan.(fx2.u_star)]
-scatter_mom3b = fx2.u_star[.!isnan.(fx1.u_star) .&& .!isnan.(fx2.u_star)]
+scatter_mom3a = var1a.u_star[.!isnan.(var1a.u_star) .&& .!isnan.(var3a.u_star)]
+scatter_mom3b = var3a.u_star[.!isnan.(var1a.u_star) .&& .!isnan.(var3a.u_star)]
 
-scatter_mom4a = fx3.u_star[.!isnan.(fx3.u_star) .&& .!isnan.(fx4.u_star)]
-scatter_mom4b = fx4.u_star[.!isnan.(fx3.u_star) .&& .!isnan.(fx4.u_star)]
+scatter_mom4a = var1b.u_star[.!isnan.(var1b.u_star) .&& .!isnan.(var3b.u_star)]
+scatter_mom4b = var3b.u_star[.!isnan.(var1b.u_star) .&& .!isnan.(var3b.u_star)]
 
 # Calculate ratios (y/x for each column)
 ratio_mom1 = scatter_mom1b ./ scatter_mom1a
