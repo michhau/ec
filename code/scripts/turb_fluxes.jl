@@ -553,7 +553,7 @@ ratio_ht1 = scatter2 ./ scatter1
 ratio_ht2 = scatter4 ./ scatter3
 
 fig_ht = PyPlot.figure(figsize=(8, 9.5))
-fig_ht.suptitle("1a - Sensible Heat Flux Height Comparison")
+fig_ht.suptitle("3a - Sensible Heat Flux Height Comparison")
 gs_ht = gridspec.GridSpec(3, 2, height_ratios=(2, 1, 1))
 
 # --- Row 1: Scatter density ---
@@ -564,7 +564,7 @@ ax_ht1.axhline(0, color="grey", alpha=0.6)
 ax_ht1.axvline(0, color="grey", alpha=0.6)
 ax_ht1.plot([-25,25], [-25,25], color="grey", alpha=0.3)
 ax_ht1.scatter_density(scatter1, scatter2, color="black", vmin=0, vmax=1500)
-lim_ht1 = (-20, 25)
+lim_ht1 = (-20, 15)
 ax_ht1.set_xlim(lim_ht1)
 ax_ht1.set_ylim(lim_ht1)
 ax_ht1.set_xlabel("\$\\overline{w'T'}_{$(heights[1])m}~\\mathrm{[W~m^{-2}]}\$")
@@ -579,7 +579,7 @@ ax_ht2.axhline(0, color="grey", alpha=0.6)
 ax_ht2.axvline(0, color="grey", alpha=0.6)
 ax_ht2.plot([-25,25], [-25,25], color="grey", alpha=0.3)
 ax_ht2.scatter_density(scatter3, scatter4, color="black", vmin=0, vmax=1500)
-lim_ht2 = (-20, 25)
+lim_ht2 = (-10, 15)
 ax_ht2.set_xlim(lim_ht2)
 ax_ht2.set_ylim(lim_ht2)
 ax_ht2.set_xlabel("\$\\overline{w'T'}_{$(heights[3])m}~\\mathrm{[W~m^{-2}]}\$")
@@ -607,14 +607,14 @@ ax_ht4.grid(alpha=0.3)
 
 # --- Row 3: Histograms of ratios ---
 ax_ht5 = fig_ht.add_subplot(gs_ht[3, 1])
-ax_ht5.hist(ratio_ht1, bins=collect(-1.0:0.01:2.0), color="black", alpha=0.7, density=true)
+ax_ht5.hist(ratio_ht1, bins=collect(-5.0:0.01:5.0), color="black", alpha=0.7, density=true)
 ax_ht5.axvline(1, color="red", linestyle="--", alpha=0.3, label="1:1")
 ax_ht5.set_xlabel("\$\\left(\\overline{w'T'}_{$(heights[2])m} ~/~ \\overline{w'T'}_{$(heights[1])m}\\right)_{$(srf_type[1])}\$")
 ax_ht5.set_ylabel("PDF")
 ax_ht5.grid(alpha=0.3)
 
 ax_ht6 = fig_ht.add_subplot(gs_ht[3, 2])
-ax_ht6.hist(ratio_ht2, bins=collect(-1.0:0.01:2.0), color="black", alpha=0.7, density=true)
+ax_ht6.hist(ratio_ht2, bins=collect(-10.0:0.01:10.0), color="black", alpha=0.7, density=true)
 ax_ht6.axvline(1, color="red", linestyle="--", alpha=0.3, label="1:1")
 ax_ht6.set_xlabel("\$\\left(\\overline{w'T'}_{$(heights[4])m} ~/~ \\overline{w'T'}_{$(heights[3])m}\\right)_{$(srf_type[3])}\$")
 ax_ht6.grid(alpha=0.3)
@@ -622,7 +622,7 @@ ax_ht6.grid(alpha=0.3)
 PyPlot.tight_layout()
 ##
 output_folder_ht = "/home/haugened/Documents/data/CONTRASTS/plots/correlation_heat/"
-#PyPlot.savefig(joinpath(output_folder_ht, "1a_per_tower.pdf"), bbox_inches="tight")
+#PyPlot.savefig(joinpath(output_folder_ht, "3a_per_tower.pdf"), bbox_inches="tight")
 
 #calculating correlations for height comparison
 cor_ht1 = nancor(fx1.wT, fx2.wT)
