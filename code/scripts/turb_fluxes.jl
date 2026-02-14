@@ -402,14 +402,14 @@ scatter1b = var1b.wT[.!isnan.(fx1.wT) .&& .!isnan.(fx3.wT)]
 scatter1a .*= ρ_air .* c_p
 scatter1b .*= ρ_air .* c_p
 
-scatter2b = var1b.wq[.!isnan.(fx1.wq) .&& .!isnan.(fx3.wq)]
 scatter2a = var1a.wq[.!isnan.(fx1.wq) .&& .!isnan.(fx3.wq)]
+scatter2b = var1b.wq[.!isnan.(fx1.wq) .&& .!isnan.(fx3.wq)]
 
 scatter2a .*= L_v .* 1e-3
 scatter2b .*= L_v .* 1e-3
 
-scatter3b = var3b.wT[.!isnan.(fx2.wT) .&& .!isnan.(fx4.wT)]
 scatter3a = var3a.wT[.!isnan.(fx2.wT) .&& .!isnan.(fx4.wT)]
+scatter3b = var3b.wT[.!isnan.(fx2.wT) .&& .!isnan.(fx4.wT)]
 
 scatter3a .*= ρ_air .* c_p
 scatter3b .*= ρ_air .* c_p
