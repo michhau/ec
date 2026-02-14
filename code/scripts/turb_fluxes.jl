@@ -458,7 +458,7 @@ ax2.grid()
 ax2.set_aspect("equal")
 
 ax3 = fig.add_subplot(gs[1, 3], projection="scatter_density")
-ax3.plot([-25,15], [-25,15], color="grey", alpha=0.5)
+ax3.plot([-25,25], [-25,25], color="grey", alpha=0.5)
 ax3.scatter_density(scatter3a, scatter3b, color="black", vmin=0, vmax=2500)
 ax3.set_title("2m Sensible Heat Fluxes")
 ax3.axhline(0, color="grey")
@@ -559,7 +559,7 @@ ratio_ht1 = scatter2 ./ scatter1
 ratio_ht2 = scatter4 ./ scatter3
 
 fig_ht = PyPlot.figure(figsize=(8, 9.5))
-fig_ht.suptitle("1a - Sensible Heat Flux Height Comparison")
+fig_ht.suptitle("2a - Sensible Heat Flux Height Comparison")
 gs_ht = gridspec.GridSpec(3, 2, height_ratios=(2, 1, 1))
 
 # --- Row 1: Scatter density ---
@@ -569,8 +569,8 @@ ax_ht1.set_title("$(srf_type[1]) (tower 1)")
 ax_ht1.axhline(0, color="grey", alpha=0.6)
 ax_ht1.axvline(0, color="grey", alpha=0.6)
 ax_ht1.plot([-25,25], [-25,25], color="grey", alpha=0.3)
-ax_ht1.scatter_density(scatter1, scatter2, color="black", vmin=0, vmax=1500)
-lim_ht1 = (-20, 25)
+ax_ht1.scatter_density(scatter1, scatter2, color="black", vmin=0, vmax=2500)
+lim_ht1 = (-25, 15)
 ax_ht1.set_xlim(lim_ht1)
 ax_ht1.set_ylim(lim_ht1)
 ax_ht1.set_xlabel("\$\\overline{w'T'}_{$(heights[1])m}~\\mathrm{[W~m^{-2}]}\$")
@@ -584,8 +584,8 @@ ax_ht2.set_title("$(srf_type[3]) (tower 2)")
 ax_ht2.axhline(0, color="grey", alpha=0.6)
 ax_ht2.axvline(0, color="grey", alpha=0.6)
 ax_ht2.plot([-25,25], [-25,25], color="grey", alpha=0.3)
-ax_ht2.scatter_density(scatter3, scatter4, color="black", vmin=0, vmax=1500)
-lim_ht2 = (-20, 25)
+ax_ht2.scatter_density(scatter3, scatter4, color="black", vmin=0, vmax=2500)
+lim_ht2 = (-25, 15)
 ax_ht2.set_xlim(lim_ht2)
 ax_ht2.set_ylim(lim_ht2)
 ax_ht2.set_xlabel("\$\\overline{w'T'}_{$(heights[3])m}~\\mathrm{[W~m^{-2}]}\$")
@@ -628,7 +628,7 @@ ax_ht6.grid(alpha=0.3)
 PyPlot.tight_layout()
 ##
 output_folder_ht = "/home/haugened/Documents/data/CONTRASTS/plots/correlation_heat/"
-#PyPlot.savefig(joinpath(output_folder_ht, "1a_per_tower.pdf"), bbox_inches="tight")
+#PyPlot.savefig(joinpath(output_folder_ht, "2a_per_tower.pdf"), bbox_inches="tight")
 
 #calculating correlations for height comparison
 cor_ht1 = nancor(fx1.wT, fx2.wT)
