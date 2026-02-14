@@ -136,7 +136,7 @@ ax1.legend(handles, labels)#, loc="upper right", bbox_to_anchor=(1.0, 1))
 
 PyPlot.tight_layout()
 output_folder_wT = output_folder = "/home/haugened/Documents/data/CONTRASTS/plots/wT_wq/"
-#PyPlot.savefig(joinpath(output_folder_wT, "1b_2.pdf"), bbox_inches="tight")
+#PyPlot.savefig(joinpath(output_folder_wT, "3c.pdf"), bbox_inches="tight")
 ##
 output_folder = "/home/haugened/Documents/data/CONTRASTS/plots/wT_wq/"
 PyPlot.savefig(joinpath(output_folder, "3c.pdf"), bbox_inches="tight")
@@ -402,14 +402,14 @@ scatter1b = var1b.wT[.!isnan.(fx1.wT) .&& .!isnan.(fx3.wT)]
 scatter1a .*= ρ_air .* c_p
 scatter1b .*= ρ_air .* c_p
 
-scatter2b = var1b.wq[.!isnan.(fx1.wq) .&& .!isnan.(fx3.wq)]
 scatter2a = var1a.wq[.!isnan.(fx1.wq) .&& .!isnan.(fx3.wq)]
+scatter2b = var1b.wq[.!isnan.(fx1.wq) .&& .!isnan.(fx3.wq)]
 
 scatter2a .*= L_v .* 1e-3
 scatter2b .*= L_v .* 1e-3
 
-scatter3b = var3b.wT[.!isnan.(fx2.wT) .&& .!isnan.(fx4.wT)]
 scatter3a = var3a.wT[.!isnan.(fx2.wT) .&& .!isnan.(fx4.wT)]
+scatter3b = var3b.wT[.!isnan.(fx2.wT) .&& .!isnan.(fx4.wT)]
 
 scatter3a .*= ρ_air .* c_p
 scatter3b .*= ρ_air .* c_p
@@ -430,7 +430,7 @@ ax1.axhline(0, color="grey", alpha=0.6)
 ax1.axvline(0, color="grey", alpha=0.6)
 ax1.plot([-100,100], [-100,100], color="grey", alpha=0.3)
 ax1.scatter_density(scatter1a, scatter1b, color="black", vmin=00, vmax=1000)
-lim_1 = (0, 25)
+lim_1 = (-35, 25)
 ax1.set_xlim(lim_1)
 ax1.set_ylim(lim_1)
 #ax1.set_yticks(collect(-20:10:20))
@@ -551,11 +551,11 @@ scatter_mom2a = var3a.u_star[.!isnan.(var3a.u_star) .&& .!isnan.(var3b.u_star)]
 scatter_mom2b = var3b.u_star[.!isnan.(var3a.u_star) .&& .!isnan.(var3b.u_star)]
 
 # Columns 3-4: Direct comparison of heights at same location
-scatter_mom3a = var1a.u_star[.!isnan.(var1a.u_star) .&& .!isnan.(var3a.u_star)]
-scatter_mom3b = var3a.u_star[.!isnan.(var1a.u_star) .&& .!isnan.(var3a.u_star)]
+scatter_mom3a = var1b.u_star[.!isnan.(var1b.u_star) .&& .!isnan.(var3b.u_star)]
+scatter_mom3b = var3b.u_star[.!isnan.(var1b.u_star) .&& .!isnan.(var3b.u_star)]
 
-scatter_mom4a = var1b.u_star[.!isnan.(var1b.u_star) .&& .!isnan.(var3b.u_star)]
-scatter_mom4b = var3b.u_star[.!isnan.(var1b.u_star) .&& .!isnan.(var3b.u_star)]
+scatter_mom4a = var1a.u_star[.!isnan.(var1a.u_star) .&& .!isnan.(var3a.u_star)]
+scatter_mom4b = var3a.u_star[.!isnan.(var1a.u_star) .&& .!isnan.(var3a.u_star)]
 
 # Calculate ratios (y/x for each column)
 ratio_mom1 = scatter_mom1b ./ scatter_mom1a
@@ -571,12 +571,12 @@ gs_mom = gridspec.GridSpec(3, 4, height_ratios=(2, 1, 1))
 # Column 1: 1m comparison (tower comparison using var1a/var1b)
 ax_m1 = fig_mom.add_subplot(gs_mom[1, 1], projection="scatter_density")
 ax_m1.set_title("1m")
-ax_m1.plot([0,1], [0,1], color="grey", alpha=0.3)
+ax_m1.plot([0,2], [0,2], color="grey", alpha=0.3)
 ax_m1.scatter_density(scatter_mom1a, scatter_mom1b, color="red", vmin=0, vmax=1000)
 ax_m1.set_xlabel("\$u_{*,$(srf_type[sc_lbl_idx[1]])}~\\mathrm{[m~s^{-1}]}\$")
 ax_m1.set_ylabel("\$u_{*,$(srf_type[sc_lbl_idx[2]])}~\\mathrm{[m~s^{-1}]}\$")
 ax_m1.grid()
-lim_m1 = (0.3, 0.8)
+lim_m1 = (0.1, 1.1)
 ax_m1.set_xlim(lim_m1)
 ax_m1.set_ylim(lim_m1)
 ax_m1.set_aspect("equal")
@@ -584,12 +584,12 @@ ax_m1.set_aspect("equal")
 # Column 2: 2m comparison (tower comparison using var3a/var3b)
 ax_m2 = fig_mom.add_subplot(gs_mom[1, 2], projection="scatter_density")
 ax_m2.set_title("2m")
-ax_m2.plot([0,1], [0,1], color="grey", alpha=0.3)
+ax_m2.plot([0,2], [0,2], color="grey", alpha=0.3)
 ax_m2.scatter_density(scatter_mom2a, scatter_mom2b, color="red", vmin=0, vmax=1000)
 ax_m2.set_xlabel("\$u_{*,$(srf_type[sc_lbl_idx[3]])}~\\mathrm{[m~s^{-1}]}\$")
 ax_m2.set_ylabel("\$u_{*,$(srf_type[sc_lbl_idx[4]])}~\\mathrm{[m~s^{-1}]}\$")
 ax_m2.grid()
-lim_m2 = (0.4, 0.9)
+lim_m2 = (0.1, 1.3)
 ax_m2.set_xlim(lim_m2)
 ax_m2.set_ylim(lim_m2)
 ax_m2.set_aspect("equal")
@@ -597,12 +597,12 @@ ax_m2.set_aspect("equal")
 # Column 3: Height comparison at tower 1 (fx1 vs fx2)
 ax_m3 = fig_mom.add_subplot(gs_mom[1, 3], projection="scatter_density")
 ax_m3.set_title("$(srf_type[1]) (tower 1)")
-ax_m3.plot([0,1], [0,1], color="grey", alpha=0.3)
+ax_m3.plot([0,2], [0,2], color="grey", alpha=0.3)
 ax_m3.scatter_density(scatter_mom3a, scatter_mom3b, color="red", vmin=0, vmax=1000)
 ax_m3.set_xlabel("\$u_{*,$(heights[1])m}~\\mathrm{[m~s^{-1}]}\$")
 ax_m3.set_ylabel("\$u_{*,$(heights[2])m}~\\mathrm{[m~s^{-1}]}\$")
 ax_m3.grid()
-lim_m3 = (0.3, 0.9)
+lim_m3 = (0.1, 1.0)
 ax_m3.set_xlim(lim_m3)
 ax_m3.set_ylim(lim_m3)
 ax_m3.set_aspect("equal")
@@ -610,12 +610,12 @@ ax_m3.set_aspect("equal")
 # Column 4: Height comparison at tower 2 (fx3 vs fx4)
 ax_m4 = fig_mom.add_subplot(gs_mom[1, 4], projection="scatter_density")
 ax_m4.set_title("$(srf_type[3]) (tower 2)")
-ax_m4.plot([0,1], [0,1], color="grey", alpha=0.3)
+ax_m4.plot([0,2], [0,2], color="grey", alpha=0.3)
 ax_m4.scatter_density(scatter_mom4a, scatter_mom4b, color="red", vmin=0, vmax=1000)
 ax_m4.set_xlabel("\$u_{*,$(heights[3])m}~\\mathrm{[m~s^{-1}]}\$")
 ax_m4.set_ylabel("\$u_{*,$(heights[4])m}~\\mathrm{[m~s^{-1}]}\$")
 ax_m4.grid()
-lim_m4 = (0.3, 0.9)
+lim_m4 = (0.1, 1.3)
 ax_m4.set_xlim(lim_m4)
 ax_m4.set_ylim(lim_m4)
 ax_m4.set_aspect("equal")
@@ -656,26 +656,26 @@ ax_m8.grid(alpha=0.3)
 
 # --- Row 3: Histograms of ratios ---
 ax_m9 = fig_mom.add_subplot(gs_mom[3, 1])
-ax_m9.hist(ratio_mom1, bins=collect(0.9:0.001:1.1), color="red", alpha=0.7, density=true)
+ax_m9.hist(ratio_mom1, bins=collect(0.4:0.001:1.05), color="red", alpha=0.7, density=true)
 ax_m9.axvline(1, color="black", linestyle="--", alpha=0.3, label="1:1")
 ax_m9.set_xlabel("\$\\left(u_{*,$(srf_type[sc_lbl_idx[2]])} ~/~ u_{*,$(srf_type[sc_lbl_idx[1]])}\\right)_{1m}\$")
 ax_m9.set_ylabel("PDF")
 ax_m9.grid(alpha=0.3)
 
 ax_m10 = fig_mom.add_subplot(gs_mom[3, 2])
-ax_m10.hist(ratio_mom2, bins=collect(0.9:0.001:1.1), color="red", alpha=0.7, density=true)
+ax_m10.hist(ratio_mom2, bins=collect(0.3:0.001:1.05), color="red", alpha=0.7, density=true)
 ax_m10.axvline(1, color="black", linestyle="--", alpha=0.3, label="1:1")
 ax_m10.set_xlabel("\$\\left(u_{*,$(srf_type[sc_lbl_idx[4]])} ~/~ u_{*,$(srf_type[sc_lbl_idx[3]])}\\right)_{2m}\$")
 ax_m10.grid(alpha=0.3)
 
 ax_m11 = fig_mom.add_subplot(gs_mom[3, 3])
-ax_m11.hist(ratio_mom3, bins=collect(0.9:0.001:1.3), color="red", alpha=0.7, density=true)
+ax_m11.hist(ratio_mom3, bins=collect(0.6:0.001:1.3), color="red", alpha=0.7, density=true)
 ax_m11.axvline(1, color="black", linestyle="--", alpha=0.3, label="1:1")
 ax_m11.set_xlabel("\$\\left(u_{*,$(heights[2])m} ~/~ u_{*,$(heights[1])m}\\right)_{$(srf_type[1])}\$")
 ax_m11.grid(alpha=0.3)
 
 ax_m12 = fig_mom.add_subplot(gs_mom[3, 4])
-ax_m12.hist(ratio_mom4, bins=collect(0.9:0.001:1.2), color="red", alpha=0.7, density=true)
+ax_m12.hist(ratio_mom4, bins=collect(0.6:0.001:1.6), color="red", alpha=0.7, density=true)
 ax_m12.axvline(1, color="black", linestyle="--", alpha=0.3, label="1:1")
 ax_m12.set_xlabel("\$\\left(u_{*,$(heights[4])m} ~/~ u_{*,$(heights[3])m}\\right)_{$(srf_type[3])}\$")
 ax_m12.grid(alpha=0.3)
@@ -717,11 +717,11 @@ scatter_uw2a = var3a.uw[.!isnan.(var3a.uw) .&& .!isnan.(var3b.uw)]
 scatter_uw2b = var3b.uw[.!isnan.(var3a.uw) .&& .!isnan.(var3b.uw)]
 
 # Columns 3-4: Direct comparison of heights at same location
-scatter_uw3a = var1a.uw[.!isnan.(var1a.uw) .&& .!isnan.(var3a.uw)]
-scatter_uw3b = var3a.uw[.!isnan.(var1a.uw) .&& .!isnan.(var3a.uw)]
+scatter_uw3a = var1b.uw[.!isnan.(var1b.uw) .&& .!isnan.(var3b.uw)]
+scatter_uw3b = var3b.uw[.!isnan.(var1b.uw) .&& .!isnan.(var3b.uw)]
 
-scatter_uw4a = var1b.uw[.!isnan.(var1b.uw) .&& .!isnan.(var3b.uw)]
-scatter_uw4b = var3b.uw[.!isnan.(var1b.uw) .&& .!isnan.(var3b.uw)]
+scatter_uw4a = var1a.uw[.!isnan.(var1a.uw) .&& .!isnan.(var3a.uw)]
+scatter_uw4b = var3a.uw[.!isnan.(var1a.uw) .&& .!isnan.(var3a.uw)]
 
 # Calculate ratios (y/x for each column)
 ratio_uw1 = scatter_uw1b ./ scatter_uw1a
@@ -730,7 +730,7 @@ ratio_uw3 = scatter_uw3b ./ scatter_uw3a
 ratio_uw4 = scatter_uw4b ./ scatter_uw4a
 
 fig_uw = PyPlot.figure(figsize=(16, 9.5))
-fig_uw.suptitle("3a - Vertical Momentum Flux")
+fig_uw.suptitle("3c - Vertical Momentum Flux")
 gs_uw = gridspec.GridSpec(3, 4, height_ratios=(2, 1, 1))
 
 # --- Row 1: Scatter density plots ---
@@ -744,7 +744,7 @@ ax_uw1.scatter_density(scatter_uw1a, scatter_uw1b, color="green", vmin=0, vmax=2
 ax_uw1.set_xlabel("\$\\overline{u'w'}_{$(srf_type[sc_lbl_idx[1]])}~\\mathrm{[m^2~s^{-2}]}\$")
 ax_uw1.set_ylabel("\$\\overline{u'w'}_{$(srf_type[sc_lbl_idx[2]])}~\\mathrm{[m^2~s^{-2}]}\$")
 ax_uw1.grid()
-lim_uw1 = (-0.05, 0.05)
+lim_uw1 = (-0.6, 0.05)
 ax_uw1.set_xlim(lim_uw1)
 ax_uw1.set_ylim(lim_uw1)
 ax_uw1.set_aspect("equal")
@@ -752,14 +752,14 @@ ax_uw1.set_aspect("equal")
 # Column 2: 2m comparison (tower comparison using var3a/var3b)
 ax_uw2 = fig_uw.add_subplot(gs_uw[1, 2], projection="scatter_density")
 ax_uw2.set_title("2m")
-ax_uw2.plot([-1,1], [-1,1], color="grey", alpha=0.3)
+ax_uw2.plot([-2,2], [-2,2], color="grey", alpha=0.3)
 ax_uw2.axhline(0, color="grey", alpha=0.6)
 ax_uw2.axvline(0, color="grey", alpha=0.6)
 ax_uw2.scatter_density(scatter_uw2a, scatter_uw2b, color="green", vmin=0, vmax=2000)
 ax_uw2.set_xlabel("\$\\overline{u'w'}_{$(srf_type[sc_lbl_idx[3]])}~\\mathrm{[m^2~s^{-2}]}\$")
 ax_uw2.set_ylabel("\$\\overline{u'w'}_{$(srf_type[sc_lbl_idx[4]])}~\\mathrm{[m^2~s^{-2}]}\$")
 ax_uw2.grid()
-lim_uw2 = (-0.15, 0.02)
+lim_uw2 = (-1.3, 0.05)
 ax_uw2.set_xlim(lim_uw2)
 ax_uw2.set_ylim(lim_uw2)
 ax_uw2.set_aspect("equal")
@@ -767,14 +767,14 @@ ax_uw2.set_aspect("equal")
 # Column 3: Height comparison at tower 1 (fx1 vs fx2)
 ax_uw3 = fig_uw.add_subplot(gs_uw[1, 3], projection="scatter_density")
 ax_uw3.set_title("$(srf_type[1]) (tower 1)")
-ax_uw3.plot([-1,1], [-1,1], color="grey", alpha=0.3)
+ax_uw3.plot([-2,2], [-2,2], color="grey", alpha=0.3)
 ax_uw3.axhline(0, color="grey", alpha=0.6)
 ax_uw3.axvline(0, color="grey", alpha=0.6)
 ax_uw3.scatter_density(scatter_uw3a, scatter_uw3b, color="green", vmin=0, vmax=2000)
 ax_uw3.set_xlabel("\$\\overline{u'w'}_{$(heights[1])m}~\\mathrm{[m^2~s^{-2}]}\$")
 ax_uw3.set_ylabel("\$\\overline{u'w'}_{$(heights[2])m}~\\mathrm{[m^2~s^{-2}]}\$")
 ax_uw3.grid()
-lim_uw3 = (-0.15, 0.05)
+lim_uw3 = (-0.5, 0.05)
 ax_uw3.set_xlim(lim_uw3)
 ax_uw3.set_ylim(lim_uw3)
 ax_uw3.set_aspect("equal")
@@ -782,14 +782,14 @@ ax_uw3.set_aspect("equal")
 # Column 4: Height comparison at tower 2 (fx3 vs fx4)
 ax_uw4 = fig_uw.add_subplot(gs_uw[1, 4], projection="scatter_density")
 ax_uw4.set_title("$(srf_type[3]) (tower 2)")
-ax_uw4.plot([-1,1], [-1,1], color="grey", alpha=0.3)
+ax_uw4.plot([-2,2], [-2,2], color="grey", alpha=0.3)
 ax_uw4.axhline(0, color="grey", alpha=0.6)
 ax_uw4.axvline(0, color="grey", alpha=0.6)
 ax_uw4.scatter_density(scatter_uw4a, scatter_uw4b, color="green", vmin=0, vmax=2000)
 ax_uw4.set_xlabel("\$\\overline{u'w'}_{$(heights[3])m}~\\mathrm{[m^2~s^{-2}]}\$")
 ax_uw4.set_ylabel("\$\\overline{u'w'}_{$(heights[4])m}~\\mathrm{[m^2~s^{-2}]}\$")
 ax_uw4.grid()
-lim_uw4 = (-0.05, 0.01)
+lim_uw4 = (-1.3, 0.05)
 ax_uw4.set_xlim(lim_uw4)
 ax_uw4.set_ylim(lim_uw4)
 ax_uw4.set_aspect("equal")
@@ -830,26 +830,26 @@ ax_uw8.grid(alpha=0.3)
 
 # --- Row 3: Histograms of ratios ---
 ax_uw9 = fig_uw.add_subplot(gs_uw[3, 1])
-ax_uw9.hist(ratio_uw1, bins=collect(-3.0:0.01:3.0), color="green", alpha=0.7, density=true)
+ax_uw9.hist(ratio_uw1, bins=collect(-2.0:0.01:3.0), color="green", alpha=0.7, density=true)
 ax_uw9.axvline(1, color="black", linestyle="--", alpha=0.3, label="1:1")
 ax_uw9.set_xlabel("\$\\left(\\overline{u'w'}_{$(srf_type[sc_lbl_idx[2]])} ~/~ \\overline{u'w'}_{$(srf_type[sc_lbl_idx[1]])}\\right)_{1m}\$")
 ax_uw9.set_ylabel("PDF")
 ax_uw9.grid(alpha=0.3)
 
 ax_uw10 = fig_uw.add_subplot(gs_uw[3, 2])
-ax_uw10.hist(ratio_uw2, bins=collect(-2.0:0.01:3.0), color="green", alpha=0.7, density=true)
+ax_uw10.hist(ratio_uw2, bins=collect(-1.0:0.01:2.0), color="green", alpha=0.7, density=true)
 ax_uw10.axvline(1, color="black", linestyle="--", alpha=0.3, label="1:1")
 ax_uw10.set_xlabel("\$\\left(\\overline{u'w'}_{$(srf_type[sc_lbl_idx[4]])} ~/~ \\overline{u'w'}_{$(srf_type[sc_lbl_idx[3]])}\\right)_{2m}\$")
 ax_uw10.grid(alpha=0.3)
 
 ax_uw11 = fig_uw.add_subplot(gs_uw[3, 3])
-ax_uw11.hist(ratio_uw3, bins=collect(-5.0:0.01:5.0), color="green", alpha=0.7, density=true)
+ax_uw11.hist(ratio_uw3, bins=collect(-2.0:0.01:4.0), color="green", alpha=0.7, density=true)
 ax_uw11.axvline(1, color="black", linestyle="--", alpha=0.3, label="1:1")
 ax_uw11.set_xlabel("\$\\left(\\overline{u'w'}_{$(heights[2])m} ~/~ \\overline{u'w'}_{$(heights[1])m}\\right)_{$(srf_type[1])}\$")
 ax_uw11.grid(alpha=0.3)
 
 ax_uw12 = fig_uw.add_subplot(gs_uw[3, 4])
-ax_uw12.hist(ratio_uw4, bins=collect(-2.0:0.01:5.0), color="green", alpha=0.7, density=true)
+ax_uw12.hist(ratio_uw4, bins=collect(-5.0:0.01:5.0), color="green", alpha=0.7, density=true)
 ax_uw12.axvline(1, color="black", linestyle="--", alpha=0.3, label="1:1")
 ax_uw12.set_xlabel("\$\\left(\\overline{u'w'}_{$(heights[4])m} ~/~ \\overline{u'w'}_{$(heights[3])m}\\right)_{$(srf_type[3])}\$")
 ax_uw12.grid(alpha=0.3)
@@ -857,7 +857,7 @@ ax_uw12.grid(alpha=0.3)
 PyPlot.tight_layout()
 ##
 output_folder_uw = "/home/haugened/Documents/data/CONTRASTS/plots/correlation_momentum/"
-#PyPlot.savefig(joinpath(output_folder_uw, "3a_uw.pdf"), bbox_inches="tight")
+#PyPlot.savefig(joinpath(output_folder_uw, "3c_uw.pdf"), bbox_inches="tight")
 
 #calculating correlations for vertical momentum flux
 cor_uw1 = nancor(var1a.uw, var1b.uw)

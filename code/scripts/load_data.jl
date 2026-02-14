@@ -59,7 +59,7 @@ evaldf4 = turb.readturbasnetcdf(joinpath(datapath, "3c_t2_csat_proc_cut.nc"), ev
 
 # Instrument metadata for labeling (corresponds to evaldf1-4 / fx1-4)
 srf_type = ["lead", "lead", "floe", "floe"]
-heights = [0.9, 2.0, 1.1, 2.0]
+heights = [1.1, 2.2, 1.1, 2.2]
 # Compose labels from instrument metadata
 instr_labels = ["$(srf_type[i]) $(heights[i])m" for i in 1:4]
 
