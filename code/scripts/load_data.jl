@@ -90,10 +90,20 @@ evaldf4 = turb.interpolatemissing(evaldf4);
 #end
 #evaldf6 = turb.interpolatemissing(evaldf6)
 
+
 wd1 = turb.winddir(evaldf1)
 wd2 = turb.winddir(evaldf2)
 wd3 = turb.winddir(evaldf3)
 wd4 = turb.winddir(evaldf4)
+
+#rotation of the towers
+#T1 (evaldf1 and evaldf2) at 27.8. 08:40, everything after +95
+wd1.α[wd1.time .>= DateTime(2025,08,27,08,40,00)] = mod.(wd1.α[wd1.time .>= DateTime(2025,08,27,08,40,00)] .+ 95, 360)
+wd2.α[wd2.time .>= DateTime(2025,08,27,08,40,00)] = mod.(wd2.α[wd2.time .>= DateTime(2025,08,27,08,40,00)] .+ 95, 360)
+#T2 (evaldf3 and evaldf4) at 27.8. 09:03 everything after -300
+wd3.α[wd3.time .>= DateTime(2025,08,27,09,03,00)] = mod.(wd3.α[wd3.time .>= DateTime(2025,08,27,09,03,00)] .- 300, 360)
+wd4.α[wd4.time .>= DateTime(2025,08,27,09,03,00)] = mod.(wd4.α[wd4.time .>= DateTime(2025,08,27,09,03,00)] .- 300, 360)
+
 
 #double rotation
 turb.drdf!(evaldf1, periodwise=false)
@@ -116,6 +126,7 @@ evaldf1[isbad_quality_1, ["u", "v", "w", "T"]] .= NaN;
 evaldf2[isbad_quality_2, ["u", "v", "w", "T"]] .= NaN;
 evaldf3[isbad_quality_3, ["u", "v", "w", "T"]] .= NaN;
 evaldf4[isbad_quality_4, ["u", "v", "w", "T"]] .= NaN;
+
 
 ######################################################
 ###               LOADING SLOW DATA                ###
@@ -352,4 +363,4 @@ PyPlot.tight_layout()
 ##
 # Save the figure
 output_folder = "/home/haugened/Documents/data/CONTRASTS/plots/wind_temperature/"
-#PyPlot.savefig(joinpath(output_folder, "1b_2.pdf"), bbox_inches="tight")
+#PyPlot.savefig(joinpath(output_folder, "3d.pdf"), bbox_inches="tight")
