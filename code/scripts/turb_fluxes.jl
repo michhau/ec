@@ -49,6 +49,17 @@ fx2 = turb.avgflux(fx2_raw, ra2, true, 0.1)
 fx3 = turb.avgflux(fx3_raw, ra3, true, 0.1)
 fx4 = turb.avgflux(fx4_raw, ra4, true, 0.1)
 
+(fx1_wT_block_time, fx1_wT_block) = gen.block_average(fx1.time, fx1.wT, Minute(10))
+(fx2_wT_block_time, fx2_wT_block) = gen.block_average(fx2.time, fx2.wT, Minute(10))
+(fx3_wT_block_time, fx3_wT_block) = gen.block_average(fx3.time, fx3.wT, Minute(10))
+(fx4_wT_block_time, fx4_wT_block) = gen.block_average(fx4.time, fx4.wT, Minute(10))
+(fx1_wq_block_time, fx1_wq_block) = gen.block_average(fx1.time, fx1.wq, Minute(10))
+(fx3_wq_block_time, fx3_wq_block) = gen.block_average(fx3.time, fx3.wq, Minute(10))
+
+wT13_acc = vcat(wT13_acc, fx1_wT_block, fx3_wT_block)
+wT24_acc = vcat(wT24_acc, fx2_wT_block, fx4_wT_block)
+wq13_acc = vcat(wq13_acc, fx1_wq_block ,fx3_wq_block)
+
 ######################################################
 ###                    PLOTS                       ###
 ######################################################
@@ -379,6 +390,43 @@ axgb.set_xlabel(xlabel)
 axgb.hist(x, bins=collect(xmin:xstep:xmax), density=true)
 axgb.tick_params(axis="y", labelleft=false)
 =#
+######################################################
+###     Histogram: accumulated heat fluxes         ###
+######################################################
+##
+fig_hist, (ax_h1, ax_h2) = PyPlot.subplots(1, 2, figsize=(10, 5))
+
+# Sensible heat flux histogram (left)
+H13 = wT13_acc .* (ρ_air * c_p)
+H24 = wT24_acc .* (ρ_air * c_p)
+H_all = hcat(H13, H24)
+
+#ax_h1.hist(filter(!isnan, H13), bins=collect(-50:0.5:50), density=true, alpha=0.6, color="C0", label="~1.2 m")
+#ax_h1.hist(filter(!isnan, H24), bins=collect(-50:0.5:50), density=true, alpha=0.6, color="C1", label="~2.2 m")
+ax_h1.hist(filter(!isnan, H_all), bins=collect(-50:0.5:50), density=true, color="C0")
+ax_h1.set_xlabel(L"\overline{w'T'}~\mathrm{[W~m^{-2}]}")
+ax_h1.set_ylabel("PDF")
+ax_h1.tick_params(axis="y", labelleft=false)
+ax_h1.set_title("Sensible")
+#ax_h1.legend()
+ax_h1.grid(alpha=0.3)
+
+# Latent heat flux histogram (right)
+LE13 = wq13_acc .* (L_v * 1e-3)
+
+ax_h2.hist(filter(!isnan, LE13), bins=collect(-25:0.5:25), density=true, color="C1")#, alpha=0.6, color="C2", label="~1.2 m")
+ax_h2.set_xlabel(L"\overline{w'q'}~\mathrm{[W~m^{-2}]}")
+ax_h2.set_ylabel("PDF")
+ax_h2.tick_params(axis="y", labelleft=false)
+ax_h2.set_title("Latent")
+#ax_h2.legend()
+ax_h2.grid(alpha=0.3)
+
+fig_hist.suptitle("Turbulent atmospheric heat fluxes CONTRASTS (21.6d of data from 9.7. - 27.8.2025)")
+PyPlot.tight_layout()
+PyPlot.savefig(joinpath("/home/haugened/Documents/data/CONTRASTS/plots/wT_wq/", "hist_all.pdf"), bbox_inches="tight")
+PyPlot.gcf()
+##
 ######################################################
 ###         Scatter plot fluxes CONTRASTS          ###
 ######################################################

@@ -46,7 +46,7 @@ println("-----------S-T-A-R-T-------------")
 ###            LOADING & PREPROCESSING             ###
 ######################################################
 #select data and measurement period to be evaluated
-evalstart = DateTime(2025, 07, 27, 10, 10, 00)
+evalstart = DateTime(2023, 07, 27, 10, 10, 00)
 evalend   = DateTime(2027, 07, 27, 09, 10, 00)
 #evalend = evalstart + Day(10)
 
