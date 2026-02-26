@@ -60,6 +60,7 @@ evaldf4 = turb.readturbasnetcdf(joinpath(datapath, "1b_t2_csat_proc_cut.nc"), ev
 # Instrument metadata for labeling (corresponds to evaldf1-4 / fx1-4)
 srf_type = ["pond", "pond", "ice", "ice"]
 heights = [1.0, 2.1, 1.2, 2.2]
+instr_type = ["IRG", "CSAT", "IRG", "CSAT"]
 # Compose labels from instrument metadata
 instr_labels = ["$(srf_type[i]) $(heights[i])m" for i in 1:4]
 
