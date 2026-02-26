@@ -422,10 +422,14 @@ ax_h2.set_title("Latent")
 #ax_h2.legend()
 ax_h2.grid(alpha=0.3)
 
-fig_hist.suptitle("Turbulent atmospheric heat fluxes CONTRASTS (21.6d of data from 9.7. - 27.8.2025)")
+fig_hist.suptitle("Turbulent atmospheric heat fluxes at 1m and 2m height (21.6d of data from 9.7. - 27.8.2025)")
 PyPlot.tight_layout()
-PyPlot.savefig(joinpath("/home/haugened/Documents/data/CONTRASTS/plots/wT_wq/", "hist_all.pdf"), bbox_inches="tight")
+#PyPlot.savefig(joinpath("/home/haugened/Documents/data/CONTRASTS/plots/wT_wq/", "hist_all.pdf"), bbox_inches="tight")
 PyPlot.gcf()
+
+using NaNStatistics
+nanmean(H_all)
+nanmean(LE13)
 ##
 ######################################################
 ###         Scatter plot fluxes CONTRASTS          ###
