@@ -143,7 +143,7 @@ for row in 1:2, col in 1:2
 
     # Reference -2/3 slope (Kolmogorov)
     x_ref = collect(0.8:0.05:8)
-    y_ref = x_ref .^ (-2 / 3)./10
+    y_ref = x_ref .^ (-2 / 3)./100
     ax.plot(x_ref, y_ref, color="black", linestyle="--", linewidth=0.8,
             label=L"f^{-2/3}")
 
@@ -152,7 +152,7 @@ for row in 1:2, col in 1:2
     ax.set_xlabel(L"f~\mathrm{[Hz]}")
     ax.set_ylabel(L"fS(f)")
     ax.set_xlim(1e-4, 10)
-    ax.set_ylim(2e-5, 5e-1)
+    ax.set_ylim(5e-6, 1e-1)
     ax.set_title(title, fontsize=11, fontweight="bold")
     ax.grid(true, alpha=0.3)
     ax.legend(fontsize=8)
@@ -161,4 +161,4 @@ end
 PyPlot.tight_layout()
 PyPlot.gcf()
 ##
-#PyPlot.savefig(joinpath("/home/haugened/Documents/data/CONTRASTS/plots/spectra/", "3c.pdf"), bbox_inches="tight")
+#PyPlot.savefig(joinpath("/home/haugened/Documents/data/CONTRASTS/plots/spectra/", "3d.pdf"), bbox_inches="tight")
