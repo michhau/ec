@@ -152,5 +152,27 @@ fp4 = ax1.plot(ffp4["xr"][end-2] .+ fluxloc_final[4, 2], ffp4["yr"][end-2] .+ fl
 ax1.legend()
 PyPlot.tight_layout()
 ##
+###########################################
+#plot for Arcic System Science conference
+##
+ctab10 = PyPlot.cm.tab10
+ffp_fig = PyPlot.figure(figsize=(5,4))
+ax1 = ffp_fig.add_subplot(111)
+#ax1.set_title("Station 2a Flux footprints 70%")
+bg = ax1.imshow(orthomosaic, extent=bgextend_final)
+#bg = ax1.pcolormesh(orthomosaic)
+ax1.set_xlabel("meter")
+ax1.set_ylabel("meter")
+locfx1 = ax1.plot(fluxloc_final[1, 2], fluxloc_final[1, 1], ".", color=ctab10(0), ms=15)
+#locfx2 = ax1.plot(fluxloc_final[2, 2], fluxloc_final[2, 1], ".", color=ctab10(1), ms=15)
+locfx3 = ax1.plot(fluxloc_final[3, 2], fluxloc_final[3, 1], ".", color=ctab10(2), ms=15)
+#locfx4 = ax1.plot(fluxloc_final[4, 2], fluxloc_final[4, 1], ".", color=ctab10(3), ms=15)
+fp1 = ax1.plot(ffp1["xr"][end-1] .+ fluxloc_final[1, 2], ffp1["yr"][end-1] .+ fluxloc_final[1, 1], color=ctab10(0), label = instr_labels[1])
+fp2 = ax1.plot(ffp2["xr"][end-1] .+ fluxloc_final[2, 2], ffp2["yr"][end-1] .+ fluxloc_final[2, 1], color=ctab10(1), label = instr_labels[2])
+fp3 = ax1.plot(ffp3["xr"][end-2] .+ fluxloc_final[3, 2], ffp3["yr"][end-2] .+ fluxloc_final[3, 1], color=ctab10(2), label = string(instr_labels[3], " (60%)"))
+fp4 = ax1.plot(ffp4["xr"][end-2] .+ fluxloc_final[4, 2], ffp4["yr"][end-2] .+ fluxloc_final[4, 1], color=ctab10(3), label = string(instr_labels[4], " (60%)"))
+#ax1.legend()
+PyPlot.tight_layout()
+##
 println("------------D-O-N-E---------------")
 println()

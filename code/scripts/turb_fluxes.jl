@@ -136,6 +136,62 @@ PyPlot.tight_layout()
 output_folder_wT = output_folder = "/home/haugened/Documents/data/CONTRASTS/plots/wT_wq/"
 #PyPlot.savefig(joinpath(output_folder_wT, "1b_2.pdf"), bbox_inches="tight")
 ##
+######################################################
+# Flux time series with dual subplots for latent and sensible heat fluxes (Arctic System Science)
+##
+fig, (ax1, ax2) = PyPlot.subplots(2, 1, figsize=(7, 4), sharex=true)
+
+# Define colors for consistent legend
+colors = ["C0", "C1", "C2", "C3"]  # Default matplotlib color cycle
+
+#define plotting step size
+step = 20*60 #every 1min
+
+#y-axis limits
+wT_limits = (-25, 20)
+wq_limits = (-7,10) #wT_limits
+
+# Upper subplot - Buoyancy fluxes (sensible heat)
+#ax1.set_title("1b-2 Turbulent Heat Fluxes")
+wt1 = ax1.plot(fx1.time[1:step:end], fx1.wT[1:step:end] .* (ρ_air * c_p), color=colors[1])
+wt2 = ax1.plot(fx2.time[1:step:end], fx2.wT[1:step:end] .* (ρ_air * c_p), color=colors[2])
+wt3 = ax1.plot(fx3.time[1:step:end], fx3.wT[1:step:end] .* (ρ_air * c_p), color=colors[3])
+wt4 = ax1.plot(fx4.time[1:step:end], fx4.wT[1:step:end] .* (ρ_air * c_p), color=colors[4])
+ax1.set_ylabel(L"\overline{w'T_s'} ~\mathrm{[W~m^{-2}]}")
+ax1.grid()
+ax1.set_ylim(wT_limits)
+
+# Lower subplot - Latent heat fluxes
+wq1 = ax2.plot(fx1.time[1:step:end], fx1.wq[1:step:end] .* (L_v * 1e-3), color=colors[1])
+wq2 = ax2.plot(fx3.time[1:step:end], fx3.wq[1:step:end] .* (L_v * 1e-3), color=colors[3])
+ax2.set_ylabel(L"\overline{w'q'} ~\mathrm{[W~m^{-2}]}")
+#ax2.set_xlabel("Time")
+ax2.xaxis_date()
+ax2.grid()
+ax2.set_ylim(wq_limits)
+
+# Create a single legend for the entire figure
+handles = [wt1[1], wt2[1], wt3[1], wt4[1]]  # Get line objects
+labels = instr_labels
+#ax1.legend(handles, labels)#, loc="upper right", bbox_to_anchor=(1.0, 1))
+
+# Optional: Uncomment these lines if you want to set specific time limits
+# ax2.set_xlim(DateTime(2021, 05, 31, 10, 30, 00), DateTime(2021, 05, 31, 20, 00))
+
+# Format dates on x-axis if needed
+# majorlocator = pydates.HourLocator(interval=1)
+# minorlocator = pydates.MinuteLocator(interval=15)
+# ax2.xaxis.set_major_locator(majorlocator)
+# ax2.xaxis.set_minor_locator(minorlocator)
+# date_format = pydates.DateFormatter("%H:%M")
+# ax2.xaxis.set_major_formatter(date_format)
+fig.autofmt_xdate()
+
+PyPlot.tight_layout()
+output_folder_wT = output_folder = "/home/haugened/Documents/data/CONTRASTS/plots/wT_wq/"
+#PyPlot.savefig(joinpath(output_folder_wT, "1b_2.pdf"), bbox_inches="tight")
+##
+#############################################################################3
 ##
 # Momentum fluxes and friction velocity plot
 fig, (ax1, ax2) = PyPlot.subplots(2, 1, figsize=(10, 8), sharex=true)
@@ -798,3 +854,99 @@ mad_mom3 = scatter_mom3b_mean - scatter_mom3a_mean
 mad_mom4 = scatter_mom4b_mean - scatter_mom4a_mean
 ##
 ######################################################
+#scatter plot for Arctic System Conference
+##
+mpl_scatter_density = pyimport("mpl_scatter_density")
+
+# Scatter data preparation, such that "ice" is always the "a" part, effect for heat and momentum
+var1a = fx3
+var1b = fx1
+var3a = fx4
+var3b = fx2
+sc_lbl_idx = [3, 1, 4, 2] #indexing for labels
+
+##################
+#Heat fluxes
+
+scatter1a = var1a.wT[.!isnan.(fx1.wT) .&& .!isnan.(fx3.wT)]
+scatter1b = var1b.wT[.!isnan.(fx1.wT) .&& .!isnan.(fx3.wT)]
+
+scatter1a .*= ρ_air .* c_p
+scatter1b .*= ρ_air .* c_p
+
+scatter2b = var1b.wq[.!isnan.(fx1.wq) .&& .!isnan.(fx3.wq)]
+scatter2a = var1a.wq[.!isnan.(fx1.wq) .&& .!isnan.(fx3.wq)]
+
+scatter2a .*= L_v .* 1e-3
+scatter2b .*= L_v .* 1e-3
+
+scatter3b = var3b.wT[.!isnan.(fx2.wT) .&& .!isnan.(fx4.wT)]
+scatter3a = var3a.wT[.!isnan.(fx2.wT) .&& .!isnan.(fx4.wT)]
+
+scatter3a .*= ρ_air .* c_p
+scatter3b .*= ρ_air .* c_p
+
+ratio1 = scatter1b ./ scatter1a
+ratio2 = scatter2b ./ scatter2a
+ratio3 = scatter3b ./ scatter3a
+
+##
+
+# Define colors for consistent legend
+colors = ["C0", "C1", "C2", "C3"]  # Default matplotlib color cycle
+
+fig = PyPlot.figure(figsize=(9, 3.5))
+#fig.suptitle("1b-2 - 27.7.2025 10:10 to 10.07.2025 16:00")
+gs = gridspec.GridSpec(1, 3)
+
+# --- Row 1: Scatter density ---
+ax1 = fig.add_subplot(gs[1, 1], projection="scatter_density")
+ax1.set_title("1m Sensible Heat Fluxes")
+ax1.axhline(0, color="grey", alpha=0.6)
+ax1.axvline(0, color="grey", alpha=0.6)
+ax1.plot([-25,25], [-25,25], color="grey", alpha=0.3)
+ax1.scatter_density(scatter1a, scatter1b, color="black", vmin=00, vmax=1000)
+lim_1 = (-15, 10)
+ax1.set_xlim(lim_1)
+ax1.set_ylim(lim_1)
+#ax1.set_yticks(collect(-20:10:20))
+ax1.set_xlabel("\$\\overline{w'T'}_{$(srf_type[sc_lbl_idx[1]])}~\\mathrm{[W~m^{-2}]}\$", color=colors[3])
+ax1.set_ylabel("\$\\overline{w'T'}_{$(srf_type[sc_lbl_idx[2]])}~\\mathrm{[W~m^{-2}]}\$", color=colors[1])
+ax1.grid()
+ax1.set_aspect("equal")
+
+ax2 = fig.add_subplot(gs[1, 2], projection="scatter_density")
+ax2.set_title("1m Latent Heat Fluxes")
+ax2.axhline(0, color="grey")
+ax2.axvline(0, color="grey")
+ax2.plot([-25,25], [-25,25], color="grey", alpha=0.3)
+ax2.scatter_density(scatter2a, scatter2b, color="blue", vmin=0, vmax=1000)
+lim_2 = (-10, 10)
+ax2.set_xlim(lim_2)
+ax2.set_ylim(lim_2)
+#ax2.set_yticks(collect(-10:5:10))
+ax2.set_xlabel("\$\\overline{w'q'}_{$(srf_type[sc_lbl_idx[1]])}~\\mathrm{[W~m^{-2}]}\$", color=colors[3])
+ax2.set_ylabel("\$\\overline{w'q'}_{$(srf_type[sc_lbl_idx[2]])}~\\mathrm{[W~m^{-2}]}\$", color=colors[1])
+ax2.grid()
+ax2.set_aspect("equal")
+
+ax3 = fig.add_subplot(gs[1, 3], projection="scatter_density")
+ax3.plot([-25,30], [-25,30], color="grey", alpha=0.3)
+ax3.scatter_density(scatter3a, scatter3b, color="black", vmin=0, vmax=1000)
+ax3.set_title("2m Sensible Heat Fluxes")
+ax3.axhline(0, color="grey")
+ax3.axvline(0, color="grey")
+lim_3 = (-20, 15)
+ax3.set_xlim(lim_3)
+ax3.set_ylim(lim_3)
+#ax3.set_yticks(collect(-20:10:10))
+ax3.set_xlabel("\$\\overline{w'T'}_{$(srf_type[sc_lbl_idx[3]])}~\\mathrm{[W~m^{-2}]}\$", color=colors[4])
+ax3.set_ylabel("\$\\overline{w'T'}_{$(srf_type[sc_lbl_idx[4]])}~\\mathrm{[W~m^{-2}]}\$", color=colors[2])
+ax3.grid()
+ax3.set_aspect("equal")
+
+
+PyPlot.tight_layout()
+##
+output_folder = "/home/haugened/Documents/presentation/conferences/arctic_system_26/"
+PyPlot.savefig(joinpath(output_folder, "1b2_corrs.pdf"), bbox_inches="tight")
