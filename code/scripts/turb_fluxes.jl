@@ -137,6 +137,47 @@ ax1.legend(handles, labels)#, loc="upper right", bbox_to_anchor=(1.0, 1))
 PyPlot.tight_layout()
 output_folder = "/home/haugened/Documents/data/CONTRASTS/plots/wT_wq/"
 #PyPlot.savefig(joinpath(output_folder, "3a.pdf"), bbox_inches="tight")
+##############################################################################
+#only flow separation behind ridge wT and uw (Arctic System science conference)
+##
+fig, (ax1,ax2) = PyPlot.subplots(2, 1, sharex=true)
+
+# Define colors for consistent legend
+colors = ["C0", "C1", "C2", "C3"]  # Default matplotlib color cycle
+
+#define plotting step size
+step = 20*60 #every 1min
+
+#y-axis limits
+wT_limits = (-20, 20)
+wq_limits = (-5,5) #wT_limits
+
+# Upper subplot - Buoyancy fluxes (sensible heat)
+uw1 = ax1.plot(fx1.time[1:step:end], fx1.uw[1:step:end], color=colors[1])
+uw2 = ax1.plot(fx2.time[1:step:end], fx2.uw[1:step:end], color=colors[2])
+ax1.set_ylabel(L"\overline{u'w'} ~\mathrm{[m^2~s^{-2}]}")
+ax1.grid()
+
+wt1 = ax2.plot(fx1.time[1:step:end], fx1.wT[1:step:end] .* (ρ_air * c_p), color=colors[1])
+wt2 = ax2.plot(fx2.time[1:step:end], fx2.wT[1:step:end] .* (ρ_air * c_p), color=colors[2])
+ax2.set_ylabel(L"\overline{w'T_s'} ~\mathrm{[W~m^{-2}]}")
+ax2.grid()
+ax2.set_ylim(wT_limits)
+
+ax2.set_xlabel("Time")
+ax2.xaxis_date()
+
+# Create a single legend for the entire figure
+handles = [wt1[1], wt2[1]]  # Get line objects
+labels = instr_labels[1:2]
+ax1.legend(handles, labels)#, loc="upper right", bbox_to_anchor=(1.0, 1))
+
+fig.autofmt_xdate()
+
+PyPlot.tight_layout()
+output_folder = "/home/haugened/Documents/data/CONTRASTS/plots/wT_wq/"
+#PyPlot.savefig(joinpath(output_folder, "3a.pdf"), bbox_inches="tight")
+###########################################################################
 ##
 # Momentum fluxes and friction velocity plot
 fig, (ax1, ax2) = PyPlot.subplots(2, 1, figsize=(10, 8), sharex=true)
