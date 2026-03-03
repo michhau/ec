@@ -394,7 +394,7 @@ axgb.tick_params(axis="y", labelleft=false)
 ###     Histogram: accumulated heat fluxes         ###
 ######################################################
 ##
-fig_hist, (ax_h1, ax_h2) = PyPlot.subplots(1, 2, figsize=(10, 5))
+fig_hist, (ax_h1, ax_h2) = PyPlot.subplots(1, 2, figsize=(6, 3))
 
 # Sensible heat flux histogram (left)
 H13 = wT13_acc .* (ρ_air * c_p)
@@ -403,9 +403,9 @@ H_all = hcat(H13, H24)
 
 #ax_h1.hist(filter(!isnan, H13), bins=collect(-50:0.5:50), density=true, alpha=0.6, color="C0", label="~1.2 m")
 #ax_h1.hist(filter(!isnan, H24), bins=collect(-50:0.5:50), density=true, alpha=0.6, color="C1", label="~2.2 m")
-ax_h1.hist(filter(!isnan, H_all), bins=collect(-50:0.5:50), density=true, color="C0")
+ax_h1.hist(filter(!isnan, H_all), bins=collect(-50:1:50), density=true, color="C0")
 ax_h1.set_xlabel(L"\overline{w'T'}~\mathrm{[W~m^{-2}]}")
-ax_h1.set_ylabel("PDF")
+ax_h1.set_ylabel("density")
 ax_h1.tick_params(axis="y", labelleft=false)
 ax_h1.set_title("Sensible")
 #ax_h1.legend()
@@ -416,13 +416,13 @@ LE13 = wq13_acc .* (L_v * 1e-3)
 
 ax_h2.hist(filter(!isnan, LE13), bins=collect(-25:0.5:25), density=true, color="C1")#, alpha=0.6, color="C2", label="~1.2 m")
 ax_h2.set_xlabel(L"\overline{w'q'}~\mathrm{[W~m^{-2}]}")
-ax_h2.set_ylabel("PDF")
+#ax_h2.set_ylabel("PDF")
 ax_h2.tick_params(axis="y", labelleft=false)
 ax_h2.set_title("Latent")
 #ax_h2.legend()
 ax_h2.grid(alpha=0.3)
 
-fig_hist.suptitle("Turbulent atmospheric heat fluxes at 1m and 2m height (21.6d of data from 9.7. - 27.8.2025)")
+#fig_hist.suptitle("Turbulent atmospheric heat fluxes at 1m and 2m height (21.6d of data from 9.7. - 27.8.2025)")
 PyPlot.tight_layout()
 #PyPlot.savefig(joinpath("/home/haugened/Documents/data/CONTRASTS/plots/wT_wq/", "hist_all.pdf"), bbox_inches="tight")
 PyPlot.gcf()
