@@ -56,6 +56,27 @@ fx4 = turb.avgflux(fx4_raw, ra4, true, 0.1)
 (fx1_wq_block_time, fx1_wq_block) = gen.block_average(fx1.time, fx1.wq, Minute(10))
 (fx3_wq_block_time, fx3_wq_block) = gen.block_average(fx3.time, fx3.wq, Minute(10))
 
+wTp_1 = vcat(wTp_1, fx1_wT_block)
+wqp_1 = vcat(wqp_1, fx1_wq_block)
+wTp_2 = vcat(wTp_2, fx2_wT_block)
+wTpi_1 = vcat(wTpi_1, fx1_wT_block, fx3_wT_block)
+wqpi_1 = vcat(wqpi_1, fx1_wq_block, fx3_wq_block)
+wTpi_2 = vcat(wTpi_2, fx2_wT_block, fx4_wT_block)
+
+wTli_1 = vcat(wTli_1, fx1_wT_block)
+wqli_1 = vcat(wqli_1, fx1_wq_block)
+wTli_2 = vcat(wTli_2, fx2_wT_block)
+wTl_1 = vcat(wTl_1, fx1_wT_block)
+wql_1 = vcat(wql_1, fx1_wq_block)
+wTl_2 = vcat(wTl_2, fx2_wT_block)
+
+wTr_1 = vcat(wTr_1, fx1_wT_block, fx3_wT_block)
+wTr_2 = vcat(wTr_2, fx2_wT_block, fx4_wT_block)
+wqr_1 = vcat(wqr_1, fx1_wq_block, fx3_wq_block)
+
+folder = "/home/haugened/Documents/data/CONTRASTS/EC_offline_preproc/for_hist"
+CSV.write(joinpath(folder, "wT_ridge_2m.csv"), DataFrame(wT=wTr_2))
+
 wT13_acc = vcat(wT13_acc, fx1_wT_block, fx3_wT_block)
 wT24_acc = vcat(wT24_acc, fx2_wT_block, fx4_wT_block)
 wq13_acc = vcat(wq13_acc, fx1_wq_block ,fx3_wq_block)
@@ -430,6 +451,89 @@ PyPlot.gcf()
 using NaNStatistics
 nanmean(H_all)
 nanmean(LE13)
+##
+######################################################
+###  Histogram: surface-type breakdown heat fluxes ###
+######################################################
+##
+# Load pre-exported histogram data from CSV
+hist_folder = "/home/haugened/Documents/data/CONTRASTS/EC_offline_preproc/for_hist/"
+wTp_1  = CSV.read(joinpath(hist_folder, "wT_pond_1m.csv"), DataFrame).wT
+wTp_2  = CSV.read(joinpath(hist_folder, "wT_pond_2m.csv"), DataFrame).wT
+wqp_1  = CSV.read(joinpath(hist_folder, "wq_pond_1m.csv"), DataFrame).wq
+wTpi_1 = CSV.read(joinpath(hist_folder, "wT_ice_pond_1m.csv"), DataFrame).wT
+wTpi_2 = CSV.read(joinpath(hist_folder, "wT_ice_pond_2m.csv"), DataFrame).wT
+wqpi_1 = CSV.read(joinpath(hist_folder, "wq_ice_pond_1m.csv"), DataFrame).wq
+wTli_1 = CSV.read(joinpath(hist_folder, "wT_ice_lead_1m.csv"), DataFrame).wT
+wTli_2 = CSV.read(joinpath(hist_folder, "wT_ice_lead_2m.csv"), DataFrame).wT
+wqli_1 = CSV.read(joinpath(hist_folder, "wq_ice_lead_1m.csv"), DataFrame).wq
+wTl_1  = CSV.read(joinpath(hist_folder, "wT_lead_1m.csv"), DataFrame).wT
+wTl_2  = CSV.read(joinpath(hist_folder, "wT_lead_2m.csv"), DataFrame).wT
+wql_1  = CSV.read(joinpath(hist_folder, "wq_lead_1m.csv"), DataFrame).wq
+wTr_1  = CSV.read(joinpath(hist_folder, "wT_ridge_1m.csv"), DataFrame).wT
+wTr_2  = CSV.read(joinpath(hist_folder, "wT_ridge_2m.csv"), DataFrame).wT
+wqr_1  = CSV.read(joinpath(hist_folder, "wq_ridge_1m.csv"), DataFrame).wq
+##
+fig_srf, axes = PyPlot.subplots(5, 2, figsize=(8, 12))
+
+wT_bins = collect(-50:1:50)
+wq_bins = collect(-25:0.5:25)
+
+# Row definitions: (label, wT_1m, wT_2m, wq_1m)
+row_data = [
+    ("all",   vcat(wTp_1, wTpi_1, wTli_1, wTl_1, wTr_1), vcat(wTp_2, wTpi_2, wTli_2, wTl_2, wTr_2), vcat(wqp_1, wqpi_1, wqli_1, wql_1, wqr_1)),
+    ("pond",  wTp_1,                                       wTp_2,                                       wqp_1),
+    ("lead",  wTl_1,                                       wTl_2,                                       wql_1),
+    ("ice",   vcat(wTpi_1, wTli_1),                        vcat(wTpi_2, wTli_2),                        vcat(wqpi_1, wqli_1)),
+    ("ridge", wTr_1,                                       wTr_2,                                       wqr_1),
+]
+
+for (i, (lbl, wT1, wT2, wq1)) in enumerate(row_data)
+    ax_l = axes[i, 1]
+    ax_r = axes[i, 2]
+
+    # Left column: sensible heat flux (1m and 2m)
+    H1 = filter(!isnan, wT1 .* (ρ_air * c_p))
+    H2 = filter(!isnan, wT2 .* (ρ_air * c_p))
+    ax_l.axvline(0, color="grey", alpha=0.4)
+    ax_l.hist(H1, bins=wT_bins, density=true, alpha=0.6, color="C0", label="~1m")
+    ax_l.hist(H2, bins=wT_bins, density=true, alpha=0.6, color="C1", label="~2m")
+    ax_l.grid(alpha=0.3)
+    n1_h = length(H1) / 6  # 10min intervals → hours
+    n2_h = length(H2) / 6
+    ax_l.text(0.19, 0.96, "1m: $(round(n1_h, digits=1))h\n2m: $(round(n2_h, digits=1))h",
+        transform=ax_l.transAxes, ha="right", va="top", fontsize=7)
+    if i==1
+        ax_l.legend()
+    end
+    ax_l.set_ylabel(lbl, fontsize=12, fontweight="bold", rotation=0, labelpad=40, va="center")
+    ax_l.tick_params(axis="y", labelleft=false)
+
+    # Right column: latent heat flux (1m only)
+    LE1 = filter(!isnan, wq1 .* (L_v * 1e-3))
+    ax_r.axvline(0, color="grey", alpha=0.4)
+    ax_r.hist(LE1, bins=wq_bins, density=true, color="C2")
+    nq_h = length(LE1) / 6
+    ax_r.text(0.13, 0.96, "$(round(nq_h, digits=1))h",
+        transform=ax_r.transAxes, ha="right", va="top", fontsize=7)
+    ax_r.grid(alpha=0.3)
+    ax_r.tick_params(axis="y", labelleft=false)
+
+    if i == 5
+        ax_l.set_xlabel(L"\overline{w'T'}~\mathrm{[W~m^{-2}]}")
+        ax_r.set_xlabel(L"\overline{w'q'}~\mathrm{[W~m^{-2}]}")
+    else
+        ax_l.tick_params(axis="x", labelbottom=false)
+        ax_r.tick_params(axis="x", labelbottom=false)
+    end
+end
+
+axes[1, 1].set_title("Sensible")
+axes[1, 2].set_title("Latent")
+
+PyPlot.tight_layout()
+PyPlot.savefig(joinpath("/home/haugened/Documents/data/CONTRASTS/plots/wT_wq/", "hist_surface_types.pdf"), bbox_inches="tight")
+#PyPlot.gcf()
 ##
 ######################################################
 ###         Scatter plot fluxes CONTRASTS          ###
