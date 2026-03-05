@@ -164,19 +164,19 @@ ax2.set_ylabel(L"\overline{w'T_s'} ~\mathrm{[W~m^{-2}]}")
 ax2.grid()
 ax2.set_ylim(wT_limits)
 
-ax2.set_xlabel("Time")
+#ax2.set_xlabel("Time")
 ax2.xaxis_date()
 
 # Create a single legend for the entire figure
 handles = [wt1[1], wt2[1]]  # Get line objects
-labels = instr_labels[1:2]
+labels = ["0.9m", "2.0m"]
 ax1.legend(handles, labels)#, loc="upper right", bbox_to_anchor=(1.0, 1))
 
 fig.autofmt_xdate()
 
 PyPlot.tight_layout()
-output_folder = "/home/haugened/Documents/data/CONTRASTS/plots/wT_wq/"
-#PyPlot.savefig(joinpath(output_folder, "3a.pdf"), bbox_inches="tight")
+output_folder = "/home/haugened/Documents/presentation/conferences/arctic_system_26/"
+#PyPlot.savefig(joinpath(output_folder, "3a_uw_wT.pdf"), bbox_inches="tight")
 ###########################################################################
 ##
 # Momentum fluxes and friction velocity plot
