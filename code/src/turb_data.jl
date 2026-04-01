@@ -20,7 +20,7 @@ export readperiodfile, nan2missing!, missing2nan!, loadrawgeneric, loadt1raw, lo
     createtimestamped3Dwind, csvtodataframe, saveturbasnetcdf, readturbasnetcdf,
     makecontinuous, findnearest, extendtofinertimeseries!, splitdaynight, simplewinddir, qualcontrolflags, qualcontrolflagCSAT3,
     sonicqualcontrol, despiking, printmissstats, repositionnanmask!, drdf!, doublerotation,
-    detrend, parametersblocksplitting, blockevaluation, interpolatemissing, winddir,
+    detrend, parametersblocksplitting, blockevaluation, interpolatemissing, interpolateinvalid, winddir,
     detectgaps, blockapply, OSHD_SHF, contflux, turbflux, turbfluxdrperperiod, avgflux, advect
 
 ######################################################
@@ -854,6 +854,77 @@ function interpolatemissing(data::DataFrame, threshgapsize::Int=20)
     println("Replaced ", round(replaced * 100, digits=2),
         "% of missing values.")
     return data
+end
+
+"""
+    interpolateinvalid(data::Vector{<:Real}, threshgapsize::Int=20) -> Vector
+
+Linearly interpolate missing, NaN, and Inf values in a vector.
+If gap size > threshgapsize, those values are left unchanged.
+Returns a new vector with interpolated values.
+"""
+function interpolateinvalid(data::Vector, threshgapsize::Int=20)
+    n = length(data)
+    result = copy(data)
+    
+    # Create mask for invalid values (missing, NaN, Inf)
+    invalid = ismissing.(result) .| isnan.(result) .| isinf.(result)
+    
+    nrreplaced = 0
+    total_invalid = count(invalid)
+    
+    i = 1
+
+    while i <= n
+        if invalid[i]
+            # Find the start and end of this gap
+            gap_start = i
+            gap_end = i
+            
+            # Find where gap ends
+            while gap_end <= n && invalid[gap_end]
+                gap_end += 1
+            end
+            gap_end -= 1  # Last invalid index
+            
+            gapsize = gap_end - gap_start + 1
+            
+            # Only interpolate if gap is within threshold
+            if gapsize <= threshgapsize
+                # Get valid neighbors
+                left_val = gap_start > 1 ? result[gap_start - 1] : nothing
+                right_val = gap_end < n ? result[gap_end + 1] : nothing
+                
+                if !isnothing(left_val) && !isnothing(right_val)
+                    # Interior gap: linear interpolation
+                    for k in 0:(gapsize - 1)
+                        frac = (k + 1) / (gapsize + 1)
+                        result[gap_start + k] = left_val + frac * (right_val - left_val)
+                    end
+                    nrreplaced += gapsize
+                elseif !isnothing(left_val)
+                    # Gap at end: use mean of valid values
+                    valid_mean = mean(filter(!isnan, filter(!isinf, skipmissing(result))))
+                    result[gap_start:gap_end] .= valid_mean
+                    nrreplaced += gapsize
+                elseif !isnothing(right_val)
+                    # Gap at start: use mean of valid values
+                    valid_mean = mean(filter(!isnan, filter(!isinf, skipmissing(result))))
+                    result[gap_start:gap_end] .= valid_mean
+                    nrreplaced += gapsize
+                end
+            end
+            
+            i = gap_end + 1
+        else
+            i += 1
+        end
+    end
+    
+    replaced_pct = nrreplaced / total_invalid * 100
+    println("Replaced $(round(replaced_pct, digits=2))% of missing values.")
+    
+    return result
 end
 
 """
