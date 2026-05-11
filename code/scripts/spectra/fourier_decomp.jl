@@ -15,8 +15,15 @@ importdir = joinpath(@__DIR__, "..", "..")
 
 include(joinpath(importdir, "src", "fourier.jl"))
 include(joinpath(importdir, "src", "general.jl"))
+if !@isdefined stationcfg
+    include(joinpath(importdir, "src", "station_config.jl"))
+    import .stationcfg
+end
 import .ft
 import .gen
+
+@isdefined station_config || error("Run load_data.jl before fourier_decomp.jl so station_config is available.")
+station_file_stem = stationcfg.station_file_stem(station_config)
 
 ######################################################
 ###              CHANGE VARIABLES HERE             ###
@@ -161,4 +168,4 @@ end
 PyPlot.tight_layout()
 PyPlot.gcf()
 ##
-#PyPlot.savefig(joinpath("/home/haugened/Documents/data/CONTRASTS/plots/spectra/", "3a.pdf"), bbox_inches="tight")
+#PyPlot.savefig(joinpath(stationcfg.plot_dir(station_config, "spectra"), "$(station_file_stem).pdf"), bbox_inches="tight")

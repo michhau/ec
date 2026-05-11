@@ -16,10 +16,17 @@ importdir = joinpath(@__DIR__, "..", "..")
 include(joinpath(importdir, "src", "turb_data.jl"))
 include(joinpath(importdir, "src", "general.jl"))
 include(joinpath(importdir, "src", "mrd.jl"))
+if !@isdefined stationcfg
+    include(joinpath(importdir, "src", "station_config.jl"))
+    import .stationcfg
+end
 import .turb
 import .gen
 import .MRD
 PyPlot.pygui(true)
+
+@isdefined station_config || error("Run load_data.jl before mrd_script.jl so station_config is available.")
+station_label = stationcfg.station_label(station_config)
 
 timestep = Millisecond(50)
 
@@ -65,18 +72,18 @@ blocklength = ceil(2^M * timestep, Dates.Second)
 PyPlot.pygui(true)
 fig = PyPlot.figure()#figsize=(12,7))
 ax = fig.add_subplot(111)
-ax.set_title(string("1a MRD ", evaldf2.time[1], " - ", evaldf2.time[end]))
+ax.set_title(string(station_label, " MRD ", evaldf2.time[1], " - ", evaldf2.time[end]))
 ax.set_xlabel("avg. time [s]")
 ax.set_ylabel(L"$C_{wT} [\cdot 10^{-3} \mathrm{Kms^{-1}}]$")
 ax.grid(true)
 PyPlot.xscale("log")
-ax.plot(Dates.value.(mrd_time_1) ./ 1000, mrd_D_median_1 .* 1000, label="T1 IRG")
+ax.plot(Dates.value.(mrd_time_1) ./ 1000, mrd_D_median_1 .* 1000, label=instr_labels[1])
 ax.fill_between(Dates.value.(mrd_time_1) ./ 1000, mrd_D_quant1_1 .* 1000, mrd_D_quant3_1 .* 1000, alpha=0.4)
-ax.plot(Dates.value.(mrd_time_2) ./ 1000, mrd_D_median_2 .* 1000, label="T1 CSAT")
+ax.plot(Dates.value.(mrd_time_2) ./ 1000, mrd_D_median_2 .* 1000, label=instr_labels[2])
 ax.fill_between(Dates.value.(mrd_time_2) ./ 1000, mrd_D_quant1_2 .* 1000, mrd_D_quant3_2 .* 1000, alpha=0.4)
-ax.plot(Dates.value.(mrd_time_3) ./ 1000, mrd_D_median_3 .* 1000, label="T2 IRG")
+ax.plot(Dates.value.(mrd_time_3) ./ 1000, mrd_D_median_3 .* 1000, label=instr_labels[3])
 ax.fill_between(Dates.value.(mrd_time_3) ./ 1000, mrd_D_quant1_3 .* 1000, mrd_D_quant3_3 .* 1000, alpha=0.4)
-ax.plot(Dates.value.(mrd_time_4) ./ 1000, mrd_D_median_4 .* 1000, label="T2 CSAT")
+ax.plot(Dates.value.(mrd_time_4) ./ 1000, mrd_D_median_4 .* 1000, label=instr_labels[4])
 ax.fill_between(Dates.value.(mrd_time_4) ./ 1000, mrd_D_quant1_4 .* 1000, mrd_D_quant3_4 .* 1000, alpha=0.4)
 #ax.plot(Dates.value.(mrd_time_5) ./ 1000, mrd_D_median_5 .* 1000, label="Kaijo")
 #ax.fill_between(Dates.value.(mrd_time_5) ./ 1000, mrd_D_quant1_5 .* 1000, mrd_D_quant3_5 .* 1000, alpha=0.4)
@@ -88,7 +95,7 @@ ax.legend()
 #Plot result in a 4-panel plot
 PyPlot.pygui(true)
 fig, axes = PyPlot.subplots(2, 2, figsize=(12, 8))
-fig.suptitle(string("2a MRD ", evaldf2.time[1], " - ", evaldf2.time[end]))
+fig.suptitle(string(station_label, " MRD ", evaldf2.time[1], " - ", evaldf2.time[end]))
 
 # Common axis settings function
 function setup_axis(ax, title_text)
@@ -104,23 +111,23 @@ function setup_axis(ax, title_text)
 end
 
 # Top left - T1 IRG
-setup_axis(axes[1,1], "Ice 1.1m")
-axes[1,1].plot(Dates.value.(mrd_time_1) ./ 1000, mrd_D_median_1 .* 1000, label="T1 IRG")
+setup_axis(axes[1,1], instr_labels[1])
+axes[1,1].plot(Dates.value.(mrd_time_1) ./ 1000, mrd_D_median_1 .* 1000, label=instr_labels[1])
 axes[1,1].fill_between(Dates.value.(mrd_time_1) ./ 1000, mrd_D_quant1_1 .* 1000, mrd_D_quant3_1 .* 1000, alpha=0.4)
 
 # Top right - T2 IRG
-setup_axis(axes[1,2], "Lead 1.3m")
-axes[1,2].plot(Dates.value.(mrd_time_3) ./ 1000, mrd_D_median_3 .* 1000, label="T2 IRG")
+setup_axis(axes[1,2], instr_labels[3])
+axes[1,2].plot(Dates.value.(mrd_time_3) ./ 1000, mrd_D_median_3 .* 1000, label=instr_labels[3])
 axes[1,2].fill_between(Dates.value.(mrd_time_3) ./ 1000, mrd_D_quant1_3 .* 1000, mrd_D_quant3_3 .* 1000, alpha=0.4)
 
 # Bottom left - T1 CSAT
-setup_axis(axes[2,1], "Ice 2.1m")
-axes[2,1].plot(Dates.value.(mrd_time_2) ./ 1000, mrd_D_median_2 .* 1000, label="T1 CSAT")
+setup_axis(axes[2,1], instr_labels[2])
+axes[2,1].plot(Dates.value.(mrd_time_2) ./ 1000, mrd_D_median_2 .* 1000, label=instr_labels[2])
 axes[2,1].fill_between(Dates.value.(mrd_time_2) ./ 1000, mrd_D_quant1_2 .* 1000, mrd_D_quant3_2 .* 1000, alpha=0.4)
 
 # Bottom right - T2 CSAT
-setup_axis(axes[2,2], "Lead 2.3m")
-axes[2,2].plot(Dates.value.(mrd_time_4) ./ 1000, mrd_D_median_4 .* 1000, label="T2 CSAT")
+setup_axis(axes[2,2], instr_labels[4])
+axes[2,2].plot(Dates.value.(mrd_time_4) ./ 1000, mrd_D_median_4 .* 1000, label=instr_labels[4])
 axes[2,2].fill_between(Dates.value.(mrd_time_4) ./ 1000, mrd_D_quant1_4 .* 1000, mrd_D_quant3_4 .* 1000, alpha=0.4)
 
 # Adjust layout to prevent overlap

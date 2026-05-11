@@ -15,14 +15,22 @@ importdir = joinpath(@__DIR__, "..")
 #datapath = "/home/haugened/Documents/slf/CONTRASTS25/data/2a/"
 include(joinpath(importdir, "src", "turb_data.jl"))
 include(joinpath(importdir, "src", "general.jl"))
+if !@isdefined stationcfg
+    include(joinpath(importdir, "src", "station_config.jl"))
+    import .stationcfg
+end
 import .turb
 import .gen
 PyPlot.pygui(true)
 
+@isdefined station_config || error("Run load_data.jl before turb_fluxes.jl so station_config is available.")
+station_label = stationcfg.station_label(station_config)
+station_file_stem = stationcfg.station_file_stem(station_config)
+
 timestep = Millisecond(50)
 ρ_air = 1.2 #kg m^{-3}
 c_p = 1004 #J kg^{-1} K^{-1}
-L_v = 2500e3 #J kg^{-1} (approx @0°C) 
+L_v = 2500e3 #J kg^{-1} (approx @0°C)
 
 ######################################################
 ###              TURBULENT FLUXES                  ###
@@ -57,7 +65,7 @@ fx4 = turb.avgflux(fx4_raw, ra4, true, 0.1)
 #flux time series
 fig = PyPlot.figure()
 ax = fig.add_subplot(111)
-ax.set_title("2a - Turbulent heat fluxes at the lead")
+ax.set_title("$(station_label) - Turbulent heat fluxes")
 pt1 = ax.plot(fx1.time[1:20*600:end], fx1.wT[1:20*600:end] .* (ρ_air * c_p), label = instr_labels[1])
 pt2 = ax.plot(fx2.time[1:20*60:end], fx2.wq[1:20*60:end].* (L_v * 1e-3),     label = instr_labels[2])
 pt3 = ax.plot(fx3.time[1:20*60:end], fx3.wT[1:20*60:end] .* (ρ_air * c_p),   label = instr_labels[3])
@@ -95,11 +103,11 @@ colors = ["C0", "C1", "C2", "C3"]  # Default matplotlib color cycle
 step = 20*60 #every 1min
 
 #y-axis limits
-wT_limits = (-20, 20)
-wq_limits = (-5,5) #wT_limits
+wT_limits = Tuple(Float64.(stationcfg.optional_key(station_config, [-20.0, 20.0], "plot", "wT_limits")))
+wq_limits = Tuple(Float64.(stationcfg.optional_key(station_config, [-5.0, 5.0], "plot", "wq_limits")))
 
 # Upper subplot - Buoyancy fluxes (sensible heat)
-ax1.set_title("3a Turbulent Heat Fluxes - Across ridge")
+ax1.set_title(stationcfg.optional_key(station_config, "$(station_label) Turbulent Heat Fluxes", "plot", "heat_flux_title"))
 wt1 = ax1.plot(fx1.time[1:step:end], fx1.wT[1:step:end] .* (ρ_air * c_p), color=colors[1])
 wt2 = ax1.plot(fx2.time[1:step:end], fx2.wT[1:step:end] .* (ρ_air * c_p), color=colors[2])
 wt3 = ax1.plot(fx3.time[1:step:end], fx3.wT[1:step:end] .* (ρ_air * c_p), color=colors[3])
@@ -135,8 +143,8 @@ ax1.legend(handles, labels)#, loc="upper right", bbox_to_anchor=(1.0, 1))
 # fig.autofmt_xdate()
 
 PyPlot.tight_layout()
-output_folder = "/home/haugened/Documents/data/CONTRASTS/plots/wT_wq/"
-#PyPlot.savefig(joinpath(output_folder, "3a.pdf"), bbox_inches="tight")
+output_folder = stationcfg.plot_dir(station_config, "wT_wq")
+#PyPlot.savefig(joinpath(output_folder, "$(station_file_stem).pdf"), bbox_inches="tight")
 ##############################################################################
 #only flow separation behind ridge wT and uw (Arctic System science conference)
 ##
@@ -149,8 +157,8 @@ colors = ["C0", "C1", "C2", "C3"]  # Default matplotlib color cycle
 step = 20*60 #every 1min
 
 #y-axis limits
-wT_limits = (-20, 20)
-wq_limits = (-5,5) #wT_limits
+wT_limits = Tuple(Float64.(stationcfg.optional_key(station_config, [-20.0, 20.0], "plot", "wT_limits")))
+wq_limits = Tuple(Float64.(stationcfg.optional_key(station_config, [-5.0, 5.0], "plot", "wq_limits")))
 
 # Upper subplot - Buoyancy fluxes (sensible heat)
 uw1 = ax1.plot(fx1.time[1:step:end], fx1.uw[1:step:end], color=colors[1])
@@ -169,14 +177,14 @@ ax2.xaxis_date()
 
 # Create a single legend for the entire figure
 handles = [wt1[1], wt2[1]]  # Get line objects
-labels = ["0.9m", "2.0m"]
+labels = ["$(heights[1])m", "$(heights[2])m"]
 ax1.legend(handles, labels)#, loc="upper right", bbox_to_anchor=(1.0, 1))
 
 fig.autofmt_xdate()
 
 PyPlot.tight_layout()
-output_folder = "/home/haugened/Documents/presentation/conferences/arctic_system_26/"
-#PyPlot.savefig(joinpath(output_folder, "3a_uw_wT.pdf"), bbox_inches="tight")
+output_folder = String(stationcfg.optional_key(station_config, "/home/haugened/Documents/presentation/conferences/arctic_system_26", "paths", "presentation_root"))
+#PyPlot.savefig(joinpath(output_folder, "$(station_file_stem)_uw_wT.pdf"), bbox_inches="tight")
 ###########################################################################
 ##
 # Momentum fluxes and friction velocity plot
@@ -213,8 +221,8 @@ handles = [uw1[1], uw2[1], uw3[1], uw4[1]]
 ax1.legend(handles, labels)
 
 PyPlot.tight_layout()
-output_folder_uw = output_folder = "/home/haugened/Documents/data/CONTRASTS/plots/uw_ustar/"
-#PyPlot.savefig(joinpath(output_folder_uw, "3a.pdf"), bbox_inches="tight")
+output_folder_uw = output_folder = stationcfg.plot_dir(station_config, "uw_ustar")
+#PyPlot.savefig(joinpath(output_folder_uw, "$(station_file_stem).pdf"), bbox_inches="tight")
 ##
 ##########################################################
 #=
@@ -458,7 +466,7 @@ ratio3 = scatter3b ./ scatter3a
 
 ##
 fig = PyPlot.figure(figsize=(12, 9.5))
-fig.suptitle("3a across ridge - 20.07.2025 to 22.07.2025")
+fig.suptitle(stationcfg.optional_key(station_config, "$(station_label) heat flux comparison", "plot", "heat_correlation_title"))
 gs = gridspec.GridSpec(3, 3, height_ratios=(2, 1, 1))
 
 # --- Row 1: Scatter density ---
@@ -555,8 +563,8 @@ ax9.grid(alpha=0.3)
 
 PyPlot.tight_layout()
 ##
-output_folder = "/home/haugened/Documents/data/CONTRASTS/plots/correlation_heat/"
-#PyPlot.savefig(joinpath(output_folder, "3a.pdf"), bbox_inches="tight")
+output_folder = stationcfg.plot_dir(station_config, "correlation_heat")
+#PyPlot.savefig(joinpath(output_folder, "$(station_file_stem).pdf"), bbox_inches="tight")
 
 #calculating correlations
 using NaNStatistics
@@ -594,7 +602,7 @@ ratio_ht1 = scatter2 ./ scatter1
 ratio_ht2 = scatter4 ./ scatter3
 
 fig_ht = PyPlot.figure(figsize=(8, 9.5))
-fig_ht.suptitle("3a - Sensible Heat Flux Height Comparison")
+fig_ht.suptitle("$(station_label) - Sensible Heat Flux Height Comparison")
 gs_ht = gridspec.GridSpec(3, 2, height_ratios=(2, 1, 1))
 
 # --- Row 1: Scatter density ---
@@ -662,8 +670,8 @@ ax_ht6.grid(alpha=0.3)
 
 PyPlot.tight_layout()
 ##
-output_folder_ht = "/home/haugened/Documents/data/CONTRASTS/plots/correlation_heat/"
-#PyPlot.savefig(joinpath(output_folder_ht, "3a_per_tower.pdf"), bbox_inches="tight")
+output_folder_ht = stationcfg.plot_dir(station_config, "correlation_heat")
+#PyPlot.savefig(joinpath(output_folder_ht, "$(station_file_stem)_per_tower.pdf"), bbox_inches="tight")
 
 #calculating correlations for height comparison
 cor_ht1 = nancor(fx1.wT, fx2.wT)
@@ -697,7 +705,7 @@ ratio_mom3 = scatter_mom3b ./ scatter_mom3a
 ratio_mom4 = scatter_mom4b ./ scatter_mom4a
 
 fig_mom = PyPlot.figure(figsize=(16, 9.5))
-fig_mom.suptitle("3a - Friction Velocity")
+fig_mom.suptitle("$(station_label) - Friction Velocity")
 gs_mom = gridspec.GridSpec(3, 4, height_ratios=(2, 1, 1))
 
 # --- Row 1: Scatter density plots ---
@@ -815,8 +823,8 @@ ax_m12.grid(alpha=0.3)
 
 PyPlot.tight_layout()
 ##
-output_folder_mom = "/home/haugened/Documents/data/CONTRASTS/plots/correlation_momentum/"
-#PyPlot.savefig(joinpath(output_folder_mom, "3a.pdf"), bbox_inches="tight")
+output_folder_mom = stationcfg.plot_dir(station_config, "correlation_momentum")
+#PyPlot.savefig(joinpath(output_folder_mom, "$(station_file_stem).pdf"), bbox_inches="tight")
 
 #calculating correlations for momentum
 cor_mom1 = nancor(var1a.u_star, var1b.u_star)
@@ -863,7 +871,7 @@ ratio_uw3 = scatter_uw3b ./ scatter_uw3a
 ratio_uw4 = scatter_uw4b ./ scatter_uw4a
 
 fig_uw = PyPlot.figure(figsize=(16, 9.5))
-fig_uw.suptitle("3a - Vertical Momentum Flux")
+fig_uw.suptitle("$(station_label) - Vertical Momentum Flux")
 gs_uw = gridspec.GridSpec(3, 4, height_ratios=(2, 1, 1))
 
 # --- Row 1: Scatter density plots ---
@@ -989,8 +997,8 @@ ax_uw12.grid(alpha=0.3)
 
 PyPlot.tight_layout()
 ##
-output_folder_uw = "/home/haugened/Documents/data/CONTRASTS/plots/correlation_momentum/"
-#PyPlot.savefig(joinpath(output_folder_uw, "3a_uw.pdf"), bbox_inches="tight")
+output_folder_uw = stationcfg.plot_dir(station_config, "correlation_momentum")
+#PyPlot.savefig(joinpath(output_folder_uw, "$(station_file_stem)_uw.pdf"), bbox_inches="tight")
 
 #calculating correlations for vertical momentum flux
 cor_uw1 = nancor(var1a.uw, var1b.uw)
