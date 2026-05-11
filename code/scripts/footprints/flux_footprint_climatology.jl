@@ -30,7 +30,9 @@ import .kljun
 @pyinclude(joinpath(importdir, "src", "kljun_ffp_climatology.py"))
 PyPlot.pygui(true)
 
-@isdefined station_config || error("Run load_data.jl before flux_footprint_climatology.jl so station_config is available.")
+if !@isdefined station_config
+    error("Run load_data.jl before flux_footprint_climatology.jl so station_config is available.")
+end
 station_label = stationcfg.station_label(station_config)
 
 #variables

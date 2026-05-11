@@ -25,7 +25,9 @@ import .gen
 import .MRD
 PyPlot.pygui(true)
 
-@isdefined station_config || error("Run load_data.jl before mrd_script.jl so station_config is available.")
+if !@isdefined station_config
+    error("Run load_data.jl before mrd_script.jl so station_config is available.")
+end
 station_label = stationcfg.station_label(station_config)
 
 timestep = Millisecond(50)

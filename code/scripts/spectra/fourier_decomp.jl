@@ -22,7 +22,9 @@ end
 import .ft
 import .gen
 
-@isdefined station_config || error("Run load_data.jl before fourier_decomp.jl so station_config is available.")
+if !@isdefined station_config
+    error("Run load_data.jl before fourier_decomp.jl so station_config is available.")
+end
 station_file_stem = stationcfg.station_file_stem(station_config)
 
 ######################################################

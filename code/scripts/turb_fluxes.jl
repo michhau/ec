@@ -23,7 +23,9 @@ import .turb
 import .gen
 PyPlot.pygui(true)
 
-@isdefined station_config || error("Run load_data.jl before turb_fluxes.jl so station_config is available.")
+if !@isdefined station_config
+    error("Run load_data.jl before turb_fluxes.jl so station_config is available.")
+end
 station_label = stationcfg.station_label(station_config)
 station_file_stem = stationcfg.station_file_stem(station_config)
 
