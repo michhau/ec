@@ -14,108 +14,91 @@ using Dates, PyCall, DataFrames, Statistics, LaTeXStrings, ProgressMeter, Distri
 import PyPlot, CSV
 pydates = pyimport("matplotlib.dates")
 
-datapath = "/home/haugened/Documents/data/CONTRASTS/EC_offline_preproc/cut/"
-#datapath = "/home/michi/Documents/slf/CONTRASTS25/data/processed/preproc/"
-#tjkpath = "/home/haugened/Documents/data/tjk/tjk_data.csv"
+station_name = "3a" # Change this to "1a", "1b_1", ..., "3d" before including the script.
+
 importdir = joinpath(@__DIR__, "..")
 include(joinpath(importdir, "src", "turb_data.jl"))
 include(joinpath(importdir, "src", "general.jl"))
+include(joinpath(importdir, "src", "station_config.jl"))
 import .turb
 import .gen
+import .stationcfg
 PyPlot.pygui(true)
 
 ######################################################
 #variables
 
+station_config = stationcfg.load_station_config(station_name)
+station_label = stationcfg.station_label(station_config)
+station_file_stem = stationcfg.station_file_stem(station_config)
+
+datapath = String(stationcfg.require_key(station_config, "data_root"))
+#datapath = "/home/michi/Documents/slf/CONTRASTS25/data/processed/preproc/"
+
 #timestep between single measurements, 1/measurement frequency
 timestep = Millisecond(50)
-#kaijo_period_file = joinpath(datapath, "kaijo", "21_kaijo_periods.txt")
-#kaijo_outfile_stam = joinpath(datapath, "kaijo", "kaijo")
-#outfile_stam = joinpath(datapath, "WindSonic_Duerrboden_2005xx/tjk_sonic_200504-200514")
-#tower_outfile_stam = joinpath(datapath, "tower", "preproc")
-#ventair_stam = joinpath(datapath, "tower", "vent_air")
-nanfile_stam = "/home/haugened/Documents/data/CONTRASTS/nan_periods"
-nanfiles = joinpath.(nanfile_stam, ["t1irg_nan.csv", "t1csat_nan.csv", "t2irg_nan.csv", "t2csat_nan.csv"])
+nanfile_stam = String(stationcfg.optional_key(station_config, "/home/haugened/Documents/data/CONTRASTS/nan_periods", "manual_nanmask", "root"))
+nanfiles = joinpath.(nanfile_stam, String.(stationcfg.optional_key(
+    station_config,
+    ["t1irg_nan.csv", "t1csat_nan.csv", "t2irg_nan.csv", "t2csat_nan.csv"],
+    "manual_nanmask",
+    "files",
+)))
+plot_output_root = stationcfg.plot_root(station_config)
 
 ######################################################
 
 println()
 println("-----------S-T-A-R-T-------------")
+println("Loading station ", station_label, " from ", station_config["config_file"])
 
 ######################################################
 ###            LOADING & PREPROCESSING             ###
 ######################################################
 #select data and measurement period to be evaluated
-evalstart = DateTime(2024, 07, 01, 10, 15, 00)
-evalend   = DateTime(2027, 07, 10, 16, 00, 00)
+evalstart = stationcfg.station_datetime(station_config, "evalstart")
+evalend   = stationcfg.station_datetime(station_config, "evalend")
 #evalend = evalstart + Day(10)
 
-evaldf1 = turb.readturbasnetcdf(joinpath(datapath, "3a_t1_irg_proc_cut.nc"), evalstart, evalend)
-evaldf2 = turb.readturbasnetcdf(joinpath(datapath, "3a_t1_csat_proc_cut.nc"), evalstart, evalend)
-evaldf3 = turb.readturbasnetcdf(joinpath(datapath, "3a_t2_irg_proc_cut.nc"), evalstart, evalend)
-evaldf4 = turb.readturbasnetcdf(joinpath(datapath, "3a_t2_csat_proc_cut.nc"), evalstart, evalend)
-#evaldf5 = turb.readturbasnetcdf(string(kaijo_outfile_stam, ".nc"), evalstart, evalend)
-#evaldf6 = turb.readturbasnetcdf(joinpath(tower_outfile_stam, "tjkdf.nc"), evalstart, evalend)
+data_files = String.(stationcfg.require_key(station_config, "data_files"))
+
+evaldfs = [
+    turb.readturbasnetcdf(joinpath(datapath, data_file), evalstart, evalend)
+    for data_file in data_files
+]
+(evaldf1, evaldf2, evaldf3, evaldf4) = evaldfs
 
 # Instrument metadata for labeling (corresponds to evaldf1-4 / fx1-4)
-srf_type = ["floe", "floe", "lead", "lead"]
-heights = [0.9, 2.0, 1.1, 2.0]
-instr_type = ["IRG", "CSAT", "IRG", "CSAT"]
-# Compose labels from instrument metadata
-instr_labels = ["$(srf_type[i]) $(heights[i])m" for i in 1:4]
-
-#apply NaN-mask to T1 & T2 when repositioned (for DR)
-#turb.repositionnanmask!(evaldf1)
-#turb.repositionnanmask!(evaldf2)
-#turb.repositionnanmask!(evaldf3)
-#turb.repositionnanmask!(evaldf4)
+srf_type = String.(stationcfg.require_key(station_config, "surface_type"))
+heights = Float64.(stationcfg.require_key(station_config, "heights"))
+instr_type = String.(stationcfg.optional_key(station_config, ["IRG", "CSAT", "IRG", "CSAT"], "instrument_type"))
+instr_labels = stationcfg.station_labels(station_config)
 
 #show statistics about missing or NaN-data
-turb.printmissstats(evaldf1)
-turb.printmissstats(evaldf2)
-turb.printmissstats(evaldf3)
-turb.printmissstats(evaldf4)
-#turb.printmissstats(evaldf5)
-#turb.printmissstats(evaldf6)
+for evaldf in evaldfs
+    turb.printmissstats(evaldf)
+end
 
 #interpolate missing
-evaldf1 = turb.interpolatemissing(evaldf1);
-evaldf2 = turb.interpolatemissing(evaldf2);
-evaldf3 = turb.interpolatemissing(evaldf3);
-evaldf4 = turb.interpolatemissing(evaldf4);
-#try
-#    evaldf5 = turb.interpolatemissing(evaldf5)
-#catch LoadError
-#    @warn("Kaijo DataFrame empty")
-#end
-#evaldf6 = turb.interpolatemissing(evaldf6)
+evaldfs = [turb.interpolatemissing(evaldf) for evaldf in evaldfs]
+(evaldf1, evaldf2, evaldf3, evaldf4) = evaldfs
 
-wd1 = turb.winddir(evaldf1)
-wd2 = turb.winddir(evaldf2)
-wd3 = turb.winddir(evaldf3)
-wd4 = turb.winddir(evaldf4)
+(wd1, wd2, wd3, wd4) = [turb.winddir(evaldf) for evaldf in evaldfs]
 
 #double rotation
-turb.drdf!(evaldf1, periodwise=false)
-turb.drdf!(evaldf2, periodwise=false)
-turb.drdf!(evaldf3, periodwise=false)
-turb.drdf!(evaldf4, periodwise=false)
-#turb.drdf!(evaldf5)
-#turb.drdf!(evaldf6, periodwise=false)
+for evaldf in evaldfs
+    turb.drdf!(evaldf, periodwise=false)
+end
 
 #CONTRASTS: apply manual nan-mask
-manual_period_1 = turb.read_nantimes_csv(nanfiles[1]);
-manual_period_2 = turb.read_nantimes_csv(nanfiles[2]);
-manual_period_3 = turb.read_nantimes_csv(nanfiles[3]);
-manual_period_4 = turb.read_nantimes_csv(nanfiles[4]);
-isbad_quality_1 = turb.manual_nanmask(manual_period_1, evaldf1.time);
-isbad_quality_2 = turb.manual_nanmask(manual_period_2, evaldf2.time);
-isbad_quality_3 = turb.manual_nanmask(manual_period_3, evaldf3.time);
-isbad_quality_4 = turb.manual_nanmask(manual_period_4, evaldf4.time);
-evaldf1[isbad_quality_1, ["u", "v", "w", "T"]] .= NaN;
-evaldf2[isbad_quality_2, ["u", "v", "w", "T"]] .= NaN;
-evaldf3[isbad_quality_3, ["u", "v", "w", "T"]] .= NaN;
-evaldf4[isbad_quality_4, ["u", "v", "w", "T"]] .= NaN;
+if stationcfg.optional_key(station_config, true, "manual_nanmask", "enabled")
+    nanmask_columns = String.(stationcfg.optional_key(station_config, ["u", "v", "w", "T"], "manual_nanmask", "columns"))
+    manual_periods = [turb.read_nantimes_csv(nanfile) for nanfile in nanfiles]
+    for (evaldf, manual_period) in zip(evaldfs, manual_periods)
+        isbad_quality = turb.manual_nanmask(manual_period, evaldf.time)
+        evaldf[isbad_quality, nanmask_columns] .= NaN
+    end
+end
 
 ######################################################
 ###               LOADING SLOW DATA                ###
@@ -193,7 +176,7 @@ function plot_windrose_panel(wd1, ws1, wd2, ws2, wd3, ws3, wd4, ws4;
         ax.set_legend(loc="lower right", fontsize=8)
     end
 
-    fig.suptitle("Station 3d", fontsize=14, fontweight="bold")
+    fig.suptitle("Station $(station_label)", fontsize=14, fontweight="bold")
     PyPlot.tight_layout()
     
     return fig
@@ -232,8 +215,8 @@ fig = plot_windrose_panel(wd1_block, ws1_block, wd2_block, ws2_block, wd3_block,
                           bins=collect(0:2:10),  # optional custom bins
                           figsize=(12, 10))
 
-output_folder = "/home/haugened/Documents/data/CONTRASTS/plots/wind_roses"
-PyPlot.savefig(joinpath(output_folder, "3d.pdf"), bbox_inches="tight")
+output_folder = stationcfg.plot_dir(station_config, "wind_roses")
+PyPlot.savefig(joinpath(output_folder, "$(station_file_stem).pdf"), bbox_inches="tight")
 ##
 #########################################################
 #Plot wind speed, direction, sonic temperature, and water vapor density
@@ -351,5 +334,5 @@ PyPlot.tight_layout()
 
 ##
 # Save the figure
-output_folder = "/home/haugened/Documents/data/CONTRASTS/plots/wind_temperature/"
-#PyPlot.savefig(joinpath(output_folder, "1b_2.pdf"), bbox_inches="tight")
+output_folder = stationcfg.plot_dir(station_config, "wind_temperature")
+#PyPlot.savefig(joinpath(output_folder, "$(station_file_stem).pdf"), bbox_inches="tight")
