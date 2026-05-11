@@ -31,7 +31,6 @@ wq_limits = [-5.0, 5.0]
 heat_correlation_title = "1b position 1 pond - 25.07.2025 to 27.07.2025"
 
 [footprint]
-measurement_heights = [1.0, 2.1, 1.2, 2.2]
 wind_direction_offsets = [0.0, 0.0, 0.0, 0.0]
 orthomosaic = "/home/haugened/Documents/data/CONTRASTS/pics/setups/1b/map 270725_cut.jpg"
 fluxloc = [[627, 1381], [627, 1381], [549, 1486], [549, 1486]]
