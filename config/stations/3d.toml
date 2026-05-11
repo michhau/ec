@@ -1,0 +1,39 @@
+id = "3d"
+label = "3d"
+file_stem = "3d"
+evalstart = "2023-07-27T10:10:00"
+evalend = "2027-07-27T09:10:00"
+data_root = "/home/haugened/Documents/data/CONTRASTS/EC_offline_preproc/cut/"
+data_files = [
+    "3d_t1_irg_proc_cut.nc",
+    "3d_t1_csat_proc_cut.nc",
+    "3d_t2_irg_proc_cut.nc",
+    "3d_t2_csat_proc_cut.nc",
+]
+surface_type = ["lead", "lead", "floe", "floe"]
+heights = [1.1, 2.2, 1.0, 2.1]
+instrument_type = ["IRG", "CSAT", "IRG", "CSAT"]
+
+[manual_nanmask]
+enabled = true
+root = "/home/haugened/Documents/data/CONTRASTS/nan_periods"
+files = ["t1irg_nan.csv", "t1csat_nan.csv", "t2irg_nan.csv", "t2csat_nan.csv"]
+columns = ["u", "v", "w", "T"]
+
+[paths]
+plot_root = "/home/haugened/Documents/data/CONTRASTS/plots"
+presentation_root = "/home/haugened/Documents/presentation/conferences/arctic_system_26"
+
+[plot]
+heat_flux_title = "3d Turbulent Heat Fluxes - Across Ridge"
+wT_limits = [-10.0, 10.0]
+wq_limits = [-4.0, 4.0]
+heat_correlation_title = "3c - 16.08.2025 to 18.08.2025"
+
+[footprint]
+wind_direction_offsets = [226.0, 226.0, 239.0, 239.0]
+orthomosaic = "/home/haugened/Documents/data/CONTRASTS/pics/setups/3c/karte 180825_cut.jpg"
+fluxloc = [[692, 324], [692, 324], [564, 560], [564, 560]]
+bgextend_m = [209.45, 168.1]
+bgextend_pxl = [1170, 946]
+figorigin = [564, 560]

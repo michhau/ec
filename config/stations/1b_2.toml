@@ -1,0 +1,40 @@
+id = "1b_2"
+label = "1b-2"
+file_stem = "1b_2"
+evalstart = "2025-07-27T10:10:00"
+evalend = "2027-07-10T16:00:00"
+data_root = "/home/haugened/Documents/data/CONTRASTS/EC_offline_preproc/cut/"
+data_files = [
+    "1b_t1_irg_proc_cut.nc",
+    "1b_t1_csat_proc_cut.nc",
+    "1b_t2_irg_proc_cut.nc",
+    "1b_t2_csat_proc_cut.nc",
+]
+surface_type = ["pond", "pond", "ice", "ice"]
+heights = [1.0, 2.1, 1.2, 2.2]
+instrument_type = ["IRG", "CSAT", "IRG", "CSAT"]
+
+[manual_nanmask]
+enabled = true
+root = "/home/haugened/Documents/data/CONTRASTS/nan_periods"
+files = ["t1irg_nan.csv", "t1csat_nan.csv", "t2irg_nan.csv", "t2csat_nan.csv"]
+columns = ["u", "v", "w", "T"]
+
+[paths]
+plot_root = "/home/haugened/Documents/data/CONTRASTS/plots"
+presentation_root = "/home/haugened/Documents/presentation/conferences/arctic_system_26"
+
+[plot]
+heat_flux_title = "1b-2 Turbulent Heat Fluxes"
+wT_limits = [-25.0, 20.0]
+wq_limits = [-7.0, 10.0]
+heat_correlation_title = "1b-2 - 27.7.2025 10:10 to 10.07.2025 16:00"
+
+[footprint]
+wind_direction_offsets = [230.0, 230.0, 235.0, 235.0]
+orthomosaic = "/home/haugened/Documents/data/CONTRASTS/pics/setups/1b/map 270725_cut.jpg"
+fluxloc = [[619, 1402], [619, 1402], [526, 1512], [526, 1512]]
+bgextend_m = [263.182, 316.09]
+bgextend_pxl = [2165, 2204]
+figorigin = [614, 1402]
+contour_indices = [-1, -1, -2, -2]
