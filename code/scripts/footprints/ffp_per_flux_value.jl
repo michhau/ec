@@ -30,6 +30,7 @@ if !@isdefined station_config
     error("Run load_data.jl before ffp_per_flux_value.jl so station_config is available.")
 end
 station_label = stationcfg.station_label(station_config)
+station_file_stem = stationcfg.station_file_stem(station_config)
 
 #variables
 names = [:evaldf1, :evaldf2, :evaldf3, :evaldf4]
@@ -48,6 +49,12 @@ wind_direction_offsets = Float64.(stationcfg.optional_key(
     "footprint",
     "wind_direction_offsets",
 ))
+contour_indices = Int.(stationcfg.optional_key(
+    station_config,
+    fill(-1, length(names)),
+    "footprint",
+    "contour_indices",
+))
 
 block_fluxes_all = Dict{Symbol, DataFrame}()
 ffp_inputs_all = Dict{Symbol, DataFrame}()
@@ -60,8 +67,6 @@ crop = false #crop output to maximum defined rs (max 0.9)
 
 println()
 println("Calculating block fluxes and per-block footprints for station ", station_label)
-
-footprints = Vector{Dict{String, Any}}(undef, 0)
 
 for ix in eachindex(names)
     println("Processing ", String(names[ix]))
@@ -100,10 +105,93 @@ for ix in eachindex(names)
 end
 
 ###############################################
-# Plotting can be added after the desired per-block display/storage format is defined.
+# Plot the per-block footprints as an animation.
 plot_footprints = false
 if plot_footprints
-    @info("Plotting of per-block footprints is deferred until the desired display/storage format is defined.")
+    fileorthomosaic = String(stationcfg.require_key(station_config, "footprint", "orthomosaic"))
+    fluxloc = stationcfg.toml_matrix(stationcfg.require_key(station_config, "footprint", "fluxloc"); T=Float64)
+    bgextend_m = Float64.(stationcfg.require_key(station_config, "footprint", "bgextend_m"))
+    bgextend_pxl = Float64.(stationcfg.require_key(station_config, "footprint", "bgextend_pxl"))
+    figorigin = Float64.(stationcfg.require_key(station_config, "footprint", "figorigin"))
+    footprint_labels = @isdefined(instr_labels) ? instr_labels : stationcfg.station_labels(station_config)
+
+    footprint_sets = [ffp_blocks_all[flux] for flux in fluxes]
+    input_sets = [ffp_inputs_all[flux] for flux in fluxes]
+    animation_output_dir = stationcfg.plot_dir(station_config, "footprints", "blocks", station_file_stem)
+    animation_output_file = joinpath(animation_output_dir, "$(station_file_stem)_ffp_blocks.mp4")
+
+    animation_file = ffp_block.save_block_footprint_animation(
+        footprint_sets,
+        input_sets,
+        fileorthomosaic,
+        fluxloc,
+        bgextend_m,
+        bgextend_pxl,
+        figorigin,
+        footprint_labels,
+        contour_indices,
+        animation_output_file;
+        station_label=station_label,
+    )
+    println("Saved block footprint animation to ", animation_file)
 end
-println("------------D-O-N-E---------------")
-println()
+##################################################
+# Combine with a drone overview image to classify
+
+mpimg = pyimport("matplotlib.image")
+classesimg = mpimg.imread(String(station_config["block_footprints"]["classes_file"]))
+
+using Images
+classes_img = load(String(station_config["block_footprints"]["classes_file"]))
+
+#create classes matrix
+"""
+    create_classes_array(img::Matrix{RGB{N0f8}}, )
+
+Create a class array with surface classes from an input image. Criterions need to be hard coded!
+"""
+function create_classes_array(img::Matrix{RGB{N0f8}})::Array{Union{Missing, Bool}}
+    classes_array = Array{Union{Missing, Bool}}(undef, size(img))#fill(false, size(img))
+    #missing: do not use
+    #true: ice
+    #false: lead
+    red_vals = round.(Int, float.(red.(img))*255)
+    green_vals = round.(Int, float.(green.(img))*255)
+    blue_vals = round.(Int, float.(blue.(img))*255)
+    for i in eachindex(classes_array)
+        if red_vals[i] > 222 && green_vals[i] > 222 && blue_vals[i] > 222
+            classes_array[i] = true
+        elseif red_vals[i] == green_vals[i] == blue_vals[i] == 0
+            classes_array[i] = false
+        else
+            classes_array[i] = missing
+        end
+    end
+    return classes_array
+end
+
+#read same as for footprints. Change, if pictures are not the same!
+classes_array = create_classes_array(classes_img)
+classes_fluxloc_pxl = stationcfg.toml_matrix(stationcfg.require_key(station_config, "footprint", "fluxloc"); T=Float64)
+classes_extend_m = Float64.(stationcfg.require_key(station_config, "footprint", "bgextend_m"))
+classes_extend_pxl = Float64.(stationcfg.require_key(station_config, "footprint", "bgextend_pxl"))
+classes_gorigin = Float64.(stationcfg.require_key(station_config, "footprint", "figorigin"))
+
+footprint_sets = [ffp_blocks_all[flux] for flux in fluxes]
+
+for ix in eachindex(footprint_sets)
+    pixel_center = [classes_fluxloc_pxl[ix, 2], classes_fluxloc_pxl[ix, 1]]
+    
+end
+
+a = copy(classes_array)
+replace!(a, missing => true)
+#=
+#todo similar to the footprint plotting
+- norm footprint (multiply by (x_ci[2]-x_ci[1])^2 to obtain absolute value, otherwise 1/area)
+- extract the footprint weighted ice fraction
+- extract the footprint weighted lead fraction
+=#
+PyPlot.figure()
+PyPlot.imshow(classesimg)
+PyPlot.gcf()
