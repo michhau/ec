@@ -13,7 +13,7 @@ This script samples every ra1-4-th value, starting at the
 first full moving-average window center, so consecutive
 sampled values represent non-overlapping block averages.
 =#
-using DataFrames
+using Dates, DataFrames
 
 importdir = joinpath(@__DIR__, "..", "..")
 include(joinpath(importdir, "src", "turb_data.jl"))
@@ -31,6 +31,7 @@ if !@isdefined station_config
 end
 station_label = stationcfg.station_label(station_config)
 station_file_stem = stationcfg.station_file_stem(station_config)
+station_id = String(stationcfg.require_key(station_config, "id"))
 
 #variables
 names = [:evaldf1, :evaldf2, :evaldf3, :evaldf4]
@@ -137,10 +138,6 @@ if plot_footprints
 end
 ##################################################
 # Combine with a drone overview image to classify
-
-mpimg = pyimport("matplotlib.image")
-classesimg = mpimg.imread(String(station_config["block_footprints"]["classes_file"]))
-
 using Images
 classes_img = load(String(station_config["block_footprints"]["classes_file"]))
 
@@ -172,26 +169,329 @@ end
 
 #read same as for footprints. Change, if pictures are not the same!
 classes_array = create_classes_array(classes_img)
+
+
 classes_fluxloc_pxl = stationcfg.toml_matrix(stationcfg.require_key(station_config, "footprint", "fluxloc"); T=Float64)
 classes_extend_m = Float64.(stationcfg.require_key(station_config, "footprint", "bgextend_m"))
 classes_extend_pxl = Float64.(stationcfg.require_key(station_config, "footprint", "bgextend_pxl"))
-classes_gorigin = Float64.(stationcfg.require_key(station_config, "footprint", "figorigin"))
+classes_figorigin_pxl = Float64.(stationcfg.require_key(station_config, "footprint", "figorigin"))
 
-footprint_sets = [ffp_blocks_all[flux] for flux in fluxes]
+classes_meterperpxl_row = classes_extend_m[1] / classes_extend_pxl[1]
+classes_meterperpxl_col = classes_extend_m[2] / classes_extend_pxl[2]
+classes_coordinates_zero_based = true
 
-for ix in eachindex(footprint_sets)
-    pixel_center = [classes_fluxloc_pxl[ix, 2], classes_fluxloc_pxl[ix, 1]]
-    
+"""
+    footprint_weighted_class_fractions(footprint, classes_array, origin_pxl,
+        meterperpxl_row, meterperpxl_col; origin_is_zero_based=true)
+
+Calculate the footprint-weighted ice and lead fractions for one footprint.
+Footprint points outside `classes_array` or on `missing` class pixels are
+excluded from the ice/lead denominator.
+"""
+function footprint_weighted_class_fractions(footprint::AbstractDict,
+        classes_array::AbstractMatrix{Union{Missing, Bool}},
+        origin_pxl::AbstractVector{<:Real},
+        meterperpxl_row::Real,
+        meterperpxl_col::Real;
+        origin_is_zero_based::Bool=true)
+
+    if get(footprint, "flag_err", false)
+        return (
+            ice_fraction=missing,
+            lead_fraction=missing,
+            classified_weight_fraction=0.0,
+            outside_weight_fraction=missing,
+            missing_class_weight_fraction=missing,
+            ice_weight=0.0,
+            lead_weight=0.0,
+            classified_weight=0.0,
+            total_weight=0.0,
+        )
+    end
+
+    x = footprint["x_2d"]
+    y = footprint["y_2d"]
+    f = footprint["f_2d"]
+
+    size(x) == size(y) == size(f) || error("Footprint x_2d, y_2d, and f_2d must have the same size.")
+
+    row0 = Float64(origin_pxl[1])
+    col0 = Float64(origin_pxl[2])
+    index_offset = origin_is_zero_based ? 1 : 0
+    nrows, ncols = size(classes_array)
+
+    ice_weight = 0.0
+    lead_weight = 0.0
+    classified_weight = 0.0
+    outside_weight = 0.0
+    missing_class_weight = 0.0
+    total_weight = 0.0
+
+    @inbounds for k in eachindex(f)
+        weight = f[k]
+        isfinite(weight) && weight > 0 || continue
+        total_weight += weight
+
+        row = round(Int, row0 - y[k] / meterperpxl_row) + index_offset
+        col = round(Int, col0 + x[k] / meterperpxl_col) + index_offset
+
+        if !(1 <= row <= nrows && 1 <= col <= ncols)
+            outside_weight += weight
+            continue
+        end
+
+        class_value = classes_array[row, col]
+        if ismissing(class_value)
+            missing_class_weight += weight
+            continue
+        end
+
+        classified_weight += weight
+        if class_value
+            ice_weight += weight
+        else
+            lead_weight += weight
+        end
+    end
+
+    if classified_weight == 0
+        return (
+            ice_fraction=missing,
+            lead_fraction=missing,
+            classified_weight_fraction=total_weight > 0 ? classified_weight / total_weight : 0.0,
+            outside_weight_fraction=total_weight > 0 ? outside_weight / total_weight : missing,
+            missing_class_weight_fraction=total_weight > 0 ? missing_class_weight / total_weight : missing,
+            ice_weight=ice_weight,
+            lead_weight=lead_weight,
+            classified_weight=classified_weight,
+            total_weight=total_weight,
+        )
+    end
+
+    return (
+        ice_fraction=ice_weight / classified_weight,
+        lead_fraction=lead_weight / classified_weight,
+        classified_weight_fraction=total_weight > 0 ? classified_weight / total_weight : 0.0,
+        outside_weight_fraction=total_weight > 0 ? outside_weight / total_weight : missing,
+        missing_class_weight_fraction=total_weight > 0 ? missing_class_weight / total_weight : missing,
+        ice_weight=ice_weight,
+        lead_weight=lead_weight,
+        classified_weight=classified_weight,
+        total_weight=total_weight,
+    )
 end
 
-a = copy(classes_array)
-replace!(a, missing => true)
-#=
-#todo similar to the footprint plotting
-- norm footprint (multiply by (x_ci[2]-x_ci[1])^2 to obtain absolute value, otherwise 1/area)
-- extract the footprint weighted ice fraction
-- extract the footprint weighted lead fraction
-=#
-PyPlot.figure()
-PyPlot.imshow(classesimg)
-PyPlot.gcf()
+function footprint_weighted_class_fractions_dataframe(footprints::AbstractVector,
+        classes_array::AbstractMatrix{Union{Missing, Bool}},
+        origin_pxl::AbstractVector{<:Real},
+        meterperpxl_row::Real,
+        meterperpxl_col::Real;
+        origin_is_zero_based::Bool=true)
+
+    fractions = [
+        footprint_weighted_class_fractions(
+            footprint,
+            classes_array,
+            origin_pxl,
+            meterperpxl_row,
+            meterperpxl_col;
+            origin_is_zero_based=origin_is_zero_based,
+        )
+        for footprint in footprints
+    ]
+    return DataFrame(fractions)
+end
+
+footprint_class_fractions_all = Dict{Symbol, DataFrame}()
+footprint_class_fraction_names = [
+    :footprint_class_fractions1,
+    :footprint_class_fractions2,
+    :footprint_class_fractions3,
+    :footprint_class_fractions4,
+]
+
+for ix in eachindex(fluxes)
+    flux = fluxes[ix]
+    fractions = footprint_weighted_class_fractions_dataframe(
+        ffp_blocks_all[flux],
+        classes_array,
+        classes_fluxloc_pxl[ix, :],
+        classes_meterperpxl_row,
+        classes_meterperpxl_col;
+        origin_is_zero_based=classes_coordinates_zero_based,
+    )
+
+    insertcols!(
+        fractions,
+        1,
+        :time => block_fluxes_all[flux].time,
+        :block_start => block_fluxes_all[flux].block_start,
+        :block_end => block_fluxes_all[flux].block_end,
+    )
+
+    footprint_class_fractions_all[flux] = fractions
+
+    block_fluxes_all[flux][!, :footprint_ice_fraction] = fractions.ice_fraction
+    block_fluxes_all[flux][!, :footprint_lead_fraction] = fractions.lead_fraction
+    block_fluxes_all[flux][!, :footprint_classified_weight_fraction] = fractions.classified_weight_fraction
+    block_fluxes_all[flux][!, :footprint_outside_weight_fraction] = fractions.outside_weight_fraction
+    block_fluxes_all[flux][!, :footprint_missing_class_weight_fraction] = fractions.missing_class_weight_fraction
+
+    @eval $(footprint_class_fraction_names[ix]) = $fractions
+end
+
+block_fluxes_output_file = ffp_block.save_block_fluxes_netcdf(block_fluxes_all, station_id)
+println("Saved block fluxes to ", block_fluxes_output_file)
+
+function class_background_geometry(fluxloc::AbstractMatrix, bgextend_m::AbstractVector,
+        bgextend_pxl::AbstractVector, figorigin::AbstractVector)
+    meterperpxl_row = bgextend_m[1] / bgextend_pxl[1]
+    meterperpxl_col = bgextend_m[2] / bgextend_pxl[2]
+
+    fluxloc_final = Array{Float64}(undef, size(fluxloc, 1), size(fluxloc, 2))
+    fluxloc_final[:, 1] = (figorigin[1] .- fluxloc[:, 1]) .* meterperpxl_row
+    fluxloc_final[:, 2] = (fluxloc[:, 2] .- figorigin[2]) .* meterperpxl_col
+
+    bgextend_final = (
+        -figorigin[2] * meterperpxl_col,
+        (bgextend_pxl[2] - 1 - figorigin[2]) * meterperpxl_col,
+        -(bgextend_pxl[1] - figorigin[1]) * meterperpxl_row,
+        (figorigin[1] - 1) * meterperpxl_row,
+    )
+
+    return fluxloc_final, bgextend_final
+end
+
+function format_fraction_percent(value)
+    return ismissing(value) ? "missing" : "$(round(value * 100, digits=1))%"
+end
+
+function class_fraction_frame_text(fraction_sets::AbstractVector{<:AbstractDataFrame},
+        labels::AbstractVector, frame_index::Integer)
+    lines = String[]
+    for ix in eachindex(fraction_sets)
+        fractions = fraction_sets[ix]
+        if frame_index <= nrow(fractions)
+            ice = format_fraction_percent(fractions.ice_fraction[frame_index])
+            lead = format_fraction_percent(fractions.lead_fraction[frame_index])
+            classified = format_fraction_percent(fractions.classified_weight_fraction[frame_index])
+            outside = format_fraction_percent(fractions.outside_weight_fraction[frame_index])
+            missing_class = format_fraction_percent(fractions.missing_class_weight_fraction[frame_index])
+            push!(lines, "$(labels[ix]): ice=$(ice), lead=$(lead), classified=$(classified), outside=$(outside), missing=$(missing_class)")
+        else
+            push!(lines, "$(labels[ix]): no footprint")
+        end
+    end
+    return join(lines, "\n")
+end
+
+function save_class_fraction_animation(footprint_sets::AbstractVector,
+        fraction_sets::AbstractVector{<:AbstractDataFrame}, class_image,
+        fluxloc::AbstractMatrix, bgextend_m::AbstractVector, bgextend_pxl::AbstractVector,
+        figorigin::AbstractVector, labels::AbstractVector,
+        contour_indices::AbstractVector{<:Integer}, output_file::AbstractString;
+        station_label::AbstractString="", interval::Integer=250, fps::Integer=4,
+        dpi::Integer=150, figsize=(10, 8))
+
+    length(footprint_sets) == length(fraction_sets) || error("footprint_sets and fraction_sets must have the same length.")
+    length(footprint_sets) == length(labels) || error("footprint_sets and labels must have the same length.")
+    length(footprint_sets) == length(contour_indices) || error("footprint_sets and contour_indices must have the same length.")
+    nframes = maximum(length.(footprint_sets))
+    nframes > 0 || error("No footprint blocks available for animation.")
+
+    animation = pyimport("matplotlib.animation")
+    fluxloc_final, bgextend_final = class_background_geometry(fluxloc, bgextend_m, bgextend_pxl, figorigin)
+
+    fig = PyPlot.figure(figsize=figsize)
+    ax = fig.add_subplot(111)
+    ax.imshow(class_image, extent=bgextend_final)
+    ax.set_xlabel("meter")
+    ax.set_ylabel("meter")
+
+    ctab10 = PyPlot.cm.tab10
+    lines = Any[]
+    for ix in eachindex(footprint_sets)
+        ax.plot(fluxloc_final[ix, 2], fluxloc_final[ix, 1], ".", color=ctab10(ix - 1), ms=15)
+        line = ax.plot(Float64[], Float64[], color=ctab10(ix - 1), label=labels[ix])[1]
+        push!(lines, line)
+    end
+    ax.legend(loc="lower right")
+
+    fraction_text = ax.text(
+        0.02,
+        0.98,
+        "",
+        transform=ax.transAxes,
+        va="top",
+        ha="left",
+        fontsize=8,
+        bbox=Dict("facecolor" => "white", "alpha" => 0.75, "edgecolor" => "none"),
+    )
+
+    function update(frame)
+        j = Int(frame) + 1
+        for ix in eachindex(footprint_sets)
+            if j <= length(footprint_sets[ix])
+                x, y = ffp_block.footprint_contour_xy(footprint_sets[ix][j], contour_indices[ix])
+                lines[ix].set_data(x .+ fluxloc_final[ix, 2], y .+ fluxloc_final[ix, 1])
+            else
+                lines[ix].set_data(Float64[], Float64[])
+            end
+        end
+
+        fraction_text.set_text(class_fraction_frame_text(fraction_sets, labels, j))
+        timestamp = ffp_block.first_frame_time(fraction_sets, j)
+        title_time = isnothing(timestamp) ? "" : " - $(Dates.format(timestamp, "yyyy-mm-dd HH:MM:SS"))"
+        ax.set_title("Station $(station_label) class footprints - block $(j)/$(nframes)$(title_time)")
+        return vcat(lines, [fraction_text])
+    end
+
+    update(0)
+    PyPlot.tight_layout()
+    mkpath(dirname(output_file))
+
+    anim = animation.FuncAnimation(fig, update, frames=nframes, interval=interval, blit=false)
+    saved_file = String(output_file)
+    try
+        anim.save(saved_file, writer="ffmpeg", fps=fps, dpi=dpi)
+    catch err
+        if endswith(lowercase(saved_file), ".mp4")
+            fallback_file = replace(saved_file, r"\.mp4$"i => ".gif")
+            @warn("Could not save mp4 animation with ffmpeg. Falling back to gif.", exception=(err, catch_backtrace()), output=fallback_file)
+            anim.save(fallback_file, writer="pillow", fps=fps, dpi=dpi)
+            saved_file = fallback_file
+        else
+            rethrow()
+        end
+    finally
+        PyPlot.close(fig)
+    end
+
+    return saved_file
+end
+
+plot_class_fraction_animation = true
+if plot_class_fraction_animation
+    footprint_sets = [ffp_blocks_all[flux] for flux in fluxes]
+    fraction_sets = [footprint_class_fractions_all[flux] for flux in fluxes]
+    footprint_labels = @isdefined(instr_labels) ? instr_labels : stationcfg.station_labels(station_config)
+    class_animation_output_dir = stationcfg.plot_dir(station_config, "footprints", "blocks", station_file_stem)
+    class_animation_output_file = joinpath(class_animation_output_dir, "$(station_file_stem)_ffp_blocks_classes.mp4")
+
+    class_animation_file = save_class_fraction_animation(
+        footprint_sets,
+        fraction_sets,
+        classesimg,
+        classes_fluxloc_pxl,
+        classes_extend_m,
+        classes_extend_pxl,
+        classes_figorigin_pxl,
+        footprint_labels,
+        contour_indices,
+        class_animation_output_file;
+        station_label=station_label,
+    )
+    println("Saved class footprint animation to ", class_animation_file)
+end
+
+ffp_block.save_block_fluxes_netcdf(block_fluxes_all, station_label)
