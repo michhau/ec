@@ -56,6 +56,8 @@ wq_limits = Tuple(Float64.(stationcfg.optional_key(station_config, [-5.0, 5.0], 
 output_folder = stationcfg.plot_dir(station_config, "footprints", "blocks", station_name)
 mkpath(output_folder)
 
+#######################################################
+#calculate correlations and export to .csv
 correlation_specs = vcat(
     [(flux_name, :wT, "sensible_heat_flux", ρ_air * c_p) for flux_name in subplot_order],
     [(flux_name, :wq, "latent_heat_flux", L_v * 1e-3) for flux_name in latent_subplot_order],
@@ -65,6 +67,8 @@ flux_lead_correlations = block_analyze.lead_flux_correlations(
 CSV.write(joinpath(output_folder, "$(station_file_stem)_block_flux_lead_correlations.csv"),
     flux_lead_correlations)
 
+#######################################################
+#plot time series of fluxes and lead fraction
 time_series_columns = [
     (subplot_order[1], subplot_order[3]),
     (subplot_order[2], subplot_order[4]),
@@ -94,6 +98,8 @@ PyPlot.tight_layout(rect=[0, 0, 1, 0.95])
 fig_ts.savefig(joinpath(output_folder, "$(station_file_stem)_block_flux_lead_timeseries.pdf"),
     bbox_inches="tight")
 
+#######################################################
+#plot correlation fluxes vs. lead fraction
 fig_wT, axs_wT = PyPlot.subplots(2, 2, figsize=(9, 7), sharex=true, sharey=true)
 fig_wT.suptitle("$(station_label) - Sensible heat flux vs lead fraction")
 wT_panel_specs = [
@@ -123,3 +129,57 @@ PyPlot.tight_layout(rect=[0, 0, 1, 0.92])
 fig_wq.savefig(joinpath(output_folder, "$(station_file_stem)_block_wq_lead_fraction.pdf"),
     bbox_inches="tight")
 
+#######################################################
+#######################################################
+#plot flux DIFFERENCES and lead fraction DIFFERENCES
+
+#######################################################
+#time series
+wT_limits_diff_timeseries = Tuple(Float64.(stationcfg.optional_key(station_config, [-10.0, 10.0], "block_footprints", "wT_limits_diff_timeseries")))
+wq_limits_diff_timeseries = Tuple(Float64.(stationcfg.optional_key(station_config, [-10.0, 10.0], "block_footprints", "wq_limits_diff_timeseries")))
+
+difference_time_series_specs = [
+    ((subplot_order[1], subplot_order[2]), :wT, ρ_air * c_p, "sensible",
+        L"\Delta H~\mathrm{[W~m^{-2}]}"),
+    ((subplot_order[3], subplot_order[4]), :wT, ρ_air * c_p, "sensible",
+        L"\Delta H~\mathrm{[W~m^{-2}]}"),
+    ((latent_subplot_order[1], latent_subplot_order[2]), :wq, L_v * 1e-3, "latent",
+        L"\Delta L_E~\mathrm{[W~m^{-2}]}"),
+]
+
+flux_lead_difference_correlations = block_analyze.lead_flux_difference_correlations(
+    difference_time_series_specs, block_data, station_name, surface_type, heights)
+CSV.write(joinpath(output_folder, "$(station_file_stem)_block_flux_lead_difference_correlations.csv"),
+    flux_lead_difference_correlations)
+
+fig_diff_ts, axs_diff_ts = PyPlot.subplots(1, 3, figsize=(15, 4.2), sharex=true)
+fig_diff_ts.suptitle("$(station_label) - Heat flux and lead fraction differences")
+for (ax, (flux_names, flux_column, conversion_factor, flux_kind, flux_ylabel)) in
+        zip(vec(axs_diff_ts), difference_time_series_specs)
+    block_analyze.plot_block_difference_timeseries_panel!(ax, block_data, flux_names,
+        flux_column, conversion_factor, flux_kind, flux_ylabel, heights,
+        surface_type, wT_limits_diff_timeseries, wq_limits_diff_timeseries)
+    ax.xaxis_date()
+end
+fig_diff_ts.autofmt_xdate()
+PyPlot.tight_layout(rect=[0, 0, 1, 0.91])
+fig_diff_ts.savefig(joinpath(output_folder,
+    "$(station_file_stem)_block_flux_difference_timeseries.pdf"),
+    bbox_inches="tight")
+
+#######################################################
+#scatter plot
+fig_diff_scatter, axs_diff_scatter = PyPlot.subplots(1, 3, figsize=(15, 4.2), sharex=true)
+fig_diff_scatter.suptitle("$(station_label) - Heat flux difference vs lead fraction difference")
+for (ax, (flux_names, flux_column, conversion_factor, flux_kind, flux_ylabel)) in
+        zip(vec(axs_diff_scatter), difference_time_series_specs)
+    flux_ylim = flux_column == :wT ? wT_limits_diff_timeseries : wq_limits_diff_timeseries
+    color = flux_column == :wT ? "black" : "C0"
+    block_analyze.plot_lead_flux_difference_panel!(ax, block_data, flux_names,
+        flux_column, conversion_factor, flux_kind, flux_ylabel, flux_ylim,
+        surface_type, heights; color=color)
+end
+PyPlot.tight_layout(rect=[0, 0, 1, 0.91])
+fig_diff_scatter.savefig(joinpath(output_folder,
+    "$(station_file_stem)_block_flux_lead_difference_scatter.pdf"),
+    bbox_inches="tight")
