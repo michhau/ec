@@ -6,7 +6,9 @@
 #=
 Run load_data.jl, turb_fluxes.jl, ffp_per_flux_value.jl
 in this order before this script to generate
-netcdf_files containing the block data
+netcdf_files containing the block data. If they already
+exist, no need to run the previous scripts, simply load
+them.
 =#
 using Dates, PyCall, DataFrames, Statistics, LaTeXStrings
 import PyPlot, CSV
@@ -55,7 +57,7 @@ wT_limits = Tuple(Float64.(stationcfg.optional_key(station_config, [-20.0, 20.0]
 wq_limits = Tuple(Float64.(stationcfg.optional_key(station_config, [-5.0, 5.0], "plot", "wq_limits")))
 output_folder = stationcfg.plot_dir(station_config, "footprints", "blocks", station_name)
 mkpath(output_folder)
-
+##
 #######################################################
 #calculate correlations and export to .csv
 correlation_specs = vcat(
@@ -66,7 +68,7 @@ flux_lead_correlations = block_analyze.lead_flux_correlations(
     correlation_specs, block_data, station_name, surface_type, heights)
 CSV.write(joinpath(output_folder, "$(station_file_stem)_block_flux_lead_correlations.csv"),
     flux_lead_correlations)
-
+##
 #######################################################
 #plot time series of fluxes and lead fraction
 time_series_columns = [
@@ -126,15 +128,11 @@ for (ix, (ax, flux_name)) in enumerate(zip(vec(axs_wq), latent_subplot_order))
 end
 fig_wq.suptitle("$(station_label) - Latent heat flux vs lead fraction")
 PyPlot.tight_layout(rect=[0, 0, 1, 0.92])
-fig_wq.savefig(joinpath(output_folder, "$(station_file_stem)_block_wq_lead_fraction.pdf"),
-    bbox_inches="tight")
-
+##
 #######################################################
+###  flux DIFFERENCES and lead fraction DIFFERENCES ###
 #######################################################
-#plot flux DIFFERENCES and lead fraction DIFFERENCES
-
-#######################################################
-#time series
+#plot time series
 wT_limits_diff_timeseries = Tuple(Float64.(stationcfg.optional_key(station_config, [-10.0, 10.0], "block_footprints", "wT_limits_diff_timeseries")))
 wq_limits_diff_timeseries = Tuple(Float64.(stationcfg.optional_key(station_config, [-10.0, 10.0], "block_footprints", "wq_limits_diff_timeseries")))
 
@@ -180,6 +178,76 @@ for (ax, (flux_names, flux_column, conversion_factor, flux_kind, flux_ylabel)) i
         surface_type, heights; color=color)
 end
 PyPlot.tight_layout(rect=[0, 0, 1, 0.91])
+
+#fitting linear model to differences
+using GLM, StatsModels, Distributions, LinearAlgebra
+
+linear_fit_params = []
+predictions = []
+
+for (ax, (flux_names, flux_column, conversion_factor, flux_kind, flux_ylabel)) in
+        zip(vec(axs_diff_scatter), difference_time_series_specs)
+
+    _, flux_difference, lead_difference = block_analyze.difference_timeseries(
+        block_data, flux_names, flux_column, conversion_factor)
+
+    valid = isfinite.(lead_difference) .& isfinite.(flux_difference)
+    x = lead_difference[valid]
+    y = flux_difference[valid]
+
+    fit_df = DataFrame(lead_difference=x, flux_difference=y)
+
+    #perform the fit
+    model = lm(@formula(flux_difference ~ lead_difference), fit_df)
+    
+    #extract information and store in Dict
+    fit_vars = coef(model)
+    fit_vars_confint = confint(model, level=0.95)
+    fit_r2 = r2(model)
+    fit_loglikelihood = loglikelihood(model)
+    fit_stderror = stderror(model)
+    
+    #actual fit to plot
+    xgrid = collect(range(minimum(x), maximum(x), length=100))
+    #ygrid = fit_vars[1] .+ fit_vars[2] .* xgrid
+    #95% confidence intervals for the conditional mean
+    preds_confidence = predict(model, DataFrame(lead_difference = xgrid), interval=:confidence)
+
+    color = flux_column == :wT ? "black" : "C0"
+
+    ax.fill_between(xgrid, preds_confidence.lower, preds_confidence.upper;
+        color=color, alpha=0.18, linewidth=0,label="95% CI")
+    ax.plot(xgrid, preds_confidence.prediction;
+        color=color, linewidth=1.0)
+    ax.legend(loc="best")
+
+    push!(linear_fit_params, (
+        flux_variable=String(flux_column),
+        flux_label=String(flux_kind),
+        difference_label=block_analyze.sensor_difference_label(flux_names, heights, surface_type),
+        n_valid=length(x),
+        intercept=fit_vars[1],
+        intercept_ci_low=fit_vars_confint[1,1],
+        intercept_ci_high=fit_vars_confint[1,2],
+        intercept_stderr = fit_stderror[1],
+        slope=fit_vars[2],
+        slope_low=fit_vars_confint[2,1],
+        slope_high=fit_vars_confint[2,2],
+        slope_stderr = fit_stderror[2],
+        predictions_confidence = preds_confidence,
+        r2=fit_r2,
+        loglikelihood = fit_loglikelihood,
+    ))
+
+    push!(predictions, (flux_variable=String(flux_column),
+    difference_label=block_analyze.sensor_difference_label(flux_names, heights, surface_type),
+    x_grid = xgrid, predictions_confidence = preds_confidence))
+end
+
+CSV.write(joinpath(output_folder,
+    "$(station_file_stem)_block_flux_lead_difference_linear_fit.csv"),
+    DataFrame(linear_fits))
+
 fig_diff_scatter.savefig(joinpath(output_folder,
-    "$(station_file_stem)_block_flux_lead_difference_scatter.pdf"),
-    bbox_inches="tight")
+"$(station_file_stem)_block_flux_lead_difference_scatter.pdf"), bbox_inches="tight")
+##
