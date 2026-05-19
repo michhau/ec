@@ -13,7 +13,7 @@ This script samples every ra1-4-th value, starting at the
 first full moving-average window center, so consecutive
 sampled values represent non-overlapping block averages.
 =#
-using Dates, DataFrames
+using Dates, DataFrames, PyCall, PyPlot
 
 importdir = joinpath(@__DIR__, "..", "..")
 include(joinpath(importdir, "src", "turb_data.jl"))
@@ -29,6 +29,7 @@ import .ffp_block
 if !@isdefined station_config
     error("Run load_data.jl before ffp_per_flux_value.jl so station_config is available.")
 end
+station_config = stationcfg.load_station_config(station_name)
 station_label = stationcfg.station_label(station_config)
 station_file_stem = stationcfg.station_file_stem(station_config)
 station_id = String(stationcfg.require_key(station_config, "id"))
@@ -107,7 +108,7 @@ end
 
 ###############################################
 # Plot the per-block footprints as an animation.
-plot_footprints = false
+plot_footprints = true
 if plot_footprints
     fileorthomosaic = String(stationcfg.require_key(station_config, "footprint", "orthomosaic"))
     fluxloc = stationcfg.toml_matrix(stationcfg.require_key(station_config, "footprint", "fluxloc"); T=Float64)
@@ -140,6 +141,41 @@ end
 # Combine with a drone overview image to classify
 using Images
 classes_img = load(String(station_config["block_footprints"]["classes_file"]))
+#for plotting
+mpimg = pyimport("matplotlib.image")
+classes_img_pyplot = mpimg.imread(String(station_config["block_footprints"]["classes_file"]))
+
+"""
+    read_criterion_from_config(config)
+
+Read RGB-criterions for ice and feature (e.g. lead, pond, ridge) from the config Dictionary
+"""
+function read_criterion_from_config(station_config::Dict)
+    #read criterion for true classification = feature (e.g. lead, pond, ridge) from config file
+    ice_red_crit_bigger_than = Int(station_config["block_footprints"]["crit_ice_red_bigger_eq"])
+    ice_red_crit_smaller_eq = Int(station_config["block_footprints"]["crit_ice_red_smaller_eq"])
+    ice_green_crit_bigger_than = Int(station_config["block_footprints"]["crit_ice_green_bigger_eq"])
+    ice_green_crit_smaller_eq = Int(station_config["block_footprints"]["crit_ice_green_smaller_eq"])
+    ice_blue_crit_bigger_than = Int(station_config["block_footprints"]["crit_ice_blue_bigger_eq"])
+    ice_blue_crit_smaller_eq = Int(station_config["block_footprints"]["crit_ice_blue_smaller_eq"])
+
+    ice_crit_rgb = [[ice_red_crit_bigger_than, ice_red_crit_smaller_eq],
+                    [ice_green_crit_bigger_than, ice_green_crit_smaller_eq],
+                    [ice_blue_crit_bigger_than, ice_blue_crit_smaller_eq]]
+
+    feature_red_crit_bigger_than = Int(station_config["block_footprints"]["crit_feature_red_bigger_eq"])
+    feature_red_crit_smaller_eq = Int(station_config["block_footprints"]["crit_feature_red_smaller_eq"])
+    feature_green_crit_bigger_than = Int(station_config["block_footprints"]["crit_feature_green_bigger_eq"])
+    feature_green_crit_smaller_eq = Int(station_config["block_footprints"]["crit_feature_green_smaller_eq"])
+    feature_blue_crit_bigger_than = Int(station_config["block_footprints"]["crit_feature_blue_bigger_eq"])
+    feature_blue_crit_smaller_eq = Int(station_config["block_footprints"]["crit_feature_blue_smaller_eq"])
+
+    feature_crit_rgb = [[feature_red_crit_bigger_than, feature_red_crit_smaller_eq],
+                            [feature_green_crit_bigger_than, feature_green_crit_smaller_eq],
+                            [feature_blue_crit_bigger_than, feature_blue_crit_smaller_eq]]
+
+    return ice_crit_rgb, feature_crit_rgb
+end
 
 #create classes matrix
 """
@@ -147,18 +183,23 @@ classes_img = load(String(station_config["block_footprints"]["classes_file"]))
 
 Create a class array with surface classes from an input image. Criterions need to be hard coded!
 """
-function create_classes_array(img::Matrix{RGB{N0f8}})::Array{Union{Missing, Bool}}
+function create_classes_array(img::Matrix{RGB{N0f8}},
+    ice_crit::Vector, feature_crit::Vector)::Array{Union{Missing, Bool}}
     classes_array = Array{Union{Missing, Bool}}(undef, size(img))#fill(false, size(img))
     #missing: do not use
     #true: ice
-    #false: lead
+    #false: feature such as lead, pond, ridge
     red_vals = round.(Int, float.(red.(img))*255)
     green_vals = round.(Int, float.(green.(img))*255)
     blue_vals = round.(Int, float.(blue.(img))*255)
     for i in eachindex(classes_array)
-        if red_vals[i] > 222 && green_vals[i] > 222 && blue_vals[i] > 222
+        if ice_crit[1][1] <= red_vals[i] <= ice_crit[1][2] &&
+           ice_crit[2][1] <= green_vals[i] <= ice_crit[2][2] &&
+           ice_crit[3][1] <= blue_vals[i] <= ice_crit[3][2]
             classes_array[i] = true
-        elseif red_vals[i] == green_vals[i] == blue_vals[i] == 0
+        elseif feature_crit[1][1] <= red_vals[i] <= feature_crit[1][2] &&
+               feature_crit[2][1] <= green_vals[i] <= feature_crit[2][2] &&
+               feature_crit[3][1] <= blue_vals[i] <= feature_crit[3][2]
             classes_array[i] = false
         else
             classes_array[i] = missing
@@ -167,9 +208,17 @@ function create_classes_array(img::Matrix{RGB{N0f8}})::Array{Union{Missing, Bool
     return classes_array
 end
 
-#read same as for footprints. Change, if pictures are not the same!
-classes_array = create_classes_array(classes_img)
+ice_crit_rgb, feature_crit_rgb = read_criterion_from_config(station_config)
+surface_feature = String(station_config["block_footprints"]["feature"])
 
+#read same as for footprints. Change, if pictures are not the same!
+classes_array = create_classes_array(classes_img, ice_crit_rgb, feature_crit_rgb)
+
+#=
+check_plot_array = replace(classes_array, missing => NaN)
+PyPlot.figure()
+PyPlot.imshow(check_plot_array)
+=#
 
 classes_fluxloc_pxl = stationcfg.toml_matrix(stationcfg.require_key(station_config, "footprint", "fluxloc"); T=Float64)
 classes_extend_m = Float64.(stationcfg.require_key(station_config, "footprint", "bgextend_m"))
@@ -184,9 +233,9 @@ classes_coordinates_zero_based = true
     footprint_weighted_class_fractions(footprint, classes_array, origin_pxl,
         meterperpxl_row, meterperpxl_col; origin_is_zero_based=true)
 
-Calculate the footprint-weighted ice and lead fractions for one footprint.
+Calculate the footprint-weighted ice and feature (lead/pond/ridge) fractions for one footprint.
 Footprint points outside `classes_array` or on `missing` class pixels are
-excluded from the ice/lead denominator.
+excluded from the ice/feature denominator.
 """
 function footprint_weighted_class_fractions(footprint::AbstractDict,
         classes_array::AbstractMatrix{Union{Missing, Bool}},
@@ -198,12 +247,12 @@ function footprint_weighted_class_fractions(footprint::AbstractDict,
     if get(footprint, "flag_err", false)
         return (
             ice_fraction=missing,
-            lead_fraction=missing,
+            feature_fraction=missing,
             classified_weight_fraction=0.0,
             outside_weight_fraction=missing,
             missing_class_weight_fraction=missing,
             ice_weight=0.0,
-            lead_weight=0.0,
+            feature_weight=0.0,
             classified_weight=0.0,
             total_weight=0.0,
         )
@@ -221,7 +270,7 @@ function footprint_weighted_class_fractions(footprint::AbstractDict,
     nrows, ncols = size(classes_array)
 
     ice_weight = 0.0
-    lead_weight = 0.0
+    feature_weight = 0.0
     classified_weight = 0.0
     outside_weight = 0.0
     missing_class_weight = 0.0
@@ -250,19 +299,19 @@ function footprint_weighted_class_fractions(footprint::AbstractDict,
         if class_value
             ice_weight += weight
         else
-            lead_weight += weight
+            feature_weight += weight
         end
     end
 
     if classified_weight == 0
         return (
             ice_fraction=missing,
-            lead_fraction=missing,
+            feature_fraction=missing,
             classified_weight_fraction=total_weight > 0 ? classified_weight / total_weight : 0.0,
             outside_weight_fraction=total_weight > 0 ? outside_weight / total_weight : missing,
             missing_class_weight_fraction=total_weight > 0 ? missing_class_weight / total_weight : missing,
             ice_weight=ice_weight,
-            lead_weight=lead_weight,
+            feature_weight=feature_weight,
             classified_weight=classified_weight,
             total_weight=total_weight,
         )
@@ -270,12 +319,12 @@ function footprint_weighted_class_fractions(footprint::AbstractDict,
 
     return (
         ice_fraction=ice_weight / classified_weight,
-        lead_fraction=lead_weight / classified_weight,
+        feature_fraction=feature_weight / classified_weight,
         classified_weight_fraction=total_weight > 0 ? classified_weight / total_weight : 0.0,
         outside_weight_fraction=total_weight > 0 ? outside_weight / total_weight : missing,
         missing_class_weight_fraction=total_weight > 0 ? missing_class_weight / total_weight : missing,
         ice_weight=ice_weight,
-        lead_weight=lead_weight,
+        feature_weight=feature_weight,
         classified_weight=classified_weight,
         total_weight=total_weight,
     )
@@ -332,7 +381,7 @@ for ix in eachindex(fluxes)
     footprint_class_fractions_all[flux] = fractions
 
     block_fluxes_all[flux][!, :footprint_ice_fraction] = fractions.ice_fraction
-    block_fluxes_all[flux][!, :footprint_lead_fraction] = fractions.lead_fraction
+    block_fluxes_all[flux][!, :footprint_feature_fraction] = fractions.feature_fraction
     block_fluxes_all[flux][!, :footprint_classified_weight_fraction] = fractions.classified_weight_fraction
     block_fluxes_all[flux][!, :footprint_outside_weight_fraction] = fractions.outside_weight_fraction
     block_fluxes_all[flux][!, :footprint_missing_class_weight_fraction] = fractions.missing_class_weight_fraction
@@ -367,17 +416,17 @@ function format_fraction_percent(value)
 end
 
 function class_fraction_frame_text(fraction_sets::AbstractVector{<:AbstractDataFrame},
-        labels::AbstractVector, frame_index::Integer)
+        labels::AbstractVector, feature::String, frame_index::Integer)
     lines = String[]
     for ix in eachindex(fraction_sets)
         fractions = fraction_sets[ix]
         if frame_index <= nrow(fractions)
             ice = format_fraction_percent(fractions.ice_fraction[frame_index])
-            lead = format_fraction_percent(fractions.lead_fraction[frame_index])
+            feature = format_fraction_percent(fractions.feature_fraction[frame_index])
             classified = format_fraction_percent(fractions.classified_weight_fraction[frame_index])
             outside = format_fraction_percent(fractions.outside_weight_fraction[frame_index])
             missing_class = format_fraction_percent(fractions.missing_class_weight_fraction[frame_index])
-            push!(lines, "$(labels[ix]): ice=$(ice), lead=$(lead), classified=$(classified), outside=$(outside), missing=$(missing_class)")
+            push!(lines, "$(labels[ix]): ice=$(ice), $(feature)=$(feature), classified=$(classified), outside=$(outside), missing=$(missing_class)")
         else
             push!(lines, "$(labels[ix]): no footprint")
         end
@@ -386,7 +435,7 @@ function class_fraction_frame_text(fraction_sets::AbstractVector{<:AbstractDataF
 end
 
 function save_class_fraction_animation(footprint_sets::AbstractVector,
-        fraction_sets::AbstractVector{<:AbstractDataFrame}, class_image,
+        fraction_sets::AbstractVector{<:AbstractDataFrame}, class_image, feature::String,
         fluxloc::AbstractMatrix, bgextend_m::AbstractVector, bgextend_pxl::AbstractVector,
         figorigin::AbstractVector, labels::AbstractVector,
         contour_indices::AbstractVector{<:Integer}, output_file::AbstractString;
@@ -439,7 +488,7 @@ function save_class_fraction_animation(footprint_sets::AbstractVector,
             end
         end
 
-        fraction_text.set_text(class_fraction_frame_text(fraction_sets, labels, j))
+        fraction_text.set_text(class_fraction_frame_text(fraction_sets, labels, feature, j))
         timestamp = ffp_block.first_frame_time(fraction_sets, j)
         title_time = isnothing(timestamp) ? "" : " - $(Dates.format(timestamp, "yyyy-mm-dd HH:MM:SS"))"
         ax.set_title("Station $(station_label) class footprints - block $(j)/$(nframes)$(title_time)")
@@ -481,7 +530,8 @@ if plot_class_fraction_animation
     class_animation_file = save_class_fraction_animation(
         footprint_sets,
         fraction_sets,
-        classesimg,
+        classes_img_pyplot,
+        surface_feature,
         classes_fluxloc_pxl,
         classes_extend_m,
         classes_extend_pxl,
