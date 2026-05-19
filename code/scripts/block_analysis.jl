@@ -66,8 +66,8 @@ correlation_specs = vcat(
 )
 flux_lead_correlations = block_analyze.lead_flux_correlations(
     correlation_specs, block_data, station_name, surface_type, heights)
-CSV.write(joinpath(output_folder, "$(station_file_stem)_block_flux_lead_correlations.csv"),
-    flux_lead_correlations)
+#=CSV.write(joinpath(output_folder, "$(station_file_stem)_block_flux_lead_correlations.csv"),
+    flux_lead_correlations)=#
 ##
 #######################################################
 #plot time series of fluxes and lead fraction
@@ -97,8 +97,7 @@ for (col, flux_names) in enumerate(time_series_columns)
 end
 fig_ts.autofmt_xdate()
 PyPlot.tight_layout(rect=[0, 0, 1, 0.95])
-fig_ts.savefig(joinpath(output_folder, "$(station_file_stem)_block_flux_lead_timeseries.pdf"),
-    bbox_inches="tight")
+#fig_ts.savefig(joinpath(output_folder, "$(station_file_stem)_block_flux_lead_timeseries.pdf"), bbox_inches="tight")
 
 #######################################################
 #plot correlation fluxes vs. lead fraction
@@ -128,6 +127,7 @@ for (ix, (ax, flux_name)) in enumerate(zip(vec(axs_wq), latent_subplot_order))
 end
 fig_wq.suptitle("$(station_label) - Latent heat flux vs lead fraction")
 PyPlot.tight_layout(rect=[0, 0, 1, 0.92])
+#fig_wq.savefig(joinpath(output_folder, "$(station_file_stem)_block_wq_lead_fraction.pdf"), bbox_inches="tight")
 ##
 #######################################################
 ###  flux DIFFERENCES and lead fraction DIFFERENCES ###
@@ -147,8 +147,8 @@ difference_time_series_specs = [
 
 flux_lead_difference_correlations = block_analyze.lead_flux_difference_correlations(
     difference_time_series_specs, block_data, station_name, surface_type, heights)
-CSV.write(joinpath(output_folder, "$(station_file_stem)_block_flux_lead_difference_correlations.csv"),
-    flux_lead_difference_correlations)
+#=CSV.write(joinpath(output_folder, "$(station_file_stem)_block_flux_lead_difference_correlations.csv"),
+    flux_lead_difference_correlations)=#
 
 fig_diff_ts, axs_diff_ts = PyPlot.subplots(1, 3, figsize=(15, 4.2), sharex=true)
 fig_diff_ts.suptitle("$(station_label) - Heat flux and lead fraction differences")
@@ -161,9 +161,9 @@ for (ax, (flux_names, flux_column, conversion_factor, flux_kind, flux_ylabel)) i
 end
 fig_diff_ts.autofmt_xdate()
 PyPlot.tight_layout(rect=[0, 0, 1, 0.91])
-fig_diff_ts.savefig(joinpath(output_folder,
+#=fig_diff_ts.savefig(joinpath(output_folder,
     "$(station_file_stem)_block_flux_difference_timeseries.pdf"),
-    bbox_inches="tight")
+    bbox_inches="tight")=#
 
 #######################################################
 #scatter plot
@@ -244,10 +244,10 @@ for (ax, (flux_names, flux_column, conversion_factor, flux_kind, flux_ylabel)) i
     x_grid = xgrid, predictions_confidence = preds_confidence))
 end
 
-CSV.write(joinpath(output_folder,
+#=CSV.write(joinpath(output_folder,
     "$(station_file_stem)_block_flux_lead_difference_linear_fit.csv"),
-    DataFrame(linear_fits))
+    DataFrame(linear_fits))=#
 
-fig_diff_scatter.savefig(joinpath(output_folder,
-"$(station_file_stem)_block_flux_lead_difference_scatter.pdf"), bbox_inches="tight")
+#=fig_diff_scatter.savefig(joinpath(output_folder,
+"$(station_file_stem)_block_flux_lead_difference_scatter.pdf"), bbox_inches="tight")=#
 ##
