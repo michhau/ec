@@ -42,17 +42,21 @@ contour_indices = [-1, -1, -2, -2]
 [block_footprints]
 classes_file = "/home/haugened/Documents/data/CONTRASTS/pics/setups/1b/map 270725_cut_classes.jpg"
 feature = "pond"
-crit_ice_red_bigger_eq = 230
+crit_ice_red_bigger_eq = 100
 crit_ice_red_smaller_eq = 255
-crit_ice_green_bigger_eq = 230
+crit_ice_green_bigger_eq = 100
 crit_ice_green_smaller_eq = 255
-crit_ice_blue_bigger_eq = 230
+crit_ice_blue_bigger_eq = 100
 crit_ice_blue_smaller_eq = 255
 crit_feature_red_bigger_eq = 0
 crit_feature_red_smaller_eq = 229
-crit_feature_green_bigger_eq = 200
+crit_feature_green_bigger_eq = 0
 crit_feature_green_smaller_eq = 255
 crit_feature_blue_bigger_eq = 0
-crit_feature_blue_smaller_eq = 229
+crit_feature_blue_smaller_eq = 255
 wT_limits_diff_timeseries = [-10, 10]
 wq_limits_diff_timeseries = [-10, 10]
+
+[block_analysis]
+subplot_order = ["fx2", "fx4", "fx1", "fx3"]
+latent_subplot_order = ["fx1", "fx3"]

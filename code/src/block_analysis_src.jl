@@ -8,11 +8,15 @@ module block_analyze
 using DataFrames, Statistics
 
 export add_axes_diagonal!, column_title, finite_series, flux_index,
-    lead_flux_correlations, lead_flux_difference_correlations, lead_flux_xy, panel_title,
+    feature_file_label, feature_flux_correlations, feature_flux_difference_correlations,
+    feature_flux_xy, panel_title,
     plot_block_difference_timeseries_panel!, plot_block_timeseries_panel!,
-    plot_lead_flux_difference_panel!, plot_lead_flux_panel!, safe_cor,
-    scatter_xy, sensor_difference_label, tied_ranks, valid_lead_value,
+    plot_feature_flux_difference_panel!, plot_feature_flux_panel!, safe_cor,
+    read_subplot_order, scatter_xy, sensor_difference_label, tied_ranks, valid_feature_value,
     valid_number
+
+const FEATURE_FRACTION_COLUMN = :footprint_feature_fraction
+const LEGACY_FRACTION_COLUMN = :footprint_lead_fraction
 
 function valid_number(value)
     return !ismissing(value) && value isa Number && isfinite(Float64(value))
@@ -24,39 +28,95 @@ function flux_index(flux_name::Symbol)
     return parse(Int, name[3:end])
 end
 
+function feature_file_label(feature_label::AbstractString)
+    label = replace(lowercase(strip(feature_label)), r"[^a-z0-9]+" => "_")
+    label = replace(label, r"^_+|_+$" => "")
+    return isempty(label) ? "feature" : label
+end
+
+function _flux_symbol(value, config_key::AbstractString)
+    if value isa Symbol
+        return value
+    elseif value isa AbstractString
+        name = startswith(value, ":") ? value[2:end] : value
+        isempty(name) && error("Config key block_analysis.$config_key contains an empty flux name.")
+        return Symbol(name)
+    end
+
+    error("Config key block_analysis.$config_key must contain flux names as strings.")
+end
+
+function read_subplot_order(config::AbstractDict, key, default_order;
+        expected_length::Integer=length(default_order))
+    key_string = String(key)
+    block_config = get(config, "block_analysis", nothing)
+
+    raw_order = if isnothing(block_config)
+        default_order
+    elseif block_config isa AbstractDict
+        get(block_config, key_string, default_order)
+    else
+        error("Config key block_analysis must be a table.")
+    end
+
+    raw_order isa AbstractVector || error(
+        "Config key block_analysis.$key_string must be a list of flux names."
+    )
+
+    order = [_flux_symbol(value, key_string) for value in raw_order]
+    length(order) == expected_length || error(
+        "Config key block_analysis.$key_string must contain $expected_length flux names; got $(length(order))."
+    )
+    foreach(flux_index, order)
+    return order
+end
+
 function panel_title(flux_name::Symbol, surface_type, heights)
     ix = flux_index(flux_name)
     return "$(surface_type[ix]), $(heights[ix]) m"
 end
 
+function feature_fraction_column(data::AbstractDataFrame)
+    if FEATURE_FRACTION_COLUMN in propertynames(data)
+        return FEATURE_FRACTION_COLUMN
+    elseif LEGACY_FRACTION_COLUMN in propertynames(data)
+        return LEGACY_FRACTION_COLUMN
+    end
+
+    error("Block data must contain :$(FEATURE_FRACTION_COLUMN).")
+end
+
+feature_fraction_series(data::AbstractDataFrame) = data[!, feature_fraction_column(data)]
+
 function scatter_xy(data::AbstractDataFrame, flux_column::Symbol, conversion_factor::Real)
-    lead_fraction = data[!, :footprint_lead_fraction]
+    feature_fraction = feature_fraction_series(data)
     flux = data[!, flux_column]
     valid = [
-        valid_number(lead_fraction[ix]) && valid_number(flux[ix])
-        #&& 0.0 <= Float64(lead_fraction[ix]) <= 1.0
-        for ix in eachindex(lead_fraction)
+        valid_number(feature_fraction[ix]) && valid_number(flux[ix])
+        #&& 0.0 <= Float64(feature_fraction[ix]) <= 1.0
+        for ix in eachindex(feature_fraction)
     ]
-    return Float64.(lead_fraction[valid]), Float64.(flux[valid]) .* conversion_factor
+    return Float64.(feature_fraction[valid]), Float64.(flux[valid]) .* conversion_factor
 end
 
 function add_axes_diagonal!(ax)
-    # Lead fraction and flux have different units; draw this as an axes-space guide.
+    # Feature fraction and flux have different units; draw this as an axes-space guide.
     ax.plot([0, 1], [0, 1], transform=ax.transAxes, color="grey",
         alpha=0.35, linewidth=1.2, zorder=1)
 end
 
-function plot_lead_flux_panel!(ax, block_data::AbstractDict, flux_name::Symbol,
+function plot_feature_flux_panel!(ax, block_data::AbstractDict, flux_name::Symbol,
         flux_column::Symbol, conversion_factor::Real, ylabel, ylim, surface_type,
-        heights; color="C0", show_xlabel=true, show_ylabel=true)
+        heights; feature_label::AbstractString="feature", color="C0",
+        show_xlabel=true, show_ylabel=true)
     data = block_data[flux_name]
-    lead_fraction, flux = scatter_xy(data, flux_column, conversion_factor)
+    feature_fraction, flux = scatter_xy(data, flux_column, conversion_factor)
 
     #add_axes_diagonal!(ax)
-    ax.scatter(lead_fraction, flux, s=12, alpha=0.65, color=color,
+    ax.scatter(feature_fraction, flux, s=12, alpha=0.65, color=color,
         edgecolors="none", zorder=2)
     ax.set_title(panel_title(flux_name, surface_type, heights))
-    ax.set_xlabel(show_xlabel ? "Lead fraction" : "")
+    ax.set_xlabel(show_xlabel ? "$(feature_label) fraction" : "")
     ax.set_ylabel(show_ylabel ? ylabel : "")
     ax.set_xlim(0, 1)
     ax.set_ylim(ylim)
@@ -70,18 +130,18 @@ function finite_series(values)
     return [valid_number(value) ? Float64(value) : NaN for value in values]
 end
 
-function valid_lead_value(value)
+function valid_feature_value(value)
     return valid_number(value) && 0.0 <= Float64(value) <= 1.0
 end
 
-function lead_flux_xy(data::AbstractDataFrame, flux_column::Symbol, conversion_factor::Real)
-    lead_fraction = data[!, :footprint_lead_fraction]
+function feature_flux_xy(data::AbstractDataFrame, flux_column::Symbol, conversion_factor::Real)
+    feature_fraction = feature_fraction_series(data)
     flux = data[!, flux_column]
     valid = [
-        valid_lead_value(lead_fraction[ix]) && valid_number(flux[ix])
-        for ix in eachindex(lead_fraction)
+        valid_feature_value(feature_fraction[ix]) && valid_number(flux[ix])
+        for ix in eachindex(feature_fraction)
     ]
-    return Float64.(lead_fraction[valid]), Float64.(flux[valid]) .* conversion_factor
+    return Float64.(feature_fraction[valid]), Float64.(flux[valid]) .* conversion_factor
 end
 
 function tied_ranks(values::AbstractVector{<:Real})
@@ -111,24 +171,25 @@ function safe_cor(x::AbstractVector{<:Real}, y::AbstractVector{<:Real})
     return cor(x, y)
 end
 
-function lead_flux_correlations(correlation_specs, block_data::AbstractDict,
-        station_name::AbstractString, surface_type, heights)
+function feature_flux_correlations(correlation_specs, block_data::AbstractDict,
+        station_name::AbstractString, surface_type, heights; feature_label::AbstractString="feature")
     rows = []
     for (flux_name, flux_column, flux_label, conversion_factor) in correlation_specs
         data = block_data[flux_name]
-        lead_fraction, flux = lead_flux_xy(data, flux_column, conversion_factor)
+        feature_fraction, flux = feature_flux_xy(data, flux_column, conversion_factor)
         sensor_ix = flux_index(flux_name)
 
         push!(rows, (
             station=station_name,
+            feature=feature_label,
             flux_name=String(flux_name),
             flux_variable=String(flux_column),
             flux_label=flux_label,
             surface_type=surface_type[sensor_ix],
             measurement_height_m=heights[sensor_ix],
-            n_valid=length(lead_fraction),
-            pearson_r=safe_cor(lead_fraction, flux),
-            spearman_r=safe_cor(tied_ranks(lead_fraction), tied_ranks(flux)),
+            n_valid=length(feature_fraction),
+            pearson_r=safe_cor(feature_fraction, flux),
+            spearman_r=safe_cor(tied_ranks(feature_fraction), tied_ranks(flux)),
         ))
     end
 
@@ -158,36 +219,37 @@ function difference_timeseries(block_data::AbstractDict, flux_names,
     first_df = DataFrame(
         time=first_data[!, :time],
         flux_first=first_data[!, flux_column],
-        lead_first=first_data[!, :footprint_lead_fraction],
+        feature_first=feature_fraction_series(first_data),
     )
     second_df = DataFrame(
         time=second_data[!, :time],
         flux_second=second_data[!, flux_column],
-        lead_second=second_data[!, :footprint_lead_fraction],
+        feature_second=feature_fraction_series(second_data),
     )
     joined = innerjoin(first_df, second_df, on=:time)
 
     flux_difference = (finite_series(joined[!, :flux_first]) .-
                        finite_series(joined[!, :flux_second])) .* conversion_factor
-    lead_difference = finite_series(joined[!, :lead_first]) .-
-                      finite_series(joined[!, :lead_second])
+    feature_difference = finite_series(joined[!, :feature_first]) .-
+                         finite_series(joined[!, :feature_second])
 
-    return joined.time, flux_difference, lead_difference
+    return joined.time, flux_difference, feature_difference
 end
 
-function lead_flux_difference_correlations(difference_specs, block_data::AbstractDict,
-        station_name::AbstractString, surface_type, heights)
+function feature_flux_difference_correlations(difference_specs, block_data::AbstractDict,
+        station_name::AbstractString, surface_type, heights; feature_label::AbstractString="feature")
     rows = []
     for (panel_ix, (flux_names, flux_column, conversion_factor, flux_kind, _)) in
             enumerate(difference_specs)
-        _, flux_difference, lead_difference = difference_timeseries(
+        _, flux_difference, feature_difference = difference_timeseries(
             block_data, flux_names, flux_column, conversion_factor)
-        valid = isfinite.(lead_difference) .& isfinite.(flux_difference)
-        lead_valid = lead_difference[valid]
+        valid = isfinite.(feature_difference) .& isfinite.(flux_difference)
+        feature_valid = feature_difference[valid]
         flux_valid = flux_difference[valid]
         first_name, second_name = flux_names
 
         push!(rows, (
+            feature=feature_label,
             flux_variable=String(flux_column),
             flux_label=String(flux_kind),
             difference_label=sensor_difference_label(flux_names, heights, surface_type),
@@ -195,9 +257,9 @@ function lead_flux_difference_correlations(difference_specs, block_data::Abstrac
             second_surface_type=surface_type[flux_index(second_name)],
             first_measurement_height_m=heights[flux_index(first_name)],
             second_measurement_height_m=heights[flux_index(second_name)],
-            n_valid=length(lead_valid),
-            pearson_r=safe_cor(lead_valid, flux_valid),
-            spearman_r=safe_cor(tied_ranks(lead_valid), tied_ranks(flux_valid)),
+            n_valid=length(feature_valid),
+            pearson_r=safe_cor(feature_valid, flux_valid),
+            spearman_r=safe_cor(tied_ranks(feature_valid), tied_ranks(flux_valid)),
         ))
     end
 
@@ -216,9 +278,11 @@ end
 
 function plot_block_difference_timeseries_panel!(ax, block_data::AbstractDict,
         flux_names, flux_column::Symbol, conversion_factor::Real, flux_kind::AbstractString,
-        flux_ylabel, heights, surface_type, wT_limits, wq_limits; show_xlabel=true, show_ylabel=true, show_right_ylabel=true)
+        flux_ylabel, heights, surface_type, wT_limits, wq_limits;
+        feature_label::AbstractString="feature", show_xlabel=true, show_ylabel=true,
+        show_right_ylabel=true)
     ax_right = ax.twinx()
-    time, flux_difference, lead_difference = difference_timeseries(
+    time, flux_difference, feature_difference = difference_timeseries(
         block_data, flux_names, flux_column, conversion_factor)
     difference_label = sensor_difference_label(flux_names, heights, surface_type)
 
@@ -226,9 +290,9 @@ function plot_block_difference_timeseries_panel!(ax, block_data::AbstractDict,
         flux_line = ax.plot(time, flux_difference, color="black", linewidth=1.1, alpha=0.8,
             label="Flux difference")
     end
-    if any(isfinite, lead_difference)
-        fraction_line = ax_right.plot(time, lead_difference, color="C3", linestyle="--", linewidth=1.0,
-            alpha=0.8, label="Lead fraction difference")
+    if any(isfinite, feature_difference)
+        fraction_line = ax_right.plot(time, feature_difference, color="C3", linestyle="--", linewidth=1.0,
+            alpha=0.8, label="$(feature_label) fraction difference")
     end
 
     ax.axhline(0, color="grey", linewidth=0.8, alpha=0.55)
@@ -237,7 +301,7 @@ function plot_block_difference_timeseries_panel!(ax, block_data::AbstractDict,
     ax.set_ylabel(show_ylabel ? "$(flux_ylabel)" : "")
     ax.set_ylim(symmetric_limits(flux_difference))
     ax.grid(alpha=0.9)
-    ax_right.set_ylabel(show_right_ylabel ? "Lead fraction difference" : "")
+    ax_right.set_ylabel(show_right_ylabel ? "$(feature_label) fraction difference" : "")
     flux_y_label = flux_column==:wT ? wT_limits : wq_limits
     ax.set_ylim(flux_y_label)
     #ax_right.set_ylim(-1.01, 1.01)
@@ -246,23 +310,23 @@ function plot_block_difference_timeseries_panel!(ax, block_data::AbstractDict,
     return ax, ax_right
 end
 
-function plot_lead_flux_difference_panel!(ax, block_data::AbstractDict,
+function plot_feature_flux_difference_panel!(ax, block_data::AbstractDict,
         flux_names, flux_column::Symbol, conversion_factor::Real, flux_kind::AbstractString,
-        flux_ylabel, ylim, surface_type, heights; color="black", show_xlabel=true,
-        show_ylabel=true)
-    _, flux_difference, lead_difference = difference_timeseries(
+        flux_ylabel, ylim, surface_type, heights; feature_label::AbstractString="feature",
+        color="black", show_xlabel=true, show_ylabel=true)
+    _, flux_difference, feature_difference = difference_timeseries(
         block_data, flux_names, flux_column, conversion_factor)
-    valid = isfinite.(lead_difference) .& isfinite.(flux_difference)
+    valid = isfinite.(feature_difference) .& isfinite.(flux_difference)
     difference_label = sensor_difference_label(flux_names, heights, surface_type)
 
-    ax.scatter(lead_difference[valid], flux_difference[valid], s=12, alpha=0.65,
+    ax.scatter(feature_difference[valid], flux_difference[valid], s=12, alpha=0.65,
         color=color, edgecolors="none", zorder=2)
     ax.axhline(0, color="grey", linewidth=0.8, alpha=0.55)
     ax.axvline(0, color="grey", linewidth=0.8, alpha=0.55)
     ax.set_title("$(flux_kind): $(difference_label)")
-    ax.set_xlabel(show_xlabel ? "Lead fraction difference" : "")
+    ax.set_xlabel(show_xlabel ? "$(feature_label) fraction difference" : "")
     ax.set_ylabel(show_ylabel ? flux_ylabel : "")
-    #ax.set_xlim(-1, 1)
+    ax.set_xlim()
     ax.set_ylim(ylim)
     ax.set_axisbelow(true)
     ax.grid(alpha=0.9)
@@ -272,7 +336,8 @@ end
 
 function plot_block_timeseries_panel!(ax, block_data::AbstractDict, flux_names,
         flux_column::Symbol, conversion_factor::Real, ylabel, heights;
-        show_xlabel=false, show_ylabel=true, show_right_ylabel=true, show_legend=true)
+        feature_label::AbstractString="feature", show_xlabel=false, show_ylabel=true,
+        show_right_ylabel=true, show_legend=true)
     ax_right = ax.twinx()
     colors = ["C0", "C1"]
 
@@ -286,9 +351,9 @@ function plot_block_timeseries_panel!(ax, block_data::AbstractDict, flux_names,
             ax.plot(data.time, flux, color=color, linewidth=1.1, label=label)
         end
 
-        lead_fraction = finite_series(data[!, :footprint_lead_fraction])
-        if any(isfinite, lead_fraction) && any(isfinite, flux)
-            ax_right.plot(data.time, lead_fraction, color=color, linestyle="--",
+        feature_fraction = finite_series(feature_fraction_series(data))
+        if any(isfinite, feature_fraction) && any(isfinite, flux)
+            ax_right.plot(data.time, feature_fraction, color=color, linestyle="--",
                 linewidth=1.0, alpha=0.8)
         end
     end
@@ -296,7 +361,7 @@ function plot_block_timeseries_panel!(ax, block_data::AbstractDict, flux_names,
     ax.set_ylabel(show_ylabel ? ylabel : "")
     ax.set_xlabel(show_xlabel ? "Time" : "")
     ax.grid(alpha=0.9)
-    ax_right.set_ylabel(show_right_ylabel ? "Lead fraction" : "")
+    ax_right.set_ylabel(show_right_ylabel ? "$(feature_label) fraction" : "")
     ax_right.set_ylim(0, 1.01)
 
     if show_legend && !isempty(ax.get_legend_handles_labels()[1])

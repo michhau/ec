@@ -416,7 +416,7 @@ function format_fraction_percent(value)
 end
 
 function class_fraction_frame_text(fraction_sets::AbstractVector{<:AbstractDataFrame},
-        labels::AbstractVector, feature::String, frame_index::Integer)
+        labels::AbstractVector, feature_name::String, frame_index::Integer)
     lines = String[]
     for ix in eachindex(fraction_sets)
         fractions = fraction_sets[ix]
@@ -426,7 +426,7 @@ function class_fraction_frame_text(fraction_sets::AbstractVector{<:AbstractDataF
             classified = format_fraction_percent(fractions.classified_weight_fraction[frame_index])
             outside = format_fraction_percent(fractions.outside_weight_fraction[frame_index])
             missing_class = format_fraction_percent(fractions.missing_class_weight_fraction[frame_index])
-            push!(lines, "$(labels[ix]): ice=$(ice), $(feature)=$(feature), classified=$(classified), outside=$(outside), missing=$(missing_class)")
+            push!(lines, "$(labels[ix]): ice=$(ice), $(feature_name)=$(feature), classified=$(classified), outside=$(outside), missing=$(missing_class)")
         else
             push!(lines, "$(labels[ix]): no footprint")
         end
