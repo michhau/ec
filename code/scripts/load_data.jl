@@ -23,7 +23,7 @@ include(joinpath(importdir, "src", "station_config.jl"))
 import .turb
 import .gen
 import .stationcfg
-PyPlot.pygui(true)
+#PyPlot.pygui(true)
 
 ######################################################
 #variables

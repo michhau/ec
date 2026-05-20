@@ -21,7 +21,7 @@ if !@isdefined stationcfg
 end
 import .turb
 import .gen
-PyPlot.pygui(true)
+#PyPlot.pygui(true)
 
 if !@isdefined station_config
     error("Run load_data.jl before turb_fluxes.jl so station_config is available.")
