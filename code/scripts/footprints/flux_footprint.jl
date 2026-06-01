@@ -21,6 +21,7 @@ datapath = "/home/haugened/Documents/data/"
 include(joinpath(importdir, "src", "turb_data.jl"))
 include(joinpath(importdir, "src", "general.jl"))
 include(joinpath(importdir, "src", "kljun_ffp.jl"))
+include(joinpath(importdir, "src", "footprint_plotting.jl"))
 import .turb
 import .gen
 import .kljun
@@ -71,27 +72,18 @@ fluxloc = [1406 1507; 1136 1265; 1136 1265; 1136 1265; 1416 1387; 940 1474]
 #extend of background [row, col]
 #bgextend_m = [280, 280] #in m from measuring in GIS: 279.9
 bgextend_pxl = [size(orthomosaic, 1), size(orthomosaic, 2)] #in pxl
-
-#calculate m/pxl from it
-meterperpxl_row = 0.1 #bgextend_m[1] / bgextend_pxl[1]
-meterperpxl_col = 0.1 #bgextend_m[2] / bgextend_pxl[2]
+bgextend_m = [0.1 * bgextend_pxl[1], 0.1 * bgextend_pxl[2]]
 
 #origin of figure
-figorigin = [1136 1265] #tower 2
+figorigin = [1136, 1265] #tower 2
 
-#calculate fluxloc in new coordinates [m]
-fluxloc_final = Array{Float64}(undef, size(fluxloc, 1), size(fluxloc, 2))
-fluxloc_final[:, 1] = (figorigin[1] .- fluxloc[:, 1]) .* meterperpxl_row
-fluxloc_final[:, 2] = (fluxloc[:, 2] .- figorigin[2])  .* meterperpxl_col
-
-#calculate extend in new coordinates
-lft = (-figorigin[2]) * meterperpxl_col
-rght = (bgextend_pxl[2]-1-figorigin[2]) *meterperpxl_col
-tp = (bgextend_pxl[1]-(figorigin[1]- bgextend_pxl[1])-1) * meterperpxl_row
-btm = (figorigin[1] - bgextend_pxl[1]) * meterperpxl_row
-
-bgextend_final = (-figorigin[2], bgextend_pxl[2]-1-figorigin[2], -(bgextend_pxl[1]-figorigin[1]), bgextend_pxl[1]-(bgextend_pxl[1]-figorigin[1])-1).*meterperpxl_col
-#(lft, rght, btm, tp)
+fluxloc_final, bgextend_final = footprint_background_geometry(
+    fluxloc,
+    bgextend_m,
+    bgextend_pxl,
+    figorigin;
+    image_file=fileorthomosaic,
+)
 
 ##
 ctab10 = PyPlot.cm.tab10

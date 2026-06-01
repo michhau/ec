@@ -31,9 +31,29 @@ wq_limits = [-1.0, 20.0]
 heat_correlation_title = "1b position 1 pond - 25.07.2025 to 27.07.2025"
 
 [footprint]
-wind_direction_offsets = [0.0, 0.0, 0.0, 0.0]
-orthomosaic = "/home/haugened/Documents/data/CONTRASTS/pics/setups/1b/map 270725_cut.jpg"
+wind_direction_offsets = [270.0, 270.0, 270.0, 270.0]
+orthomosaic = "/home/haugened/Documents/data/CONTRASTS/pics/setups/2b/22_cut.jpeg"
 fluxloc = [[627, 1381], [627, 1381], [549, 1486], [549, 1486]]
-bgextend_m = [263.182, 316.09]
-bgextend_pxl = [2165, 2204]
 figorigin = [627, 1381]
+
+[block_footprints]
+classes_file = "/home/haugened/Documents/data/CONTRASTS/pics/setups/2b/karte 140725_cut_classes.jpg"
+feature = "pond"
+crit_ice_red_bigger_eq = 222
+crit_ice_red_smaller_eq = 255
+crit_ice_green_bigger_eq = 222
+crit_ice_green_smaller_eq = 255
+crit_ice_blue_bigger_eq = 222
+crit_ice_blue_smaller_eq = 255
+crit_feature_red_bigger_eq = 0
+crit_feature_red_smaller_eq = 1
+crit_feature_green_bigger_eq = 0
+crit_feature_green_smaller_eq = 1
+crit_feature_blue_bigger_eq = 0
+crit_feature_blue_smaller_eq = 1
+wT_limits_diff_timeseries = [-10, 10]
+wq_limits_diff_timeseries = [-10, 10]
+
+[block_analysis]
+subplot_order = ["fx4", "fx2", "fx3", "fx1"]
+latent_subplot_order = ["fx3", "fx1"]

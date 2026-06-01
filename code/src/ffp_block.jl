@@ -9,10 +9,12 @@ import PyPlot
 
 import ..kljun
 import ..turb
+include(joinpath(@__DIR__, "footprint_plotting.jl"))
 
 export block_footprint_inputs, calculate_footprints, extract_block_fluxes,
     footprint_dict, full_block_indices, nan_footprint, nanmean, nanstd,
-    rows_per_period, footprint_background_geometry, footprint_contour_xy,
+    rows_per_period, footprint_background_geometry, footprint_meterperpxl,
+    footprint_world_file, footprint_contour_xy,
     save_block_footprint_animation, block_fluxes_netcdf_path,
     save_block_fluxes_netcdf, read_block_fluxes_netcdf#, valid_footprint_inputs
 
@@ -173,25 +175,6 @@ function calculate_footprints(inputs::DataFrame, zm::Real, rs, rslayer::Bool, nr
     end
 
     return footprints
-end
-
-function footprint_background_geometry(fluxloc::AbstractMatrix, bgextend_m::AbstractVector,
-        bgextend_pxl::AbstractVector, figorigin::AbstractVector)
-    meterperpxl_row = bgextend_m[1] / bgextend_pxl[1]
-    meterperpxl_col = bgextend_m[2] / bgextend_pxl[2]
-
-    fluxloc_final = Array{Float64}(undef, size(fluxloc, 1), size(fluxloc, 2))
-    fluxloc_final[:, 1] = (figorigin[1] .- fluxloc[:, 1]) .* meterperpxl_row
-    fluxloc_final[:, 2] = (fluxloc[:, 2] .- figorigin[2]) .* meterperpxl_col
-
-    bgextend_final = (
-        -figorigin[2],
-        bgextend_pxl[2] - 1 - figorigin[2],
-        -(bgextend_pxl[1] - figorigin[1]),
-        bgextend_pxl[1] - (bgextend_pxl[1] - figorigin[1]) - 1,
-    ) .* meterperpxl_col
-
-    return fluxloc_final, bgextend_final
 end
 
 function contour_level_index(contours::AbstractMatrix, contour_offset::Integer)
@@ -395,7 +378,13 @@ function save_block_footprint_animation(footprint_sets::AbstractVector, input_se
     mpimg = pyimport("matplotlib.image")
 
     orthomosaic = mpimg.imread(String(orthomosaic_file))
-    fluxloc_final, bgextend_final = footprint_background_geometry(fluxloc, bgextend_m, bgextend_pxl, figorigin)
+    fluxloc_final, bgextend_final = footprint_background_geometry(
+        fluxloc,
+        bgextend_m,
+        bgextend_pxl,
+        figorigin;
+        image_file=orthomosaic_file,
+    )
 
     fig = PyPlot.figure(figsize=figsize)
     ax = fig.add_subplot(111)
