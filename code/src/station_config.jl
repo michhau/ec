@@ -1,6 +1,7 @@
 module stationcfg
 
 using Dates
+using Sockets: gethostname
 using TOML
 
 export available_station_names, load_station_config, optional_key, plot_dir,
@@ -8,8 +9,43 @@ export available_station_names, load_station_config, optional_key, plot_dir,
        station_label, station_labels, toml_matrix
 
 const DEFAULT_CONFIG_DIR = normpath(joinpath(@__DIR__, "..", "..", "config", "stations"))
+const REMOTE_HOSTNAME = "slfl29682"
+const REMOTE_GVFS_PREFIX = "/run/user/1000/gvfs/sftp:host=10.37.10.38/"
 
 _key(key) = String(key)
+
+function remote_gvfs_path(path::AbstractString)
+    path_string = String(path)
+    startswith(path_string, REMOTE_GVFS_PREFIX) && return path_string
+    isabspath(path_string) || return path_string
+    return REMOTE_GVFS_PREFIX * lstrip(path_string, '/')
+end
+
+function prefix_absolute_paths!(value)
+    if value isa AbstractDict
+        for (key, item) in value
+            if item isa AbstractString
+                value[key] = remote_gvfs_path(item)
+            else
+                prefix_absolute_paths!(item)
+            end
+        end
+    elseif value isa AbstractVector
+        for index in eachindex(value)
+            item = value[index]
+            if item isa AbstractString
+                value[index] = remote_gvfs_path(item)
+            else
+                prefix_absolute_paths!(item)
+            end
+        end
+    end
+
+    return value
+end
+
+prefix_remote_config_paths!(config::AbstractDict) =
+    gethostname() == REMOTE_HOSTNAME ? config : prefix_absolute_paths!(config)
 
 function available_station_names(; config_dir::AbstractString=DEFAULT_CONFIG_DIR)
     isdir(config_dir) || return String[]
@@ -36,6 +72,7 @@ function load_station_config(station_name::AbstractString;
     configured_id == station_id || error(
         "Config id '$configured_id' does not match file station '$station_id'."
     )
+    prefix_remote_config_paths!(config)
     config["config_file"] = config_file
     return config
 end
