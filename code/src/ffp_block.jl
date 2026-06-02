@@ -5,6 +5,7 @@
 module ffp_block
 
 using Dates, DataFrames, Statistics, ProgressMeter, PyCall, NCDatasets
+using Images
 import PyPlot
 
 import ..kljun
@@ -362,8 +363,9 @@ function read_block_fluxes_netcdf(source::AbstractString;
 end
 
 function save_block_footprint_animation(footprint_sets::AbstractVector, input_sets::AbstractVector,
-        orthomosaic_file::AbstractString, fluxloc::AbstractMatrix, bgextend_m::AbstractVector,
-        bgextend_pxl::AbstractVector, figorigin::AbstractVector, labels::AbstractVector,
+        orthomosaic_file::AbstractString, fluxloc::AbstractMatrix,
+        bgextend_m::Union{AbstractVector, Nothing}, bgextend_pxl::Union{AbstractVector, Nothing},
+        figorigin::AbstractVector, labels::AbstractVector,
         contour_indices::AbstractVector{<:Integer}, output_file::AbstractString;
         station_label::AbstractString="", interval::Integer=250, fps::Integer=4,
         dpi::Integer=150, figsize=(10, 8))
@@ -378,12 +380,14 @@ function save_block_footprint_animation(footprint_sets::AbstractVector, input_se
     mpimg = pyimport("matplotlib.image")
 
     orthomosaic = mpimg.imread(String(orthomosaic_file))
+    orthomosaic_jl = load(String(orthomosaic_file))
     fluxloc_final, bgextend_final = footprint_background_geometry(
         fluxloc,
         bgextend_m,
         bgextend_pxl,
         figorigin;
         image_file=orthomosaic_file,
+        image_size=size(orthomosaic_jl),
     )
 
     fig = PyPlot.figure(figsize=figsize)

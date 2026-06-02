@@ -9,6 +9,7 @@ meterisation for Flux Footprint Prediction (FFP), gmd
 need to run turb_fluxes before for eg. Obukhov-length
 =#
 using Dates, PyCall, DataFrames, Statistics, LaTeXStrings, ProgressMeter
+using Images
 import PyPlot, CSV
 pydates = pyimport("matplotlib.dates")
 gridspec = pyimport("matplotlib.gridspec")
@@ -66,7 +67,7 @@ function footprint_contour(contours, end_offset::Integer)
 end
 
 #optional input
-domain = nothing
+domain = [nothing]#[-1e6, 1e6, -1e6, 1e6]
 dx = nothing
 dy = nothing
 nx = nothing
@@ -115,7 +116,7 @@ for ix in 1:size(names, 1)
     end
 
     output = py"FFP_climatology"(meas_heights[ix], nothing, PyVector(umean), PyVector(h), PyVector(ol),
-    PyVector(sigmav), PyVector(ustar), PyVector(wind_dir), domain, dx, dy, nx, ny, PyVector(rs), rslayer, smooth_data, crop, pulse, verbosity, fig)
+    PyVector(sigmav), PyVector(ustar), PyVector(wind_dir), PyVector(domain), dx, dy, nx, ny, PyVector(rs), rslayer, smooth_data, crop, pulse, verbosity, fig)
     if output["flag_err"] != 0
         @warn("Error flag set to true! There is an error!")
     end
@@ -127,14 +128,17 @@ end
 
 fileorthomosaic = String(stationcfg.require_key(station_config, "footprint", "orthomosaic"))
 orthomosaic = mpimg.imread(fileorthomosaic)
+orthomosaic_jl = load(fileorthomosaic)
 #PyPlot.imshow(orthomosaic)
 #location of flux measurements 1-6 in original image
 #[row-location, col-location]
 fluxloc = stationcfg.toml_matrix(stationcfg.require_key(station_config, "footprint", "fluxloc"); T=Float64)
 
-#extend of background [row, col]
-bgextend_m = Float64.(stationcfg.require_key(station_config, "footprint", "bgextend_m")) #in m from measuring in GIS
-bgextend_pxl = Float64.(stationcfg.require_key(station_config, "footprint", "bgextend_pxl")) #[size(orthomosaic, 1), size(orthomosaic, 2)] #in pxl
+#fallback extent of background [row, col], used only when no world file exists
+bgextend_m_config = stationcfg.optional_key(station_config, nothing, "footprint", "bgextend_m")
+bgextend_pxl_config = stationcfg.optional_key(station_config, nothing, "footprint", "bgextend_pxl")
+bgextend_m = isnothing(bgextend_m_config) ? nothing : Float64.(bgextend_m_config)
+bgextend_pxl = isnothing(bgextend_pxl_config) ? nothing : Float64.(bgextend_pxl_config)
 
 #origin of figure
 figorigin = Float64.(stationcfg.require_key(station_config, "footprint", "figorigin"))
@@ -145,6 +149,7 @@ fluxloc_final, bgextend_final = footprint_background_geometry(
     bgextend_pxl,
     figorigin;
     image_file=fileorthomosaic,
+    image_size=size(orthomosaic_jl),
 )
 
 ##

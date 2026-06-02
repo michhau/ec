@@ -69,10 +69,14 @@ orthomosaic = mpimg.imread(fileorthomosaic)
 #[row-location, col-location]
 fluxloc = [1406 1507; 1136 1265; 1136 1265; 1136 1265; 1416 1387; 940 1474]
 
-#extend of background [row, col]
-#bgextend_m = [280, 280] #in m from measuring in GIS: 279.9
-bgextend_pxl = [size(orthomosaic, 1), size(orthomosaic, 2)] #in pxl
-bgextend_m = [0.1 * bgextend_pxl[1], 0.1 * bgextend_pxl[2]]
+#fallback extent of background [row, col], used only when no world file exists
+bgextend_m = nothing
+bgextend_pxl = nothing
+if !isfile(footprint_world_file(fileorthomosaic))
+    #bgextend_m = [280, 280] #in m from measuring in GIS: 279.9
+    bgextend_pxl = [size(orthomosaic, 1), size(orthomosaic, 2)] #in pxl
+    bgextend_m = [0.1 * bgextend_pxl[1], 0.1 * bgextend_pxl[2]]
+end
 
 #origin of figure
 figorigin = [1136, 1265] #tower 2
@@ -83,6 +87,7 @@ fluxloc_final, bgextend_final = footprint_background_geometry(
     bgextend_pxl,
     figorigin;
     image_file=fileorthomosaic,
+    image_size=size(orthomosaic),
 )
 
 ##

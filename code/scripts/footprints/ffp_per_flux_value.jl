@@ -112,8 +112,10 @@ plot_footprints = true
 if plot_footprints
     fileorthomosaic = String(stationcfg.require_key(station_config, "footprint", "orthomosaic"))
     fluxloc = stationcfg.toml_matrix(stationcfg.require_key(station_config, "footprint", "fluxloc"); T=Float64)
-    bgextend_m = Float64.(stationcfg.require_key(station_config, "footprint", "bgextend_m"))
-    bgextend_pxl = Float64.(stationcfg.require_key(station_config, "footprint", "bgextend_pxl"))
+    bgextend_m_config = stationcfg.optional_key(station_config, nothing, "footprint", "bgextend_m")
+    bgextend_pxl_config = stationcfg.optional_key(station_config, nothing, "footprint", "bgextend_pxl")
+    bgextend_m = isnothing(bgextend_m_config) ? nothing : Float64.(bgextend_m_config)
+    bgextend_pxl = isnothing(bgextend_pxl_config) ? nothing : Float64.(bgextend_pxl_config)
     figorigin = Float64.(stationcfg.require_key(station_config, "footprint", "figorigin"))
     footprint_labels = @isdefined(instr_labels) ? instr_labels : stationcfg.station_labels(station_config)
 
@@ -140,10 +142,11 @@ end
 ##################################################
 # Combine with a drone overview image to classify
 using Images
-classes_img = load(String(station_config["block_footprints"]["classes_file"]))
+classes_file = String(station_config["block_footprints"]["classes_file"])
+classes_img = load(classes_file)
 #for plotting
 mpimg = pyimport("matplotlib.image")
-classes_img_pyplot = mpimg.imread(String(station_config["block_footprints"]["classes_file"]))
+classes_img_pyplot = mpimg.imread(classes_file)
 
 """
     read_criterion_from_config(config)
@@ -221,12 +224,15 @@ PyPlot.imshow(check_plot_array)
 =#
 
 classes_fluxloc_pxl = stationcfg.toml_matrix(stationcfg.require_key(station_config, "footprint", "fluxloc"); T=Float64)
-classes_extend_m = Float64.(stationcfg.require_key(station_config, "footprint", "bgextend_m"))
-classes_extend_pxl = Float64.(stationcfg.require_key(station_config, "footprint", "bgextend_pxl"))
+classes_extend_m_config = stationcfg.optional_key(station_config, nothing, "footprint", "bgextend_m")
+classes_extend_pxl_config = stationcfg.optional_key(station_config, nothing, "footprint", "bgextend_pxl")
+classes_extend_m = isnothing(classes_extend_m_config) ? nothing : Float64.(classes_extend_m_config)
+classes_extend_pxl = isnothing(classes_extend_pxl_config) ? nothing : Float64.(classes_extend_pxl_config)
 classes_figorigin_pxl = Float64.(stationcfg.require_key(station_config, "footprint", "figorigin"))
 
-classes_meterperpxl_row = classes_extend_m[1] / classes_extend_pxl[1]
-classes_meterperpxl_col = classes_extend_m[2] / classes_extend_pxl[2]
+classes_scale = ffp_block.footprint_meterperpxl(classes_file, classes_extend_m, classes_extend_pxl)
+classes_meterperpxl_row = classes_scale.meterperpxl_row
+classes_meterperpxl_col = classes_scale.meterperpxl_col
 classes_coordinates_zero_based = true
 
 """
@@ -392,23 +398,18 @@ end
 block_fluxes_output_file = ffp_block.save_block_fluxes_netcdf(block_fluxes_all, station_id)
 println("Saved block fluxes to ", block_fluxes_output_file)
 
-function class_background_geometry(fluxloc::AbstractMatrix, bgextend_m::AbstractVector,
-        bgextend_pxl::AbstractVector, figorigin::AbstractVector)
-    meterperpxl_row = bgextend_m[1] / bgextend_pxl[1]
-    meterperpxl_col = bgextend_m[2] / bgextend_pxl[2]
-
-    fluxloc_final = Array{Float64}(undef, size(fluxloc, 1), size(fluxloc, 2))
-    fluxloc_final[:, 1] = (figorigin[1] .- fluxloc[:, 1]) .* meterperpxl_row
-    fluxloc_final[:, 2] = (fluxloc[:, 2] .- figorigin[2]) .* meterperpxl_col
-
-    bgextend_final = (
-        -figorigin[2] * meterperpxl_col,
-        (bgextend_pxl[2] - 1 - figorigin[2]) * meterperpxl_col,
-        -(bgextend_pxl[1] - figorigin[1]) * meterperpxl_row,
-        (figorigin[1] - 1) * meterperpxl_row,
+function class_background_geometry(fluxloc::AbstractMatrix,
+        bgextend_m::Union{AbstractVector, Nothing},
+        bgextend_pxl::Union{AbstractVector, Nothing}, figorigin::AbstractVector;
+        image_file::Union{AbstractString, Nothing}=nothing, image_size=nothing)
+    return ffp_block.footprint_background_geometry(
+        fluxloc,
+        bgextend_m,
+        bgextend_pxl,
+        figorigin;
+        image_file=image_file,
+        image_size=image_size,
     )
-
-    return fluxloc_final, bgextend_final
 end
 
 function format_fraction_percent(value)
@@ -436,11 +437,12 @@ end
 
 function save_class_fraction_animation(footprint_sets::AbstractVector,
         fraction_sets::AbstractVector{<:AbstractDataFrame}, class_image, feature::String,
-        fluxloc::AbstractMatrix, bgextend_m::AbstractVector, bgextend_pxl::AbstractVector,
-        figorigin::AbstractVector, labels::AbstractVector,
-        contour_indices::AbstractVector{<:Integer}, output_file::AbstractString;
-        station_label::AbstractString="", interval::Integer=250, fps::Integer=4,
-        dpi::Integer=150, figsize=(10, 8))
+        fluxloc::AbstractMatrix, bgextend_m::Union{AbstractVector, Nothing},
+        bgextend_pxl::Union{AbstractVector, Nothing}, figorigin::AbstractVector,
+        labels::AbstractVector, contour_indices::AbstractVector{<:Integer},
+        output_file::AbstractString; station_label::AbstractString="",
+        class_image_file::Union{AbstractString, Nothing}=nothing,
+        interval::Integer=250, fps::Integer=4, dpi::Integer=150, figsize=(10, 8))
 
     length(footprint_sets) == length(fraction_sets) || error("footprint_sets and fraction_sets must have the same length.")
     length(footprint_sets) == length(labels) || error("footprint_sets and labels must have the same length.")
@@ -449,7 +451,14 @@ function save_class_fraction_animation(footprint_sets::AbstractVector,
     nframes > 0 || error("No footprint blocks available for animation.")
 
     animation = pyimport("matplotlib.animation")
-    fluxloc_final, bgextend_final = class_background_geometry(fluxloc, bgextend_m, bgextend_pxl, figorigin)
+    fluxloc_final, bgextend_final = class_background_geometry(
+        fluxloc,
+        bgextend_m,
+        bgextend_pxl,
+        figorigin;
+        image_file=class_image_file,
+        image_size=size(class_image),
+    )
 
     fig = PyPlot.figure(figsize=figsize)
     ax = fig.add_subplot(111)
@@ -540,6 +549,7 @@ if plot_class_fraction_animation
         contour_indices,
         class_animation_output_file;
         station_label=station_label,
+        class_image_file=classes_file,
     )
     println("Saved class footprint animation to ", class_animation_file)
 end

@@ -2,7 +2,7 @@ id = "2b"
 label = "2b"
 file_stem = "2b"
 evalstart = "2023-07-27T10:10:00"
-evalend = "2027-07-27T09:10:00"
+evalend = "2025-07-31T01:15:00"
 data_root = "/home/haugened/Documents/data/CONTRASTS/EC_offline_preproc/cut/"
 data_files = [
     "2b_t1_irg_proc_cut.nc",
@@ -31,13 +31,14 @@ wq_limits = [-1.0, 20.0]
 heat_correlation_title = "1b position 1 pond - 25.07.2025 to 27.07.2025"
 
 [footprint]
-wind_direction_offsets = [270.0, 270.0, 270.0, 270.0]
+wind_direction_offsets = [258.0, 270.0, 258.0, 265.0]
 orthomosaic = "/home/haugened/Documents/data/CONTRASTS/pics/setups/2b/22_cut.jpeg"
-fluxloc = [[627, 1381], [627, 1381], [549, 1486], [549, 1486]]
-figorigin = [627, 1381]
+fluxloc = [[4275, 10245], [4275, 10245], [4142, 10570], [4142, 10570]]
+figorigin = [4275, 10245]
+contour_indices = [-1, -1, -1, -1]
 
 [block_footprints]
-classes_file = "/home/haugened/Documents/data/CONTRASTS/pics/setups/2b/karte 140725_cut_classes.jpg"
+classes_file = "/home/haugened/Documents/data/CONTRASTS/pics/setups/2b/22_cut_classes.jpeg"
 feature = "pond"
 crit_ice_red_bigger_eq = 222
 crit_ice_red_smaller_eq = 255
