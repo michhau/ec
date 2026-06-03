@@ -47,14 +47,14 @@ crit_ice_green_smaller_eq = 255
 crit_ice_blue_bigger_eq = 222
 crit_ice_blue_smaller_eq = 255
 crit_feature_red_bigger_eq = 0
-crit_feature_red_smaller_eq = 1
+crit_feature_red_smaller_eq = 229
 crit_feature_green_bigger_eq = 0
-crit_feature_green_smaller_eq = 1
+crit_feature_green_smaller_eq = 255
 crit_feature_blue_bigger_eq = 0
-crit_feature_blue_smaller_eq = 1
+crit_feature_blue_smaller_eq = 255
 wT_limits_diff_timeseries = [-10, 10]
 wq_limits_diff_timeseries = [-10, 10]
 
 [block_analysis]
-subplot_order = ["fx4", "fx2", "fx3", "fx1"]
-latent_subplot_order = ["fx3", "fx1"]
+subplot_order = ["fx2", "fx4", "fx1", "fx3"]
+latent_subplot_order = ["fx1", "fx3"]
