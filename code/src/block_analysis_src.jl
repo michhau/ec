@@ -326,7 +326,7 @@ function plot_feature_flux_difference_panel!(ax, block_data::AbstractDict,
     ax.set_title("$(flux_kind): $(difference_label)")
     ax.set_xlabel(show_xlabel ? "$(feature_label) fraction difference" : "")
     ax.set_ylabel(show_ylabel ? flux_ylabel : "")
-    ax.set_xlim()
+    #ax.set_xlim()
     ax.set_ylim(ylim)
     ax.set_axisbelow(true)
     ax.grid(alpha=0.9)
