@@ -143,7 +143,10 @@ end
 # Combine with a drone overview image to classify
 using Images
 classes_file = String(station_config["block_footprints"]["classes_file"])
+classes_reference_file = String(stationcfg.require_key(station_config, "footprint", "orthomosaic"))
+classes_scale_file = isfile(ffp_block.footprint_world_file(classes_file)) ? classes_file : classes_reference_file
 classes_img = load(classes_file)
+classes_img_size = size(classes_img)
 #for plotting
 mpimg = pyimport("matplotlib.image")
 classes_img_pyplot = mpimg.imread(classes_file)
@@ -184,7 +187,8 @@ end
 """
     create_classes_array(img::Matrix{RGB{N0f8}}, )
 
-Create a class array with surface classes from an input image. Criterions need to be hard coded!
+Create a class array with surface classes from an input image.
+Criterions need to be set in the config file!
 """
 function create_classes_array(img::Matrix{RGB{N0f8}},
     ice_crit::Vector, feature_crit::Vector)::Array{Union{Missing, Bool}}
@@ -218,6 +222,7 @@ surface_feature = String(station_config["block_footprints"]["feature"])
 classes_array = create_classes_array(classes_img, ice_crit_rgb, feature_crit_rgb)
 
 #=
+PyPlot.pygui(true)
 check_plot_array = replace(classes_array, missing => NaN)
 PyPlot.figure()
 PyPlot.imshow(check_plot_array)
@@ -230,7 +235,7 @@ classes_extend_m = isnothing(classes_extend_m_config) ? nothing : Float64.(class
 classes_extend_pxl = isnothing(classes_extend_pxl_config) ? nothing : Float64.(classes_extend_pxl_config)
 classes_figorigin_pxl = Float64.(stationcfg.require_key(station_config, "footprint", "figorigin"))
 
-classes_scale = ffp_block.footprint_meterperpxl(classes_file, classes_extend_m, classes_extend_pxl)
+classes_scale = ffp_block.footprint_meterperpxl(classes_scale_file, classes_extend_m, classes_extend_pxl)
 classes_meterperpxl_row = classes_scale.meterperpxl_row
 classes_meterperpxl_col = classes_scale.meterperpxl_col
 classes_coordinates_zero_based = true
@@ -436,12 +441,13 @@ function class_fraction_frame_text(fraction_sets::AbstractVector{<:AbstractDataF
 end
 
 function save_class_fraction_animation(footprint_sets::AbstractVector,
-        fraction_sets::AbstractVector{<:AbstractDataFrame}, class_image, feature::String,
+        fraction_sets::AbstractVector{<:AbstractDataFrame}, class_image,
+        class_img_size::Tuple{Int64, Int64}, feature::String,
         fluxloc::AbstractMatrix, bgextend_m::Union{AbstractVector, Nothing},
         bgextend_pxl::Union{AbstractVector, Nothing}, figorigin::AbstractVector,
         labels::AbstractVector, contour_indices::AbstractVector{<:Integer},
         output_file::AbstractString; station_label::AbstractString="",
-        class_image_file::Union{AbstractString, Nothing}=nothing,
+        class_scale_file::Union{AbstractString, Nothing}=nothing,
         interval::Integer=250, fps::Integer=4, dpi::Integer=150, figsize=(10, 8))
 
     length(footprint_sets) == length(fraction_sets) || error("footprint_sets and fraction_sets must have the same length.")
@@ -456,8 +462,8 @@ function save_class_fraction_animation(footprint_sets::AbstractVector,
         bgextend_m,
         bgextend_pxl,
         figorigin;
-        image_file=class_image_file,
-        image_size=size(class_image),
+        image_file=class_scale_file,
+        image_size=class_img_size,
     )
 
     fig = PyPlot.figure(figsize=figsize)
@@ -540,6 +546,7 @@ if plot_class_fraction_animation
         footprint_sets,
         fraction_sets,
         classes_img_pyplot,
+        classes_img_size,
         surface_feature,
         classes_fluxloc_pxl,
         classes_extend_m,
@@ -549,7 +556,7 @@ if plot_class_fraction_animation
         contour_indices,
         class_animation_output_file;
         station_label=station_label,
-        class_image_file=classes_file,
+        class_scale_file=classes_scale_file,
     )
     println("Saved class footprint animation to ", class_animation_file)
 end
