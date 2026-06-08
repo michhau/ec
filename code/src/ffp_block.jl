@@ -154,6 +154,20 @@ function calculate_footprints(inputs::DataFrame, zm::Real, rs, rslayer::Bool, nr
             "wind_dir" => inputs.wind_dir[j],
         )
 
+        required_inputs = (
+        input_dict["zm"],
+        input_dict["umean"],
+        input_dict["h"],
+        input_dict["ol"],
+        input_dict["sigmav"],
+        input_dict["ustar"],
+        input_dict["wind_dir"])
+
+        if !all(value -> value isa Real && isfinite(Float64(value)), required_inputs)
+            footprints[j] = nan_footprint(rs, "non-finite footprint input", input_dict)
+            continue
+        end
+
         try
             result = kljun.ffp(
                 zm,
