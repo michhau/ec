@@ -88,6 +88,7 @@ for ix in 1:size(names, 1)
     ecdata = @eval $(names[ix])
     turb.missing2nan!(ecdata)
     fluxdata = @eval $(fluxes[ix])
+    turb.missing2nan!(fluxdata)
     obukl = fluxdata.L_highfreq
     wd_tmp = @eval $(wd[ix])
 

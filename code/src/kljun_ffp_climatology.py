@@ -439,6 +439,25 @@ def FFP_climatology(zm=None, z0=None, umean=None, h=None, ol=None, sigmav=None, 
 #===============================================================================
 #===============================================================================
 def check_ffp_inputs(ustar, sigmav, h, ol, wind_dir, zm, z0, umean, rslayer, verbosity):
+    import numpy as np
+
+    # Check for NaN inputs
+    def finite(value):
+        try:
+            return value is not None and np.isfinite(float(value))
+        except (TypeError, ValueError):
+            return False
+
+    required = [ustar, sigmav, h, ol, wind_dir, zm]
+    if not all(finite(value) for value in required):
+        return False
+
+    if z0 is not None and not finite(z0):
+        return False
+
+    if z0 is None and not finite(umean):
+        return False
+
     # Check passed values for physical plausibility and consistency
     if zm <= 0.:
         raise_ffp_exception(2, verbosity)
