@@ -5,7 +5,7 @@
 
 module block_analyze
 
-using DataFrames, Statistics
+using DataFrames, Statistics, Dates, LaTeXStrings
 
 export add_axes_diagonal!, column_title, finite_series, flux_index,
     feature_file_label, feature_flux_correlations, feature_flux_difference_correlations,
@@ -13,10 +13,12 @@ export add_axes_diagonal!, column_title, finite_series, flux_index,
     plot_block_difference_timeseries_panel!, plot_block_timeseries_panel!,
     plot_feature_flux_difference_panel!, plot_feature_flux_panel!, safe_cor,
     read_subplot_order, scatter_xy, sensor_difference_label, tied_ranks, valid_feature_value,
-    valid_number
+    valid_number, normalize_colored_scatter_variable, colored_scatter_prerequisite_note,
+    colored_scatter_time_origin, colored_difference_data, colored_scatter_colorbar_label
 
 const FEATURE_FRACTION_COLUMN = :footprint_feature_fraction
 const LEGACY_FRACTION_COLUMN = :footprint_lead_fraction
+const CLASSIFIED_WEIGHT_FRACTION_COLUMN = :footprint_classified_weight_fraction
 
 function valid_number(value)
     return !ismissing(value) && value isa Number && isfinite(Float64(value))
@@ -86,7 +88,24 @@ function feature_fraction_column(data::AbstractDataFrame)
     error("Block data must contain :$(FEATURE_FRACTION_COLUMN).")
 end
 
-feature_fraction_series(data::AbstractDataFrame) = data[!, feature_fraction_column(data)]
+function feature_fraction_series(data::AbstractDataFrame)
+    feature_column = feature_fraction_column(data)
+    feature_fraction = data[!, feature_column]
+
+    if feature_column == FEATURE_FRACTION_COLUMN &&
+            CLASSIFIED_WEIGHT_FRACTION_COLUMN in propertynames(data)
+        # Stored feature fractions are conditional on classified pixels; scale them back
+        # to the whole footprint so outside/missing surface stays unknown downstream.
+        classified_fraction = data[!, CLASSIFIED_WEIGHT_FRACTION_COLUMN]
+        return [
+            valid_number(feature_fraction[ix]) && valid_number(classified_fraction[ix]) ?
+                Float64(feature_fraction[ix]) * Float64(classified_fraction[ix]) : missing
+            for ix in eachindex(feature_fraction)
+        ]
+    end
+
+    return feature_fraction
+end
 
 function scatter_xy(data::AbstractDataFrame, flux_column::Symbol, conversion_factor::Real)
     feature_fraction = feature_fraction_series(data)
@@ -369,6 +388,192 @@ function plot_block_timeseries_panel!(ax, block_data::AbstractDict, flux_names,
     end
 
     return ax, ax_right
+end
+
+function normalize_colored_scatter_variable(value)
+    raw = lowercase(strip(String(value)))
+    if raw == "u"
+        return "u"
+    elseif raw == "wt"
+        return "wT"
+    elseif raw == "wq"
+        return "wq"
+    elseif raw == "time"
+        return "time"
+    elseif raw in ("wind_dir", "winddir", "wind_direction", "wd")
+        return "wind_dir"
+    end
+
+    error("colored_scatter_variable must be one of \"u\", \"wT\", \"wq\", \"time\", or \"wind_dir\".")
+end
+
+function colored_scatter_prerequisite_note(color_variable::AbstractString)
+    if color_variable == "u"
+        return "Source variable: load_data.jl. Rerun load_data.jl, turb_fluxes.jl, and ffp_per_flux_value.jl so :u is written to the block NetCDF."
+    elseif color_variable == "wind_dir"
+        return "Source variable: load_data.jl. Rerun load_data.jl, turb_fluxes.jl, and ffp_per_flux_value.jl so :wind_dir is written to the block NetCDF."
+    elseif color_variable == "wT" || color_variable == "wq"
+        return "Source variable: turb_fluxes.jl. Rerun load_data.jl, turb_fluxes.jl, and ffp_per_flux_value.jl so fluxes are written to the block NetCDF."
+    elseif color_variable == "time"
+        return "Time should be written by ffp_per_flux_value.jl; rerun it if the block NetCDF is stale."
+    end
+
+    return ""
+end
+
+function colored_scatter_color_column(color_variable::AbstractString)
+    color_variable == "u" && return :u
+    color_variable == "wT" && return :wT
+    color_variable == "wq" && return :wq
+    color_variable == "wind_dir" && return :wind_dir
+    error("No data column for color variable \"$(color_variable)\".")
+end
+
+function colored_scatter_conversion_factor(color_variable::AbstractString)
+    ρ_air = 1.2 #kg m^{-3}
+    c_p = 1004 #J kg^{-1} K^{-1}
+    L_v = 2500e3 #J kg^{-1} (approx @0°C)
+    color_variable == "wT" && return ρ_air * c_p
+    color_variable == "wq" && return L_v * 1e-3
+    return 1.0
+end
+
+function colored_scatter_colorbar_label(color_variable::AbstractString, time_origin)
+    if color_variable == "u"
+        return L"\overline{u}~\mathrm{[m~s^{-1}]}"
+    elseif color_variable == "wind_dir"
+        return L"\overline{\alpha}~\mathrm{[^\circ]}"
+    elseif color_variable == "wT"
+        return L"\overline{w'T'}~\mathrm{[W~m^{-2}]}"
+    elseif color_variable == "wq"
+        return L"\overline{w'q'}~\mathrm{[W~m^{-2}]}"
+    elseif color_variable == "time" && !isnothing(time_origin)
+        return "time since $(Dates.format(time_origin, "yyyy-mm-dd HH:MM")) [h]"
+    end
+
+    return color_variable
+end
+
+function colored_scatter_time_origin(block_data::AbstractDict, difference_specs)
+    times = DateTime[]
+    for (flux_names, _, _, _, _) in difference_specs
+        for flux_name in flux_names
+            data = block_data[flux_name]
+            :time in propertynames(data) || continue
+            append!(times, [time for time in data.time if time isa DateTime])
+        end
+    end
+
+    return isempty(times) ? nothing : minimum(times)
+end
+
+function colored_scatter_elapsed_hours(value, time_origin)
+    value isa DateTime && time_origin isa DateTime || return NaN
+    return Dates.value(value - time_origin) / (1000 * 60 * 60)
+end
+
+function mean_wind_direction_pair(first_value, second_value)
+    valid_number(first_value) && valid_number(second_value) || return NaN
+
+    angles_rad = deg2rad.([Float64(first_value), Float64(second_value)])
+    east_component = mean(sin.(angles_rad))
+    north_component = mean(cos.(angles_rad))
+    return mod(rad2deg(atan(east_component, north_component)), 360)
+end
+
+function colored_scatter_pair_value(first_value, second_value, color_variable::AbstractString)
+    block_analyze.valid_number(first_value) && block_analyze.valid_number(second_value) || return NaN
+
+    first_number = Float64(first_value)
+    second_number = Float64(second_value)
+    if color_variable == "wind_dir"
+        return mean_wind_direction_pair(first_number, second_number)
+    end
+    if color_variable == "wT" || color_variable == "wq"
+        return 0.5 * (first_number + second_number) *
+            colored_scatter_conversion_factor(color_variable)
+    end
+
+    return 0.5 * (first_number + second_number)
+end
+
+function empty_colored_difference_data(message::AbstractString)
+    return (
+        available=false,
+        message=String(message),
+        time=DateTime[],
+        feature_difference=Float64[],
+        flux_difference=Float64[],
+        color_values=Float64[],
+    )
+end
+
+function colored_difference_data(block_data::AbstractDict, flux_names,
+        flux_column::Symbol, conversion_factor::Real, color_variable::AbstractString,
+        time_origin)
+    length(flux_names) == 2 || error("Expected exactly two flux names.")
+    first_name, second_name = flux_names
+    first_data = block_data[first_name]
+    second_data = block_data[second_name]
+
+    if color_variable == "time" && isnothing(time_origin)
+        return empty_colored_difference_data(
+            "Color variable \"time\" is unavailable. $(colored_scatter_prerequisite_note(color_variable))"
+        )
+    end
+
+    first_df = DataFrame(
+        time=first_data[!, :time],
+        flux_first=first_data[!, flux_column],
+        feature_first=block_analyze.feature_fraction_series(first_data),
+    )
+    second_df = DataFrame(
+        time=second_data[!, :time],
+        flux_second=second_data[!, flux_column],
+        feature_second=block_analyze.feature_fraction_series(second_data),
+    )
+
+    if color_variable != "time"
+        color_column = colored_scatter_color_column(color_variable)
+        missing_columns = String[]
+        color_column in propertynames(first_data) || push!(missing_columns,
+            "$(String(first_name)).$(String(color_column))")
+        color_column in propertynames(second_data) || push!(missing_columns,
+            "$(String(second_name)).$(String(color_column))")
+
+        if !isempty(missing_columns)
+            return empty_colored_difference_data(
+                "Color variable \"$(color_variable)\" is unavailable ($(join(missing_columns, ", ")) missing). " *
+                colored_scatter_prerequisite_note(color_variable)
+            )
+        end
+
+        first_df[!, :color_first] = first_data[!, color_column]
+        second_df[!, :color_second] = second_data[!, color_column]
+    end
+
+    joined = innerjoin(first_df, second_df, on=:time)
+    flux_difference = (block_analyze.finite_series(joined[!, :flux_first]) .-
+                       block_analyze.finite_series(joined[!, :flux_second])) .* conversion_factor
+    feature_difference = block_analyze.finite_series(joined[!, :feature_first]) .-
+                         block_analyze.finite_series(joined[!, :feature_second])
+
+    color_values = if color_variable == "time"
+        [colored_scatter_elapsed_hours(value, time_origin) for value in joined.time]
+    else
+        [colored_scatter_pair_value(joined.color_first[ix], joined.color_second[ix], color_variable)
+            for ix in 1:nrow(joined)]
+    end
+
+    valid = isfinite.(feature_difference) .& isfinite.(flux_difference) .& isfinite.(color_values)
+    return (
+        available=true,
+        message="",
+        time=joined.time[valid],
+        feature_difference=feature_difference[valid],
+        flux_difference=flux_difference[valid],
+        color_values=color_values[valid],
+    )
 end
 
 end # module block_analyze

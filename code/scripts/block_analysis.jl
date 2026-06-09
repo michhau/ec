@@ -279,4 +279,129 @@ if save_figs
 end
 ##
 
+#######################################################
+##
+#scatter plot with color-coded points
+colored_scatter_variable = "wq" # choose "u", "wind_dir", "wT", "wq", or "time"
+colored_scatter_cmap = "viridis"
+
+colored_scatter_variable = block_analyze.normalize_colored_scatter_variable(colored_scatter_variable)
+colored_scatter_origin = colored_scatter_variable == "time" ?
+    block_analyze.colored_scatter_time_origin(block_data, difference_time_series_specs) : nothing
+colored_panel_data = [
+    block_analyze.colored_difference_data(
+        block_data,
+        flux_names,
+        flux_column,
+        conversion_factor,
+        colored_scatter_variable,
+        colored_scatter_origin,
+    )
+    for (flux_names, flux_column, conversion_factor, _, _) in difference_time_series_specs
+]
+
+all_color_values = Float64[]
+for panel_data in colored_panel_data
+    append!(all_color_values, panel_data.color_values)
+end
+
+if isempty(all_color_values)
+    @warn(
+        "No colored difference scatter plot saved for color variable \"$(colored_scatter_variable)\". " *
+        block_analyze.colored_scatter_prerequisite_note(colored_scatter_variable)
+    )
+else
+    color_min = minimum(all_color_values)
+    color_max = maximum(all_color_values)
+    if colored_scatter_variable == "wind_dir"
+        color_min = 0.0
+        color_max = 360.0
+    end
+    if color_min == color_max
+        color_min -= 0.5
+        color_max += 0.5
+    end
+
+    fig_diff_scatter_colored, axs_diff_scatter_colored =
+        PyPlot.subplots(1, 3, figsize=(15.8, 4.2), sharex=true)
+    fig_diff_scatter_colored.suptitle(
+        "$(station_label) - Heat flux difference vs $(surface_feature) fraction difference, colored by $(colored_scatter_variable)"
+    )
+    scatter_handle = nothing
+
+    for panel_ix in eachindex(difference_time_series_specs)
+        ax = vec(axs_diff_scatter_colored)[panel_ix]
+        flux_names, flux_column, _, flux_kind, flux_ylabel = difference_time_series_specs[panel_ix]
+        panel_data = colored_panel_data[panel_ix]
+        flux_ylim = flux_column == :wT ? wT_limits_diff_timeseries : wq_limits_diff_timeseries
+
+        ax.axhline(0, color="grey", linewidth=0.8, alpha=0.55)
+        ax.axvline(0, color="grey", linewidth=0.8, alpha=0.55)
+        ax.set_title("$(flux_kind): $(block_analyze.sensor_difference_label(flux_names, heights, surface_type))")
+        ax.set_xlabel("$(surface_feature) fraction difference")
+        ax.set_ylabel(flux_ylabel)
+        ax.set_ylim(flux_ylim)
+        ax.set_axisbelow(true)
+        ax.grid(alpha=0.9)
+
+        if panel_data.available && !isempty(panel_data.color_values)
+            scatter_handle = ax.scatter(
+                panel_data.feature_difference,
+                panel_data.flux_difference,
+                c=panel_data.color_values,
+                cmap=colored_scatter_cmap,
+                vmin=color_min,
+                vmax=color_max,
+                s=12,
+                alpha=0.75,
+                edgecolors="none",
+                zorder=2,
+            )
+
+            prediction = predictions[panel_ix]
+            ax.fill_between(
+                prediction.x_grid,
+                prediction.predictions_confidence.lower,
+                prediction.predictions_confidence.upper;
+                color="0.45",
+                alpha=0.16,
+                linewidth=0,
+                label="95% CI",
+            )
+            ax.plot(
+                prediction.x_grid,
+                prediction.predictions_confidence.prediction;
+                color="0.2",
+                linewidth=1.0,
+            )
+            ax.legend(loc="best")
+        else
+            message = panel_data.available ?
+                "No finite values for color variable \"$(colored_scatter_variable)\"." :
+                panel_data.message
+            @warn(message)
+            ax.text(
+                0.5,
+                0.5,
+                message,
+                transform=ax.transAxes,
+                ha="center",
+                va="center",
+                fontsize=8,
+                wrap=true,
+            )
+        end
+    end
+
+    PyPlot.tight_layout(rect=[0, 0, 0.90, 0.91])
+    colorbar_ax = fig_diff_scatter_colored.add_axes([0.92, 0.18, 0.015, 0.66])
+    colorbar = fig_diff_scatter_colored.colorbar(scatter_handle, cax=colorbar_ax)
+    colorbar.set_label(block_analyze.colored_scatter_colorbar_label(colored_scatter_variable, colored_scatter_origin))
+
+    if save_figs
+        fig_diff_scatter_colored.savefig(joinpath(output_folder,
+            "$(station_file_stem)_block_flux_$(feature_file_label)_difference_scatter_colored_by_$(colored_scatter_variable).pdf"),
+            bbox_inches="tight")
+    end
+end
 ##

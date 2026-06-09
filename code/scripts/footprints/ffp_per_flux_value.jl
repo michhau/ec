@@ -95,6 +95,19 @@ for ix in eachindex(names)
         wind_direction_offsets[ix],
     )
 
+    block_flux[!, :u] = [
+        ffp_block.nanmean(
+            sqrt.(ecdata.u[start_indices[j]:end_indices[j]] .^ 2 .+
+                  ecdata.v[start_indices[j]:end_indices[j]] .^ 2)
+        )
+        for j in eachindex(start_indices)
+    ]
+    block_flux[!, :wind_dir] = [
+        turb.mean_winddir(wd_tmp[ecdata.time[start_indices[j]] .<= wd_tmp.time .<
+            ecdata.time[end_indices[j]], Symbol("α")])
+        for j in eachindex(start_indices)
+    ]
+
     footprints = ffp_block.calculate_footprints(inputs, meas_heights[ix], rs, rslayer, nrelemgrid, crop)
 
     block_fluxes_all[fluxes[ix]] = block_flux
