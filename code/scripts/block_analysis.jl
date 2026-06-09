@@ -34,7 +34,9 @@ c_p = 1004 #J kg^{-1} K^{-1}
 L_v = 2500e3 #J kg^{-1} (approx @0°C)
 
 #######################################################
-station_name = "2b"
+station_name = "2a"
+save_figs = true
+save_csv = true
 #######################################################
 #read station specifics
 station_config = stationcfg.load_station_config(station_name)
@@ -72,8 +74,10 @@ correlation_specs = vcat(
 flux_feature_correlations = block_analyze.feature_flux_correlations(
     correlation_specs, block_data, station_name, surface_type, heights;
     feature_label=surface_feature)
-CSV.write(joinpath(output_folder, "$(station_file_stem)_block_flux_$(feature_file_label)_correlations.csv"),
-    flux_feature_correlations)
+if save_csv
+    CSV.write(joinpath(output_folder, "$(station_file_stem)_block_flux_$(feature_file_label)_correlations.csv"),
+        flux_feature_correlations)
+end
 ##
 #######################################################
 #plot time series of fluxes and feature (lead, pond, ridge) fraction
@@ -105,8 +109,9 @@ for (col, flux_names) in enumerate(time_series_columns)
 end
 fig_ts.autofmt_xdate()
 PyPlot.tight_layout(rect=[0, 0, 1, 0.95])
-fig_ts.savefig(joinpath(output_folder, "$(station_file_stem)_block_flux_$(feature_file_label)_timeseries.pdf"), bbox_inches="tight")
-
+if save_figs
+    fig_ts.savefig(joinpath(output_folder, "$(station_file_stem)_block_flux_$(feature_file_label)_timeseries.pdf"), bbox_inches="tight")
+end
 #######################################################
 #plot correlation fluxes vs. feature fraction
 fig_wT, axs_wT = PyPlot.subplots(2, 2, figsize=(9, 7), sharex=true, sharey=true)
@@ -124,8 +129,9 @@ for (ax, flux_name, show_xlabel, show_ylabel) in wT_panel_specs
         feature_label=surface_feature)
 end
 PyPlot.tight_layout(rect=[0, 0, 1, 0.95])
-fig_wT.savefig(joinpath(output_folder, "$(station_file_stem)_block_wT_$(feature_file_label)_fraction.pdf"),bbox_inches="tight")
-
+if save_figs
+    fig_wT.savefig(joinpath(output_folder, "$(station_file_stem)_block_wT_$(feature_file_label)_fraction.pdf"),bbox_inches="tight")
+end
 fig_wq, axs_wq = PyPlot.subplots(1, 2, figsize=(9, 3.8), sharex=true, sharey=true)
 
 for (ix, (ax, flux_name)) in enumerate(zip(vec(axs_wq), latent_subplot_order))
@@ -135,7 +141,9 @@ for (ix, (ax, flux_name)) in enumerate(zip(vec(axs_wq), latent_subplot_order))
 end
 fig_wq.suptitle("$(station_label) - Latent heat flux vs $(surface_feature) fraction")
 PyPlot.tight_layout(rect=[0, 0, 1, 0.92])
-fig_wq.savefig(joinpath(output_folder, "$(station_file_stem)_block_wq_$(feature_file_label)_fraction.pdf"), bbox_inches="tight")
+if save_figs
+    fig_wq.savefig(joinpath(output_folder, "$(station_file_stem)_block_wq_$(feature_file_label)_fraction.pdf"), bbox_inches="tight")
+end
 ##
 #######################################################
 ###     feature fraction and flux DIFFERENCES       ###
@@ -156,8 +164,10 @@ difference_time_series_specs = [
 flux_feature_difference_correlations = block_analyze.feature_flux_difference_correlations(
     difference_time_series_specs, block_data, station_name, surface_type, heights;
     feature_label=surface_feature)
-CSV.write(joinpath(output_folder, "$(station_file_stem)_block_flux_$(feature_file_label)_difference_correlations.csv"),
+if save_csv
+    CSV.write(joinpath(output_folder, "$(station_file_stem)_block_flux_$(feature_file_label)_difference_correlations.csv"),
     flux_feature_difference_correlations)
+end
 
 fig_diff_ts, axs_diff_ts = PyPlot.subplots(1, 3, figsize=(15, 4.2), sharex=true)
 fig_diff_ts.suptitle("$(station_label) - Heat flux and $(surface_feature) fraction differences")
@@ -171,9 +181,11 @@ for (ax, (flux_names, flux_column, conversion_factor, flux_kind, flux_ylabel)) i
 end
 fig_diff_ts.autofmt_xdate()
 PyPlot.tight_layout(rect=[0, 0, 1, 0.91])
-fig_diff_ts.savefig(joinpath(output_folder,
-    "$(station_file_stem)_block_flux_$(feature_file_label)_difference_timeseries.pdf"),
-    bbox_inches="tight")
+if save_figs
+    fig_diff_ts.savefig(joinpath(output_folder,
+        "$(station_file_stem)_block_flux_$(feature_file_label)_difference_timeseries.pdf"),
+        bbox_inches="tight")
+end
 
 #######################################################
 #scatter plot
@@ -255,10 +267,16 @@ for (ax, (flux_names, flux_column, conversion_factor, flux_kind, flux_ylabel)) i
     x_grid = xgrid, predictions_confidence = preds_confidence))
 end
 
-CSV.write(joinpath(output_folder,
-    "$(station_file_stem)_block_flux_$(feature_file_label)_difference_linear_fit.csv"),
-    DataFrame(linear_fit_params))
+if save_csv
+    CSV.write(joinpath(output_folder,
+        "$(station_file_stem)_block_flux_$(feature_file_label)_difference_linear_fit.csv"),
+        DataFrame(linear_fit_params))
+end
 
-fig_diff_scatter.savefig(joinpath(output_folder,
-"$(station_file_stem)_block_flux_$(feature_file_label)_difference_scatter.pdf"), bbox_inches="tight")
+if save_figs
+    fig_diff_scatter.savefig(joinpath(output_folder,
+    "$(station_file_stem)_block_flux_$(feature_file_label)_difference_scatter.pdf"), bbox_inches="tight")
+end
+##
+
 ##
