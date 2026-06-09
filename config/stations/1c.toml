@@ -37,7 +37,7 @@ fluxloc = [[2375, 1360], [2375, 1360], [1916, 1520], [1916, 1520]]
 figorigin = [2375, 1360]
 
 [block_footprints]
-classes_file = "/home/haugened/Documents/data/CONTRASTS/pics/setups/1c/13_cut_classes.jpeg"
+classes_file = "/home/haugened/Documents/data/CONTRASTS/Orthomosaics/R1_3/13_cut_classes.jpeg"
 feature = "lead"
 crit_ice_red_bigger_eq = 222
 crit_ice_red_smaller_eq = 255
@@ -55,5 +55,5 @@ wT_limits_diff_timeseries = [-10, 10]
 wq_limits_diff_timeseries = [-10, 10]
 
 [block_analysis]
-subplot_order = ["fx2", "fx4", "fx1", "fx3"]
+subplot_order = ["fx2", "fx3", "fx1", "fx4"]
 latent_subplot_order = ["fx1", "fx3"]
