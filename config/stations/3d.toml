@@ -32,7 +32,7 @@ heat_correlation_title = "3c - 16.08.2025 to 18.08.2025"
 
 [footprint]
 wind_direction_offsets = [226.0, 226.0, 239.0, 239.0]
-orthomosaic = "/home/haugened/Documents/data/CONTRASTS/pics/setups/3c/karte 180825_cut.jpg"
+orthomosaic = "/home/haugened/Documents/data/CONTRASTS/Orthomosaics/R3_4/34_cut.jpeg"
 fluxloc = [[692, 324], [692, 324], [564, 560], [564, 560]]
 bgextend_m = [209.45, 168.1]
 bgextend_pxl = [1170, 946]
