@@ -130,7 +130,12 @@ end
 fileorthomosaic = String(stationcfg.require_key(station_config, "footprint", "orthomosaic"))
 orthomosaic = mpimg.imread(fileorthomosaic)
 orthomosaic_jl = load(fileorthomosaic)
-#PyPlot.imshow(orthomosaic)
+
+#=
+PyPlot.pygui(true)
+PyPlot.imshow(orthomosaic)
+PyPlot.pygui(false)
+=#
 #location of flux measurements 1-6 in original image
 #[row-location, col-location]
 fluxloc = stationcfg.toml_matrix(stationcfg.require_key(station_config, "footprint", "fluxloc"); T=Float64)

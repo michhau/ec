@@ -102,6 +102,10 @@ for ix in eachindex(names)
         )
         for j in eachindex(start_indices)
     ]
+    block_flux[!, :T] = [
+        ffp_block.nanmean(ecdata.T[start_indices[j]:end_indices[j]])
+        for j in eachindex(start_indices)
+    ]
     block_flux[!, :wind_dir] = [
         turb.mean_winddir(wd_tmp[ecdata.time[start_indices[j]] .<= wd_tmp.time .<
             ecdata.time[end_indices[j]], Symbol("α")])

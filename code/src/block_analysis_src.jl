@@ -14,7 +14,8 @@ export add_axes_diagonal!, column_title, finite_series, flux_index,
     plot_feature_flux_difference_panel!, plot_feature_flux_panel!, safe_cor,
     read_subplot_order, scatter_xy, sensor_difference_label, tied_ranks, valid_feature_value,
     valid_number, normalize_colored_scatter_variable, colored_scatter_prerequisite_note,
-    colored_scatter_time_origin, colored_difference_data, colored_scatter_colorbar_label
+    colored_scatter_time_origin, colored_flux_time_origin, colored_difference_data,
+    colored_correlation_data, colored_scatter_colorbar_label
 
 const FEATURE_FRACTION_COLUMN = :footprint_feature_fraction
 const LEGACY_FRACTION_COLUMN = :footprint_lead_fraction
@@ -394,6 +395,8 @@ function normalize_colored_scatter_variable(value)
     raw = lowercase(strip(String(value)))
     if raw == "u"
         return "u"
+    elseif raw in ("t", "temperature", "sonic_temperature", "sonic_temp")
+        return "T"
     elseif raw == "wt"
         return "wT"
     elseif raw == "wq"
@@ -404,12 +407,14 @@ function normalize_colored_scatter_variable(value)
         return "wind_dir"
     end
 
-    error("colored_scatter_variable must be one of \"u\", \"wT\", \"wq\", \"time\", or \"wind_dir\".")
+    error("colored_scatter_variable must be one of \"u\", \"T\", \"wind_dir\", \"wT\", \"wq\", or \"time\".")
 end
 
 function colored_scatter_prerequisite_note(color_variable::AbstractString)
     if color_variable == "u"
         return "Source variable: load_data.jl. Rerun load_data.jl, turb_fluxes.jl, and ffp_per_flux_value.jl so :u is written to the block NetCDF."
+    elseif color_variable == "T"
+        return "Source variable: load_data.jl. Rerun load_data.jl, turb_fluxes.jl, and ffp_per_flux_value.jl so :T is written to the block NetCDF."
     elseif color_variable == "wind_dir"
         return "Source variable: load_data.jl. Rerun load_data.jl, turb_fluxes.jl, and ffp_per_flux_value.jl so :wind_dir is written to the block NetCDF."
     elseif color_variable == "wT" || color_variable == "wq"
@@ -423,6 +428,7 @@ end
 
 function colored_scatter_color_column(color_variable::AbstractString)
     color_variable == "u" && return :u
+    color_variable == "T" && return :T
     color_variable == "wT" && return :wT
     color_variable == "wq" && return :wq
     color_variable == "wind_dir" && return :wind_dir
@@ -441,6 +447,8 @@ end
 function colored_scatter_colorbar_label(color_variable::AbstractString, time_origin)
     if color_variable == "u"
         return L"\overline{u}~\mathrm{[m~s^{-1}]}"
+    elseif color_variable == "T"
+        return L"\overline{T_{sonic}}~\mathrm{[^\circ C]}"
     elseif color_variable == "wind_dir"
         return L"\overline{\alpha}~\mathrm{[^\circ]}"
     elseif color_variable == "wT"
@@ -462,6 +470,17 @@ function colored_scatter_time_origin(block_data::AbstractDict, difference_specs)
             :time in propertynames(data) || continue
             append!(times, [time for time in data.time if time isa DateTime])
         end
+    end
+
+    return isempty(times) ? nothing : minimum(times)
+end
+
+function colored_flux_time_origin(block_data::AbstractDict, flux_names)
+    times = DateTime[]
+    for flux_name in flux_names
+        data = block_data[flux_name]
+        :time in propertynames(data) || continue
+        append!(times, [time for time in data.time if time isa DateTime])
     end
 
     return isempty(times) ? nothing : minimum(times)
@@ -505,6 +524,60 @@ function empty_colored_difference_data(message::AbstractString)
         feature_difference=Float64[],
         flux_difference=Float64[],
         color_values=Float64[],
+    )
+end
+
+function empty_colored_correlation_data(message::AbstractString)
+    return (
+        available=false,
+        message=String(message),
+        time=DateTime[],
+        feature_fraction=Float64[],
+        flux=Float64[],
+        color_values=Float64[],
+    )
+end
+
+function colored_correlation_data(block_data::AbstractDict, flux_name::Symbol,
+        flux_column::Symbol, conversion_factor::Real, color_variable::AbstractString,
+        time_origin)
+    data = block_data[flux_name]
+
+    if color_variable == "time" && isnothing(time_origin)
+        return empty_colored_correlation_data(
+            "Color variable \"time\" is unavailable. $(colored_scatter_prerequisite_note(color_variable))"
+        )
+    end
+
+    feature_fraction = finite_series(feature_fraction_series(data))
+    flux = finite_series(data[!, flux_column]) .* conversion_factor
+
+    color_values = if color_variable == "time"
+        [colored_scatter_elapsed_hours(value, time_origin) for value in data.time]
+    else
+        color_column = colored_scatter_color_column(color_variable)
+        if !(color_column in propertynames(data))
+            return empty_colored_correlation_data(
+                "Color variable \"$(color_variable)\" is unavailable ($(String(flux_name)).$(String(color_column)) missing). " *
+                colored_scatter_prerequisite_note(color_variable)
+            )
+        end
+
+        [
+            valid_number(value) ?
+                Float64(value) * colored_scatter_conversion_factor(color_variable) : NaN
+            for value in data[!, color_column]
+        ]
+    end
+
+    valid = isfinite.(feature_fraction) .& isfinite.(flux) .& isfinite.(color_values)
+    return (
+        available=true,
+        message="",
+        time=data.time[valid],
+        feature_fraction=feature_fraction[valid],
+        flux=flux[valid],
+        color_values=color_values[valid],
     )
 end
 
