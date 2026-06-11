@@ -14,6 +14,16 @@ surface_type = ["lead", "lead", "floe", "floe"]
 heights = [1.1, 2.2, 1.0, 2.1]
 instrument_type = ["IRG", "CSAT", "IRG", "CSAT"]
 
+[[wind_direction_rotations]]
+instrument_indices = [1, 2]
+start = "2025-08-27T08:40:00"
+offset_degrees = 95.0
+
+[[wind_direction_rotations]]
+instrument_indices = [3, 4]
+start = "2025-08-27T09:03:00"
+offset_degrees = -300.0
+
 [manual_nanmask]
 enabled = true
 root = "/home/haugened/Documents/data/CONTRASTS/nan_periods"

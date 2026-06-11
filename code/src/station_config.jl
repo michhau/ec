@@ -6,7 +6,7 @@ using TOML
 
 export available_station_names, load_station_config, optional_key, plot_dir,
        plot_root, require_key, station_datetime, station_file_stem,
-       station_label, station_labels, toml_matrix
+       station_label, station_labels, toml_matrix, apply_station_wind_direction_rotations!
 
 const DEFAULT_CONFIG_DIR = normpath(joinpath(@__DIR__, "..", "..", "config", "stations"))
 const REMOTE_HOSTNAME = "slfl29682"
@@ -143,6 +143,43 @@ function toml_matrix(value; T=Float64)
     rows = [T.(row) for row in value]
     isempty(rows) && return Matrix{T}(undef, 0, 0)
     return reduce(vcat, permutedims.(rows))
+end
+
+function config_datetime(value, key::AbstractString)
+    if value isa DateTime
+        return value
+    elseif value isa Date
+        return DateTime(value)
+    elseif value isa AbstractString
+        return DateTime(replace(String(value), " " => "T"))
+    end
+
+    error("Station config key '$key' must be a DateTime or ISO datetime string.")
+end
+
+function apply_station_wind_direction_rotations!(wds, station_config)
+    String(stationcfg.require_key(station_config, "id")) == "3d" || return wds
+
+    rotations = stationcfg.optional_key(station_config, Any[], "wind_direction_rotations")
+    for (rotation_ix, rotation) in pairs(rotations)
+        instrument_indices = Int.(stationcfg.require_key(rotation, "instrument_indices"))
+        start_time = config_datetime(
+            stationcfg.require_key(rotation, "start"),
+            "wind_direction_rotations[$rotation_ix].start",
+        )
+        offset_degrees = Float64(stationcfg.require_key(rotation, "offset_degrees"))
+
+        for instrument_ix in instrument_indices
+            1 <= instrument_ix <= length(wds) || error(
+                "Wind direction rotation index $instrument_ix is outside 1:$(length(wds))."
+            )
+            wd = wds[instrument_ix]
+            rotate_after = wd.time .>= start_time
+            wd.α[rotate_after] = mod.(wd.α[rotate_after] .+ offset_degrees, 360)
+        end
+    end
+
+    return wds
 end
 
 end

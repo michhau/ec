@@ -83,7 +83,7 @@ end
 evaldfs = [turb.interpolatemissing(evaldf) for evaldf in evaldfs]
 (evaldf1, evaldf2, evaldf3, evaldf4) = evaldfs
 
-(wd1, wd2, wd3, wd4) = [turb.winddir(evaldf) for evaldf in evaldfs]
+wds = [turb.winddir(evaldf) for evaldf in evaldfs]
 
 #double rotation
 for evaldf in evaldfs
@@ -99,6 +99,10 @@ if stationcfg.optional_key(station_config, true, "manual_nanmask", "enabled")
         evaldf[isbad_quality, nanmask_columns] .= NaN
     end
 end
+
+#tower rotation correction for station 3d
+stationcfg.apply_station_wind_direction_rotations!(wds, station_config)
+(wd1, wd2, wd3, wd4) = wds
 
 ######################################################
 ###               LOADING SLOW DATA                ###
@@ -192,10 +196,9 @@ ws3 = sqrt.(evaldf3.u .^2 + evaldf3.v .^2 + evaldf3.w .^2);
 ws4 = sqrt.(evaldf4.u .^2 + evaldf4.v .^2 + evaldf4.w .^2);
 
 #wind directions
-wd1 = turb.winddir(evaldf1);
-wd2 = turb.winddir(evaldf2);
-wd3 = turb.winddir(evaldf3);
-wd4 = turb.winddir(evaldf4);
+wds = [turb.winddir(evaldf) for evaldf in evaldfs]
+apply_station_wind_direction_rotations!(wds, station_config)
+(wd1, wd2, wd3, wd4) = wds
 
 #block average
 block_length = Minute(1)
