@@ -14,6 +14,9 @@ surface_type = ["lead", "lead", "floe", "floe"]
 heights = [1.1, 2.2, 1.0, 2.1]
 instrument_type = ["IRG", "CSAT", "IRG", "CSAT"]
 
+[flux_histogram]
+surface_type = ["ice", "ice", "ice", "ice"]
+
 [[wind_direction_rotations]]
 instrument_indices = [1, 2]
 start = "2025-08-27T08:40:00"

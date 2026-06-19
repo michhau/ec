@@ -14,6 +14,9 @@ surface_type = ["lead", "lead", "floe", "floe"]
 heights = [1.1, 2.2, 1.1, 2.2]
 instrument_type = ["IRG", "CSAT", "IRG", "CSAT"]
 
+[flux_histogram]
+surface_type = ["lead", "lead", "ridge", "ridge"]
+
 [manual_nanmask]
 enabled = true
 root = "/home/haugened/Documents/data/CONTRASTS/nan_periods"
