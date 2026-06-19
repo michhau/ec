@@ -30,6 +30,32 @@ const FLUX_SURFACE_TYPES = ("ice", "lead", "pond", "ridge")
 const DEFAULT_SENSIBLE_BINS = collect(-50.0:1.0:50.0)
 const DEFAULT_LATENT_BINS = collect(-25.0:0.5:25.0)
 
+"""
+    read_dship_meteo_csv(filename::String, datatypes::Vector{DataType}, dateformat_inp=DateFormat("yyyymmddTHHMMSS"))
+
+Read a CSV file extracted from DSHIP.
+
+# Arguments
+- `filename::String`: Path to the CSV file
+
+# Returns
+- DataFrame with the data
+"""
+function read_dship_meteo_csv(filename::String, datatypes::Vector{DataType}, dateformat_inp=DateFormat("yyyymmddTHHMMSS"))
+    a = CSV.read(filename, DataFrame, header=1, skipto=4,  dateformat=dateformat_inp, types=datatypes, maxwarnings=10)
+
+    #extract and rename colnames (without the generic "Polarstern" leading text)
+    colnames_raw = names(a)
+    colnames_final = Vector{String}(undef, length(colnames_raw))
+    colnames_final[1] = "time"
+    reg_test = r"\.([^.]*)$"
+    for i in 2:length(colnames_raw)
+        colnames_final[i] = first(Tuple(match(reg_test, colnames_raw[i])))
+    end
+    rename!(a, colnames_final)
+        return a
+end
+
 period_seconds(period::Period) = period / Second(1)
 
 function selected_station_names(stations=nothing)
@@ -223,26 +249,6 @@ function write_flux_cache(cache_file::AbstractString, data::DataFrame)
     return cache_file
 end
 
-function custom_grouping_labels(data::DataFrame, group_name::AbstractString)
-    error("Grouping '$group_name' is not implemented yet. Add it in custom_grouping_labels.")
-end
-
-function grouping_labels(data::DataFrame, group_name::AbstractString)
-    normalized = lowercase(strip(group_name))
-    if normalized in ("", "all", "none")
-        return fill("all", nrow(data))
-    elseif normalized == "daynight"
-        return [Time(6, 0) <= Time(t) < Time(18, 0) ? "day" : "night" for t in data.time]
-    else
-        return custom_grouping_labels(data, group_name)
-    end
-end
-
-function add_grouping_column!(data::DataFrame, group_name::AbstractString)
-    data[!, :histogram_group] = grouping_labels(data, group_name)
-    return data
-end
-
 function finite_values(values)
     out = Float64[]
     for value in values
@@ -400,6 +406,69 @@ function plot_histograms(data::DataFrame, plot_dir::AbstractString, avg_period::
     return outputs
 end
 
+
+function finite_numeric_values(values)
+    valid = Float64[]
+    for value in values
+        if !ismissing(value) && value isa Number
+            value_float = Float64(value)
+            isfinite(value_float) && push!(valid, value_float)
+        end
+    end
+    return valid
+end
+
+function is_dship_wind_direction_column(column_name::AbstractString)
+    normalized = lowercase(column_name)
+    return normalized in ("winddirection", "wind_direction", "wind_dir", "true_wind_direction") ||
+           endswith(normalized, "_wind_direction")
+end
+
+function dship_interval_mean(values, column_name::AbstractString)
+    valid = finite_numeric_values(values)
+    isempty(valid) && return NaN
+    return is_dship_wind_direction_column(column_name) ? turb.mean_winddir(valid) : mean(valid)
+end
+
+function aggregate_dship_meteo_to_flux_times(
+        dship_meteo::DataFrame, flux_times::AbstractVector, avg_interval::Period)
+    unique_flux_times = unique(flux_times)
+    aggregate_by_time = DataFrame(time=unique_flux_times)
+
+    for column_name in names(dship_meteo)
+        column_name == "time" && continue
+
+        aggregate_by_time[!, Symbol(column_name)] = [
+            begin
+                interval_start = flux_time - avg_interval / 2
+                interval_end = flux_time + avg_interval / 2
+                in_interval = (interval_start .<= dship_meteo.time) .& (dship_meteo.time .< interval_end)
+                dship_interval_mean(dship_meteo[in_interval, column_name], column_name)
+            end
+            for flux_time in unique_flux_times
+        ]
+    end
+
+    row_by_time = Dict(flux_time => i for (i, flux_time) in pairs(unique_flux_times))
+    aggregated = DataFrame(time=flux_times)
+    for column_name in names(aggregate_by_time)
+        column_name == "time" && continue
+        values_by_time = aggregate_by_time[!, column_name]
+        aggregated[!, Symbol(column_name)] = [values_by_time[row_by_time[flux_time]] for flux_time in flux_times]
+    end
+
+    return aggregated
+end
+
+function add_dship_meteo_columns!(flux_data::DataFrame, dship_meteo::DataFrame, avg_interval::Period)
+    dship_aggregated = aggregate_dship_meteo_to_flux_times(dship_meteo, flux_data.time, avg_interval)
+    for column_name in names(dship_aggregated)
+        column_name == "time" && continue
+        flux_data[!, Symbol(column_name)] = dship_aggregated[!, column_name]
+    end
+    return flux_data
+end
+
 ## Settings
 # Run this section first, then either rebuild from high-frequency data or read the cache.
 
@@ -431,7 +500,7 @@ flux_data = copy(station_flux_data)
 =#
 ## Accumulate all stations without keeping all high-frequency data in memory
 # Run this section instead of the one-station sections above when rebuilding the full cache.
-
+#=
 flux_data = DataFrame()
 @showprogress for station_config_loop in station_configs
     evaldfs = load_station_data(station_config_loop)
@@ -450,12 +519,23 @@ end
 ## Saving or loading low-frequency data
 
 write_flux_cache(cache_file, flux_data)
+=#
 # To reuse the expensive result later, run the settings section and then this line:
-# flux_data = read_flux_cache(cache_file)
+flux_data = read_flux_cache(cache_file)
 
-## Attributing grouping
+## Add meteo data
 
-add_grouping_column!(flux_data, group_name)
+datatypes = [DateTime, Float32, Float32, Int32, Int32, Float32, Float32, Float32, Float32, Float32, Float32, Int32, Float32]
+filename = "/home/haugened/Documents/data/CONTRASTS/weather_raw_data/meteo_dship_extracted_260619/meteo_dship_260619.dat"
+
+dship_meteo = read_dship_meteo_csv(filename, datatypes) #no worries, there will be warnings for parsing "#" (missing data)
+
+dship_meteo = dship_meteo[flux_data.time[1]-avg_period/2 .<= dship_meteo.time .<= flux_data.time[end]+avg_period/2, :]
+
+#aggregate dship_meteo to flux_data time
+dship_meteo_agg = aggregate_dship_meteo_to_flux_times(dship_meteo, flux_data.time, avg_period)
+
+add_dship_meteo_columns!(flux_data, dship_meteo_agg, avg_period)
 
 ## Plotting
 
