@@ -34,7 +34,7 @@ c_p = 1004 #J kg^{-1} K^{-1}
 L_v = 2500e3 #J kg^{-1} (approx @0°C)
 
 #######################################################
-station_name = "2a"
+station_name = "3c"
 save_figs = true
 save_csv = true
 #######################################################
@@ -287,14 +287,8 @@ end
 wT_limits_diff_timeseries = Tuple(Float64.(stationcfg.optional_key(station_config, [-10.0, 10.0], "block_footprints", "wT_limits_diff_timeseries")))
 wq_limits_diff_timeseries = Tuple(Float64.(stationcfg.optional_key(station_config, [-10.0, 10.0], "block_footprints", "wq_limits_diff_timeseries")))
 
-difference_time_series_specs = [
-    ((subplot_order[1], subplot_order[2]), :wT, ρ_air * c_p, "sensible",
-        L"\Delta H~\mathrm{[W~m^{-2}]}"),
-    ((subplot_order[3], subplot_order[4]), :wT, ρ_air * c_p, "sensible",
-        L"\Delta H~\mathrm{[W~m^{-2}]}"),
-    ((latent_subplot_order[1], latent_subplot_order[2]), :wq, L_v * 1e-3, "latent",
-        L"\Delta L_E~\mathrm{[W~m^{-2}]}"),
-]
+difference_time_series_specs = block_analyze.standard_difference_specs(
+    subplot_order, latent_subplot_order, ρ_air * c_p, L_v * 1e-3)
 
 flux_feature_difference_correlations = block_analyze.feature_flux_difference_correlations(
     difference_time_series_specs, block_data, station_name, surface_type, heights;
@@ -337,69 +331,24 @@ end
 PyPlot.tight_layout(rect=[0, 0, 1, 0.91])
 
 #fitting linear model to differences
-using GLM, StatsModels, Distributions, LinearAlgebra
-
 linear_fit_params = []
 predictions = []
 
 for (ax, (flux_names, flux_column, conversion_factor, flux_kind, flux_ylabel)) in
         zip(vec(axs_diff_scatter), difference_time_series_specs)
 
-    _, flux_difference, feature_difference = block_analyze.difference_timeseries(
+    x, y = block_analyze.feature_flux_difference_xy(
         block_data, flux_names, flux_column, conversion_factor)
-
-    valid = isfinite.(feature_difference) .& isfinite.(flux_difference)
-    x = feature_difference[valid]
-    y = flux_difference[valid]
-
-    fit_df = DataFrame(feature_difference=x, flux_difference=y)
-
-    #perform the fit
-    model = lm(@formula(flux_difference ~ feature_difference), fit_df)
-    
-    #extract information and store in Dict
-    fit_vars = coef(model)
-    fit_vars_confint = confint(model, level=0.95)
-    fit_r2 = r2(model)
-    fit_loglikelihood = loglikelihood(model)
-    fit_stderror = stderror(model)
-    
-    #actual fit to plot
-    xgrid = collect(range(minimum(x), maximum(x), length=100))
-    #ygrid = fit_vars[1] .+ fit_vars[2] .* xgrid
-    #95% confidence intervals for the conditional mean
-    preds_confidence = predict(model, DataFrame(feature_difference = xgrid), interval=:confidence)
+    fit = block_analyze.fit_feature_flux_difference(x, y)
 
     color = flux_column == :wT ? "black" : "C0"
-
-    ax.fill_between(xgrid, preds_confidence.lower, preds_confidence.upper;
-        color=color, alpha=0.18, linewidth=0,label="95% CI")
-    ax.plot(xgrid, preds_confidence.prediction;
-        color=color, linewidth=1.0)
+    block_analyze.plot_feature_flux_difference_fit!(ax, fit; color=color)
     ax.legend(loc="best")
 
-    push!(linear_fit_params, (
-        feature=surface_feature,
-        flux_variable=String(flux_column),
-        flux_label=String(flux_kind),
-        difference_label=block_analyze.sensor_difference_label(flux_names, heights, surface_type),
-        n_valid=length(x),
-        intercept=fit_vars[1],
-        intercept_ci_low=fit_vars_confint[1,1],
-        intercept_ci_high=fit_vars_confint[1,2],
-        intercept_stderr = fit_stderror[1],
-        slope=fit_vars[2],
-        slope_low=fit_vars_confint[2,1],
-        slope_high=fit_vars_confint[2,2],
-        slope_stderr = fit_stderror[2],
-        r2=fit_r2,
-        loglikelihood = fit_loglikelihood,
-    ))
-
-    push!(predictions, (flux_variable=String(flux_column),
-    feature=surface_feature,
-    difference_label=block_analyze.sensor_difference_label(flux_names, heights, surface_type),
-    x_grid = xgrid, predictions_confidence = preds_confidence))
+    difference_label = block_analyze.sensor_difference_label(flux_names, heights, surface_type)
+    push!(linear_fit_params, block_analyze.feature_flux_difference_fit_summary(
+        fit, surface_feature, flux_column, flux_kind, difference_label))
+    push!(predictions, fit)
 end
 
 if save_csv

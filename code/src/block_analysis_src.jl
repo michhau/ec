@@ -6,12 +6,15 @@
 module block_analyze
 
 using DataFrames, Statistics, Dates, LaTeXStrings
+using GLM, StatsModels
 
 export add_axes_diagonal!, column_title, finite_series, flux_index,
     feature_file_label, feature_flux_correlations, feature_flux_difference_correlations,
-    feature_flux_xy, panel_title,
+    feature_flux_difference_fit_summary, feature_flux_difference_xy, feature_flux_xy,
+    fit_feature_flux_difference, panel_title,
     plot_block_difference_timeseries_panel!, plot_block_timeseries_panel!,
-    plot_feature_flux_difference_panel!, plot_feature_flux_panel!, safe_cor,
+    plot_feature_flux_difference_fit!, plot_feature_flux_difference_panel!,
+    plot_feature_flux_panel!, safe_cor, standard_difference_specs,
     read_subplot_order, scatter_xy, sensor_difference_label, tied_ranks, valid_feature_value,
     valid_number, normalize_colored_scatter_variable, colored_scatter_prerequisite_note,
     colored_scatter_time_origin, colored_flux_time_origin, colored_difference_data,
@@ -229,6 +232,21 @@ function sensor_difference_label(flux_names, heights, surface_type)
     return "$(first_label) - $(second_label)"
 end
 
+function standard_difference_specs(subplot_order, latent_subplot_order,
+        sensible_conversion_factor::Real, latent_conversion_factor::Real)
+    length(subplot_order) >= 4 || error("subplot_order must contain at least four flux names.")
+    length(latent_subplot_order) >= 2 || error("latent_subplot_order must contain at least two flux names.")
+
+    return [
+        ((subplot_order[1], subplot_order[2]), :wT, sensible_conversion_factor, "sensible",
+            L"\Delta H~\mathrm{[W~m^{-2}]}"),
+        ((subplot_order[3], subplot_order[4]), :wT, sensible_conversion_factor, "sensible",
+            L"\Delta H~\mathrm{[W~m^{-2}]}"),
+        ((latent_subplot_order[1], latent_subplot_order[2]), :wq, latent_conversion_factor, "latent",
+            L"\Delta L_E~\mathrm{[W~m^{-2}]}"),
+    ]
+end
+
 function difference_timeseries(block_data::AbstractDict, flux_names,
         flux_column::Symbol, conversion_factor::Real)
     length(flux_names) == 2 || error("Expected exactly two flux names.")
@@ -254,6 +272,87 @@ function difference_timeseries(block_data::AbstractDict, flux_names,
                          finite_series(joined[!, :feature_second])
 
     return joined.time, flux_difference, feature_difference
+end
+
+function feature_flux_difference_xy(block_data::AbstractDict, flux_names,
+        flux_column::Symbol, conversion_factor::Real)
+    _, flux_difference, feature_difference = difference_timeseries(
+        block_data, flux_names, flux_column, conversion_factor)
+    valid = isfinite.(feature_difference) .& isfinite.(flux_difference)
+    return feature_difference[valid], flux_difference[valid]
+end
+
+function fit_feature_flux_difference(feature_difference::AbstractVector,
+        flux_difference::AbstractVector; xgrid=nothing, grid_length::Integer=100)
+    length(feature_difference) == length(flux_difference) || error(
+        "feature_difference and flux_difference must have the same length."
+    )
+
+    valid = isfinite.(feature_difference) .& isfinite.(flux_difference)
+    x = Float64.(feature_difference[valid])
+    y = Float64.(flux_difference[valid])
+
+    length(x) >= 2 || error("At least two valid points are required for a linear fit.")
+    length(unique(x)) >= 2 || error("At least two unique feature-difference values are required for a linear fit.")
+
+    fit_df = DataFrame(feature_difference=x, flux_difference=y)
+    model = lm(@formula(flux_difference ~ feature_difference), fit_df)
+    fit_vars = coef(model)
+    fit_vars_confint = confint(model, level=0.95)
+    fit_stderror = stderror(model)
+
+    x_grid = isnothing(xgrid) ?
+        collect(range(minimum(x), maximum(x), length=grid_length)) :
+        Float64.(collect(xgrid))
+    preds_confidence = predict(model, DataFrame(feature_difference=x_grid), interval=:confidence)
+
+    return (
+        model=model,
+        feature_difference=x,
+        flux_difference=y,
+        n_valid=length(x),
+        coef=fit_vars,
+        confint=fit_vars_confint,
+        stderror=fit_stderror,
+        r2=r2(model),
+        loglikelihood=loglikelihood(model),
+        x_grid=x_grid,
+        predictions_confidence=preds_confidence,
+    )
+end
+
+function feature_flux_difference_fit_summary(fit, feature_label::AbstractString,
+        flux_column::Symbol, flux_kind::AbstractString, difference_label::AbstractString)
+    return (
+        feature=feature_label,
+        flux_variable=String(flux_column),
+        flux_label=String(flux_kind),
+        difference_label=difference_label,
+        n_valid=fit.n_valid,
+        intercept=fit.coef[1],
+        intercept_ci_low=fit.confint[1, 1],
+        intercept_ci_high=fit.confint[1, 2],
+        intercept_stderr=fit.stderror[1],
+        slope=fit.coef[2],
+        slope_low=fit.confint[2, 1],
+        slope_high=fit.confint[2, 2],
+        slope_stderr=fit.stderror[2],
+        r2=fit.r2,
+        loglikelihood=fit.loglikelihood,
+    )
+end
+
+function plot_feature_flux_difference_fit!(ax, fit; color="black",
+        label::AbstractString="linear fit", ci_label::AbstractString="95% CI",
+        ci_alpha::Real=0.18, linewidth::Real=1.0)
+    ax.fill_between(fit.x_grid,
+        fit.predictions_confidence.lower,
+        fit.predictions_confidence.upper;
+        color=color, alpha=ci_alpha, linewidth=0, label=ci_label)
+    ax.plot(fit.x_grid, fit.predictions_confidence.prediction;
+        color=color, linewidth=linewidth, label=label)
+
+    return ax
 end
 
 function feature_flux_difference_correlations(difference_specs, block_data::AbstractDict,
