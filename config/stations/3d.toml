@@ -22,7 +22,7 @@ offset_degrees = 95.0
 [[wind_direction_rotations]]
 instrument_indices = [3, 4]
 start = "2025-08-27T09:03:00"
-offset_degrees = -300.0
+offset_degrees = 60.0
 
 [manual_nanmask]
 enabled = true
@@ -41,9 +41,29 @@ wq_limits = [-4.0, 4.0]
 heat_correlation_title = "3c - 16.08.2025 to 18.08.2025"
 
 [footprint]
-wind_direction_offsets = [226.0, 226.0, 239.0, 239.0]
+wind_direction_offsets = [21.5, 28.5, 65.0, 65.0]
 orthomosaic = "/home/haugened/Documents/data/CONTRASTS/Orthomosaics/R3_4/34_cut.jpeg"
-fluxloc = [[692, 324], [692, 324], [564, 560], [564, 560]]
-bgextend_m = [209.45, 168.1]
-bgextend_pxl = [1170, 946]
-figorigin = [564, 560]
+fluxloc = [[3177, 3491], [3177, 3491], [3129, 3953], [3129, 3953]]
+figorigin = [3177, 3491]
+
+[block_footprints]
+classes_file = "/home/haugened/Documents/data/CONTRASTS/Orthomosaics/R3_1/31_cut_classes.jpeg"
+feature = "ridge"
+crit_ice_red_bigger_eq = 222
+crit_ice_red_smaller_eq = 255
+crit_ice_green_bigger_eq = 222
+crit_ice_green_smaller_eq = 255
+crit_ice_blue_bigger_eq = 222
+crit_ice_blue_smaller_eq = 255
+crit_feature_red_bigger_eq = 0
+crit_feature_red_smaller_eq = 1
+crit_feature_green_bigger_eq = 0
+crit_feature_green_smaller_eq = 1
+crit_feature_blue_bigger_eq = 100
+crit_feature_blue_smaller_eq = 255
+wT_limits_diff_timeseries = [-20, 20]
+wq_limits_diff_timeseries = [-5, 5]
+
+[block_analysis]
+subplot_order = ["fx4", "fx2", "fx3", "fx1"]
+latent_subplot_order = ["fx3", "fx1"]
