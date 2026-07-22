@@ -12,7 +12,8 @@ NetCDF files again, run the settings section and then the cache-reading section.
 =#
 
 using Dates, DataFrames, Statistics, LaTeXStrings, ProgressMeter
-import CSV, PyPlot
+import CSV, PyCall, PyPlot
+pydates = PyCall.pyimport("matplotlib.dates")
 
 importdir = joinpath(@__DIR__, "..")
 include(joinpath(importdir, "src", "turb_data.jl"))
@@ -29,6 +30,7 @@ const L_V = 2500e3        # J kg^-1
 const FLUX_SURFACE_TYPES = ("ice", "lead", "pond", "ridge")
 const DEFAULT_SENSIBLE_BINS = collect(-50.0:1.0:50.0)
 const DEFAULT_LATENT_BINS = collect(-25.0:0.5:25.0)
+const DEFAULT_TIME_FLUX_BIN_PERIOD = Hour(6)
 const WEATHER_CLASS_ORDER = ("clear_sky", "overcast_cloudy", "foggy", "transient", "unknown")
 const WEATHER_CLASS_LABELS = Dict(
     "clear_sky" => "clear sky",
@@ -492,6 +494,205 @@ function plot_histograms(data::DataFrame, plot_dir::AbstractString, avg_period::
     return outputs
 end
 
+function finite_time_flux_values(data::DataFrame, flux_column::Symbol)
+    times = DateTime[]
+    values = Float64[]
+
+    for (time_value, flux_value) in zip(data.time, data[!, flux_column])
+        if !ismissing(time_value) && !ismissing(flux_value)
+            flux_value_float = Float64(flux_value)
+            if isfinite(flux_value_float)
+                push!(times, parse_datetime_value(time_value))
+                push!(values, flux_value_float)
+            end
+        end
+    end
+
+    return times, values
+end
+
+function time_bin_edges(times::AbstractVector{DateTime}, bin_period::Period)
+    period_seconds(bin_period) > 0 || error("time_bin_period must be positive.")
+    isempty(times) && return Float64[]
+
+    start_time = minimum(times)
+    end_time = maximum(times)
+    edges = DateTime[start_time]
+    while last(edges) <= end_time
+        push!(edges, last(edges) + bin_period)
+    end
+
+    return pydates.date2num.(edges)
+end
+
+function histogram2d_max_count(x_values, y_values, x_edges, y_edges)
+    counts = zeros(Int, max(length(x_edges) - 1, 0), max(length(y_edges) - 1, 0))
+    isempty(counts) && return 0
+
+    for (x_value, y_value) in zip(x_values, y_values)
+        x_index = searchsortedlast(x_edges, x_value)
+        y_index = searchsortedlast(y_edges, y_value)
+
+        x_index == length(x_edges) && x_value == last(x_edges) && (x_index -= 1)
+        y_index == length(y_edges) && y_value == last(y_edges) && (y_index -= 1)
+
+        if 1 <= x_index < length(x_edges) && 1 <= y_index < length(y_edges)
+            counts[x_index, y_index] += 1
+        end
+    end
+
+    return maximum(counts)
+end
+
+function flux_column_label(flux_column::Symbol)
+    flux_column == :H && return L"\overline{w'T'}~\mathrm{[W~m^{-2}]}"
+    flux_column == :LE && return L"\overline{w'q'}~\mathrm{[W~m^{-2}]}"
+    return string(flux_column)
+end
+
+function flux_column_title(flux_column::Symbol)
+    flux_column == :H && return "Sensible heat flux"
+    flux_column == :LE && return "Latent heat flux"
+    return string(flux_column)
+end
+
+function flux_column_slug(flux_column::Symbol)
+    flux_column == :H && return "heat_flux"
+    flux_column == :LE && return "latent_heat_flux"
+    slug = lowercase(replace(string(flux_column), r"[^A-Za-z0-9]+" => "_"))
+    return strip(slug, ['_'])
+end
+
+function plot_flux_time_histogram(data::DataFrame, output_file::AbstractString, avg_period::Period;
+                                  flux_column::Symbol=:H,
+                                  flux_bins=DEFAULT_SENSIBLE_BINS,
+                                  time_bin_period::Period=DEFAULT_TIME_FLUX_BIN_PERIOD,
+                                  title_suffix="",
+                                  cmap="viridis")
+    :time in propertynames(data) || error("Cannot plot time/flux histogram without a time column.")
+    flux_column in propertynames(data) || error("Cannot plot time/flux histogram without column $flux_column.")
+
+    all_times, all_values = finite_time_flux_values(data, flux_column)
+    isempty(all_values) && return nothing
+
+    time_edges = time_bin_edges(all_times, time_bin_period)
+    all_time_values = pydates.date2num.(all_times)
+    max_count = max(1, histogram2d_max_count(all_time_values, all_values, time_edges, flux_bins))
+
+    row_specs = [
+        ("total", "total"),
+        ("lead", "lead"),
+        ("pond", "pond"),
+        ("ice", "ice"),
+        ("ridge", "ridge"),
+    ]
+
+    fig, axes_raw = PyPlot.subplots(length(row_specs), 1, figsize=(8.6, 9.0), sharex=true, sharey=true)
+    axes = vec(axes_raw)
+    hist_image = nothing
+
+    for (row_index, (label, surface_type)) in enumerate(row_specs)
+        ax = axes[row_index]
+        row_data = subset_surface(data, surface_type)
+        row_times, row_values = finite_time_flux_values(row_data, flux_column)
+
+        ax.axhline(0, color="grey", alpha=0.4, lw=0.8)
+        if isempty(row_values)
+            ax.text(0.5, 0.5, "no data", transform=ax.transAxes,
+                    ha="center", va="center", fontsize=9, color="0.4")
+        else
+            row_time_values = pydates.date2num.(row_times)
+            hist_result = ax.hist2d(row_time_values, row_values;
+                                    bins=[time_edges, flux_bins], cmap=cmap,
+                                    cmin=1, vmin=0, vmax=max_count)
+            hist_image = hist_result[end]
+        end
+
+        add_hours_text!(ax, "$(round(data_hours(row_data[!, flux_column], avg_period), digits=1)) h")
+        ax.set_ylabel(label, fontsize=11, fontweight="bold", rotation=0, labelpad=36, va="center")
+        ax.grid(alpha=0.25)
+    end
+
+    date_locator = pydates.AutoDateLocator()
+    date_formatter = pydates.DateFormatter("%d.%m.\n%H:%M")
+    for ax in axes
+        ax.xaxis_date()
+        ax.xaxis.set_major_locator(date_locator)
+        ax.xaxis.set_major_formatter(date_formatter)
+        ax.set_xlim(first(time_edges), last(time_edges))
+        ax.set_ylim(first(flux_bins), last(flux_bins))
+    end
+    axes[end].set_xlabel("date")
+
+    title = "$(flux_column_title(flux_column)) by date"
+    !isempty(title_suffix) && (title = "$title - $title_suffix")
+    fig.suptitle(title, fontweight="bold")
+    fig.text(0.03, 0.52, flux_column_label(flux_column), rotation="vertical", va="center")
+    fig.tight_layout(rect=(0.07, 0.04, 0.88, 0.94))
+
+    if !isnothing(hist_image)
+        cbar_ax = fig.add_axes([0.90, 0.14, 0.02, 0.74])
+        cbar = fig.colorbar(hist_image, cax=cbar_ax)
+        cbar.set_label("count per $(time_bin_period) x flux bin")
+    end
+
+    mkpath(dirname(output_file))
+    PyPlot.savefig(output_file, bbox_inches="tight")
+    PyPlot.close(fig)
+    return output_file
+end
+
+function plot_heat_flux_time_histograms(data::DataFrame, plot_dir::AbstractString, avg_period::Period;
+                                        flux_column::Symbol=:H,
+                                        flux_bins=DEFAULT_SENSIBLE_BINS,
+                                        time_bin_period::Period=DEFAULT_TIME_FLUX_BIN_PERIOD,
+                                        split_by_weather=false,
+                                        weather_column::Symbol=:weather_class)
+    outputs = String[]
+    flux_slug = flux_column_slug(flux_column)
+
+    for group_value in histogram_group_values(data)
+        group_data = histogram_group_data(data, group_value)
+        group_suffix = output_suffix(group_value)
+        group_title = group_value == "all" ? "" : group_value
+
+        output = plot_flux_time_histogram(
+            group_data,
+            joinpath(plot_dir, "hist_time_$(flux_slug)$(group_suffix).pdf"),
+            avg_period;
+            flux_column=flux_column,
+            flux_bins=flux_bins,
+            time_bin_period=time_bin_period,
+            title_suffix=group_title,
+        )
+        !isnothing(output) && push!(outputs, output)
+
+        if split_by_weather && weather_column in propertynames(group_data)
+            for class_value in sorted_string_values(group_data[!, weather_column]; order=WEATHER_CLASS_ORDER)
+                weather_data = group_data[string_column_mask(group_data, weather_column, class_value), :]
+                nrow(weather_data) == 0 && continue
+
+                title_parts = String[]
+                !isempty(group_title) && push!(title_parts, group_title)
+                push!(title_parts, weather_class_label(class_value))
+
+                output = plot_flux_time_histogram(
+                    weather_data,
+                    joinpath(plot_dir, "hist_time_$(flux_slug)$(group_suffix)$(output_suffix(class_value)).pdf"),
+                    avg_period;
+                    flux_column=flux_column,
+                    flux_bins=flux_bins,
+                    time_bin_period=time_bin_period,
+                    title_suffix=join(title_parts, " - "),
+                )
+                !isnothing(output) && push!(outputs, output)
+            end
+        end
+    end
+
+    return outputs
+end
+
 
 function finite_numeric_values(values)
     valid = Float64[]
@@ -561,6 +762,9 @@ end
 station_names = selected_station_names() # or ["1a", "1b_1"]
 avg_period = Second(400)
 group_name = "all" # "all" or "daynight"; extend custom_grouping_labels for more
+plot_time_flux_histograms = true # set true for 2D date-vs-H provenance histograms
+time_flux_bin_period = DEFAULT_TIME_FLUX_BIN_PERIOD # x-bin width for provenance histograms
+time_flux_split_by_weather = true # add weather-specific provenance histograms
 
 station_configs = load_station_configs(station_names)
 cache_file = default_cache_file(station_configs, avg_period)
@@ -654,3 +858,12 @@ flux_data[!, :weather_class] = dship_meteo_agg.weather_class
 ## Plotting
 
 plot_outputs = plot_histograms(flux_data, plot_dir, avg_period)
+if plot_time_flux_histograms
+    append!(plot_outputs, plot_heat_flux_time_histograms(
+        flux_data,
+        plot_dir,
+        avg_period;
+        time_bin_period=time_flux_bin_period,
+        split_by_weather=time_flux_split_by_weather,
+    ))
+end
