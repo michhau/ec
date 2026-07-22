@@ -29,6 +29,14 @@ const L_V = 2500e3        # J kg^-1
 const FLUX_SURFACE_TYPES = ("ice", "lead", "pond", "ridge")
 const DEFAULT_SENSIBLE_BINS = collect(-50.0:1.0:50.0)
 const DEFAULT_LATENT_BINS = collect(-25.0:0.5:25.0)
+const WEATHER_CLASS_ORDER = ("clear_sky", "overcast_cloudy", "foggy", "transient", "unknown")
+const WEATHER_CLASS_LABELS = Dict(
+    "clear_sky" => "clear sky",
+    "overcast_cloudy" => "overcast/cloudy",
+    "foggy" => "foggy",
+    "transient" => "transient",
+    "unknown" => "unknown",
+)
 
 """
     read_dship_meteo_csv(filename::String, datatypes::Vector{DataType}, dateformat_inp=DateFormat("yyyymmddTHHMMSS"))
@@ -380,26 +388,104 @@ function output_suffix(group_value)
     isempty(group_string) || group_string == "all" ? "" : "_$group_string"
 end
 
-function plot_histograms(data::DataFrame, plot_dir::AbstractString, avg_period::Period)
-    outputs = String[]
-    groups = sort(unique(String.(data.histogram_group)))
+function string_values(values)
+    return [string(value) for value in values if !ismissing(value)]
+end
 
-    for group_value in groups
-        group_data = data[data.histogram_group .== group_value, :]
-        suffix = output_suffix(group_value)
-        title_suffix = group_value == "all" ? "" : group_value
+function sorted_string_values(values; order=())
+    present_values = unique(string_values(values))
+    order_index = Dict(string(value) => i for (i, value) in enumerate(order))
+    return sort(present_values, by=value -> (get(order_index, value, typemax(Int)), value))
+end
 
-        push!(outputs, plot_total_histogram(
-            group_data,
+function string_column_mask(data::DataFrame, column::Symbol, value::AbstractString)
+    return [!ismissing(row_value) && string(row_value) == value for row_value in data[!, column]]
+end
+
+function weather_class_label(class_value::AbstractString)
+    return get(WEATHER_CLASS_LABELS, class_value, replace(class_value, "_" => " "))
+end
+
+function plot_histogram_pair(data::DataFrame, plot_dir::AbstractString, avg_period::Period;
+                             suffix="", title_suffix="")
+    return [
+        plot_total_histogram(
+            data,
             joinpath(plot_dir, "hist_all_fluxes$(suffix).pdf"),
             avg_period;
             title_suffix=title_suffix,
-        ))
-        push!(outputs, plot_surface_histogram(
-            group_data,
+        ),
+        plot_surface_histogram(
+            data,
             joinpath(plot_dir, "hist_surface_types$(suffix).pdf"),
             avg_period;
             title_suffix=title_suffix,
+        ),
+    ]
+end
+
+function histogram_group_values(data::DataFrame)
+    :histogram_group in propertynames(data) || return ["all"]
+    values = sorted_string_values(data.histogram_group)
+    return isempty(values) ? ["all"] : values
+end
+
+function histogram_group_data(data::DataFrame, group_value::AbstractString)
+    :histogram_group in propertynames(data) || return data
+    return data[string_column_mask(data, :histogram_group, group_value), :]
+end
+
+function plot_weather_histograms(data::DataFrame, plot_dir::AbstractString, avg_period::Period;
+                                 weather_column::Symbol=:weather_class,
+                                 base_suffix="",
+                                 title_prefix="")
+    weather_column in propertynames(data) || return String[]
+
+    outputs = String[]
+    for class_value in sorted_string_values(data[!, weather_column]; order=WEATHER_CLASS_ORDER)
+        weather_data = data[string_column_mask(data, weather_column, class_value), :]
+        nrow(weather_data) == 0 && continue
+
+        title_parts = String[]
+        !isempty(title_prefix) && push!(title_parts, title_prefix)
+        push!(title_parts, weather_class_label(class_value))
+
+        append!(outputs, plot_histogram_pair(
+            weather_data,
+            plot_dir,
+            avg_period;
+            suffix="$(base_suffix)$(output_suffix(class_value))",
+            title_suffix=join(title_parts, " - "),
+        ))
+    end
+
+    return outputs
+end
+
+function plot_histograms(data::DataFrame, plot_dir::AbstractString, avg_period::Period;
+                         weather_column::Symbol=:weather_class)
+    outputs = String[]
+    groups = histogram_group_values(data)
+
+    for group_value in groups
+        group_data = histogram_group_data(data, group_value)
+        suffix = output_suffix(group_value)
+        title_suffix = group_value == "all" ? "" : group_value
+
+        append!(outputs, plot_histogram_pair(
+            group_data,
+            plot_dir,
+            avg_period;
+            suffix=suffix,
+            title_suffix=title_suffix,
+        ))
+        append!(outputs, plot_weather_histograms(
+            group_data,
+            plot_dir,
+            avg_period;
+            weather_column=weather_column,
+            base_suffix=suffix,
+            title_prefix=title_suffix,
         ))
     end
 
@@ -535,7 +621,35 @@ dship_meteo = dship_meteo[flux_data.time[1]-avg_period/2 .<= dship_meteo.time .<
 #aggregate dship_meteo to flux_data time
 dship_meteo_agg = aggregate_dship_meteo_to_flux_times(dship_meteo, flux_data.time, avg_period)
 
-add_dship_meteo_columns!(flux_data, dship_meteo_agg, avg_period)
+## Classify fog, clear sky, overcast, transient
+"""
+    classify_dship_weather(row)::Symbol
+
+Classify DSHIP meteo records into broad visual-weather classes.
+
+The DSHIP cloud-base field uses `99999` for no detected ceiling and `-9999`
+for invalid data. Fog follows the standard visibility threshold (< 1000 m).
+"""
+function classify_dship_weather(row)::Symbol
+    vis = row.visibility
+    ceiling = row.ceiling_m
+
+    if ismissing(vis) || ismissing(ceiling) || ceiling < 0
+        return :unknown
+    elseif vis <= 2000
+        return :foggy
+    elseif vis >= 10_000 && ceiling >= 90_000
+        return :clear_sky
+    elseif vis >= 5000 && ceiling >= 100
+        return :overcast_cloudy
+    else
+        return :transient
+    end
+end
+
+dship_meteo_agg.weather_class = [classify_dship_weather(row) for row in eachrow(dship_meteo_agg)]
+
+flux_data[!, :weather_class] = dship_meteo_agg.weather_class
 
 ## Plotting
 
