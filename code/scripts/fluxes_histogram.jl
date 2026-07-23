@@ -32,6 +32,7 @@ const DEFAULT_SENSIBLE_BINS = collect(-50.0:1.0:50.0)
 const DEFAULT_LATENT_BINS = collect(-25.0:0.5:25.0)
 const DEFAULT_TIME_FLUX_BIN_PERIOD = Hour(6)
 const WEATHER_CLASS_ORDER = ("clear_sky", "overcast_cloudy", "foggy", "transient", "unknown")
+const AIR_TEMPERATURE_CLASS_ORDER = ("cold", "near_zero", "warm", "unknown")
 const WEATHER_CLASS_LABELS = Dict(
     "clear_sky" => "clear sky",
     "overcast_cloudy" => "overcast/cloudy",
@@ -404,8 +405,35 @@ function string_column_mask(data::DataFrame, column::Symbol, value::AbstractStri
     return [!ismissing(row_value) && string(row_value) == value for row_value in data[!, column]]
 end
 
-function weather_class_label(class_value::AbstractString)
-    return get(WEATHER_CLASS_LABELS, class_value, replace(class_value, "_" => " "))
+function default_classification_order(classification_column)
+    classification_column == :weather_class && return WEATHER_CLASS_ORDER
+    classification_column == :air_temperature_class && return AIR_TEMPERATURE_CLASS_ORDER
+    return ()
+end
+
+function default_classification_labels(classification_column, air_temperature_thresholds)
+    if classification_column == :weather_class
+        return WEATHER_CLASS_LABELS
+    elseif classification_column == :air_temperature_class
+        lower_temperature, upper_temperature = air_temperature_thresholds
+        return Dict(
+            "cold" => "T < $(lower_temperature) C",
+            "near_zero" => "$(lower_temperature) C <= T <= $(upper_temperature) C",
+            "warm" => "T > $(upper_temperature) C",
+            "unknown" => "unknown",
+        )
+    end
+
+    return Dict{String,String}()
+end
+
+function classification_label(class_value::AbstractString, classification_labels)
+    return get(classification_labels, class_value, replace(class_value, "_" => " "))
+end
+
+function classification_suffix(classification_column::Symbol, class_value)
+    classification_name = replace(string(classification_column), r"_class$" => "")
+    return "$(output_suffix(classification_name))$(output_suffix(class_value))"
 end
 
 function plot_histogram_pair(data::DataFrame, plot_dir::AbstractString, avg_period::Period;
@@ -437,26 +465,28 @@ function histogram_group_data(data::DataFrame, group_value::AbstractString)
     return data[string_column_mask(data, :histogram_group, group_value), :]
 end
 
-function plot_weather_histograms(data::DataFrame, plot_dir::AbstractString, avg_period::Period;
-                                 weather_column::Symbol=:weather_class,
-                                 base_suffix="",
-                                 title_prefix="")
-    weather_column in propertynames(data) || return String[]
+function plot_classification_histograms(data::DataFrame, plot_dir::AbstractString, avg_period::Period;
+                                        classification_column=nothing,
+                                        classification_order=(),
+                                        classification_labels=Dict{String,String}(),
+                                        base_suffix="",
+                                        title_prefix="")
+    isnothing(classification_column) && return String[]
 
     outputs = String[]
-    for class_value in sorted_string_values(data[!, weather_column]; order=WEATHER_CLASS_ORDER)
-        weather_data = data[string_column_mask(data, weather_column, class_value), :]
-        nrow(weather_data) == 0 && continue
+    for class_value in sorted_string_values(data[!, classification_column]; order=classification_order)
+        class_data = data[string_column_mask(data, classification_column, class_value), :]
+        nrow(class_data) == 0 && continue
 
         title_parts = String[]
         !isempty(title_prefix) && push!(title_parts, title_prefix)
-        push!(title_parts, weather_class_label(class_value))
+        push!(title_parts, classification_label(class_value, classification_labels))
 
         append!(outputs, plot_histogram_pair(
-            weather_data,
+            class_data,
             plot_dir,
             avg_period;
-            suffix="$(base_suffix)$(output_suffix(class_value))",
+            suffix="$(base_suffix)$(classification_suffix(classification_column, class_value))",
             title_suffix=join(title_parts, " - "),
         ))
     end
@@ -465,7 +495,9 @@ function plot_weather_histograms(data::DataFrame, plot_dir::AbstractString, avg_
 end
 
 function plot_histograms(data::DataFrame, plot_dir::AbstractString, avg_period::Period;
-                         weather_column::Symbol=:weather_class)
+                         classification_column=nothing,
+                         classification_order=(),
+                         classification_labels=Dict{String,String}())
     outputs = String[]
     groups = histogram_group_values(data)
 
@@ -481,11 +513,13 @@ function plot_histograms(data::DataFrame, plot_dir::AbstractString, avg_period::
             suffix=suffix,
             title_suffix=title_suffix,
         ))
-        append!(outputs, plot_weather_histograms(
+        append!(outputs, plot_classification_histograms(
             group_data,
             plot_dir,
             avg_period;
-            weather_column=weather_column,
+            classification_column=classification_column,
+            classification_order=classification_order,
+            classification_labels=classification_labels,
             base_suffix=suffix,
             title_prefix=title_suffix,
         ))
@@ -646,8 +680,9 @@ function plot_heat_flux_time_histograms(data::DataFrame, plot_dir::AbstractStrin
                                         flux_column::Symbol=:H,
                                         flux_bins=DEFAULT_SENSIBLE_BINS,
                                         time_bin_period::Period=DEFAULT_TIME_FLUX_BIN_PERIOD,
-                                        split_by_weather=false,
-                                        weather_column::Symbol=:weather_class)
+                                        classification_column=nothing,
+                                        classification_order=(),
+                                        classification_labels=Dict{String,String}())
     outputs = String[]
     flux_slug = flux_column_slug(flux_column)
 
@@ -667,18 +702,18 @@ function plot_heat_flux_time_histograms(data::DataFrame, plot_dir::AbstractStrin
         )
         !isnothing(output) && push!(outputs, output)
 
-        if split_by_weather && weather_column in propertynames(group_data)
-            for class_value in sorted_string_values(group_data[!, weather_column]; order=WEATHER_CLASS_ORDER)
-                weather_data = group_data[string_column_mask(group_data, weather_column, class_value), :]
-                nrow(weather_data) == 0 && continue
+        if !isnothing(classification_column)
+            for class_value in sorted_string_values(group_data[!, classification_column]; order=classification_order)
+                class_data = group_data[string_column_mask(group_data, classification_column, class_value), :]
+                nrow(class_data) == 0 && continue
 
                 title_parts = String[]
                 !isempty(group_title) && push!(title_parts, group_title)
-                push!(title_parts, weather_class_label(class_value))
+                push!(title_parts, classification_label(class_value, classification_labels))
 
                 output = plot_flux_time_histogram(
-                    weather_data,
-                    joinpath(plot_dir, "hist_time_$(flux_slug)$(group_suffix)$(output_suffix(class_value)).pdf"),
+                    class_data,
+                    joinpath(plot_dir, "hist_time_$(flux_slug)$(group_suffix)$(classification_suffix(classification_column, class_value)).pdf"),
                     avg_period;
                     flux_column=flux_column,
                     flux_bins=flux_bins,
@@ -762,9 +797,12 @@ end
 station_names = selected_station_names() # or ["1a", "1b_1"]
 avg_period = Second(400)
 group_name = "all" # "all" or "daynight"; extend custom_grouping_labels for more
-plot_time_flux_histograms = true # set true for 2D date-vs-H provenance histograms
-time_flux_bin_period = DEFAULT_TIME_FLUX_BIN_PERIOD # x-bin width for provenance histograms
-time_flux_split_by_weather = true # add weather-specific provenance histograms
+air_temperature_thresholds = (-1.0, 1.0)
+classification_column = :air_temperature_class # :weather_class, :air_temperature_class, or nothing
+classification_order = default_classification_order(classification_column)
+classification_labels = default_classification_labels(classification_column, air_temperature_thresholds)
+plot_time_flux_histograms = true # add 2D date-vs-H histograms for the same classification
+time_flux_bin_period = DEFAULT_TIME_FLUX_BIN_PERIOD # x-bin width for 2D histograms
 
 station_configs = load_station_configs(station_names)
 cache_file = default_cache_file(station_configs, avg_period)
@@ -825,7 +863,7 @@ dship_meteo = dship_meteo[flux_data.time[1]-avg_period/2 .<= dship_meteo.time .<
 #aggregate dship_meteo to flux_data time
 dship_meteo_agg = aggregate_dship_meteo_to_flux_times(dship_meteo, flux_data.time, avg_period)
 
-## Classify fog, clear sky, overcast, transient
+## Classify DSHIP meteo records
 """
     classify_dship_weather(row)::Symbol
 
@@ -851,19 +889,51 @@ function classify_dship_weather(row)::Symbol
     end
 end
 
+function classify_air_temperature(air_temperature, thresholds)::Symbol
+    if ismissing(air_temperature)
+        return :unknown
+    end
+
+    temperature = Float64(air_temperature)
+    if !isfinite(temperature)
+        return :unknown
+    elseif temperature < thresholds[1]
+        return :cold
+    elseif temperature <= thresholds[2]
+        return :near_zero
+    else
+        return :warm
+    end
+end
+
 dship_meteo_agg.weather_class = [classify_dship_weather(row) for row in eachrow(dship_meteo_agg)]
+dship_meteo_agg.air_temperature_class = [
+    classify_air_temperature(air_temperature, air_temperature_thresholds)
+    for air_temperature in dship_meteo_agg.air_temperature
+]
 
 flux_data[!, :weather_class] = dship_meteo_agg.weather_class
+flux_data[!, :air_temperature] = dship_meteo_agg.air_temperature
+flux_data[!, :air_temperature_class] = dship_meteo_agg.air_temperature_class
 
 ## Plotting
 
-plot_outputs = plot_histograms(flux_data, plot_dir, avg_period)
+plot_outputs = plot_histograms(
+    flux_data,
+    plot_dir,
+    avg_period;
+    classification_column=classification_column,
+    classification_order=classification_order,
+    classification_labels=classification_labels,
+)
 if plot_time_flux_histograms
     append!(plot_outputs, plot_heat_flux_time_histograms(
         flux_data,
         plot_dir,
         avg_period;
         time_bin_period=time_flux_bin_period,
-        split_by_weather=time_flux_split_by_weather,
+        classification_column=classification_column,
+        classification_order=classification_order,
+        classification_labels=classification_labels,
     ))
 end
