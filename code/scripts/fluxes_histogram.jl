@@ -12,7 +12,7 @@ NetCDF files again, run the settings section and then the cache-reading section.
 =#
 
 using Dates, DataFrames, Statistics, LaTeXStrings, ProgressMeter
-import CSV, PyCall, PyPlot
+import CSV, PyCall, PyPlot, StatsBase
 pydates = PyCall.pyimport("matplotlib.dates")
 
 importdir = joinpath(@__DIR__, "..")
@@ -33,6 +33,19 @@ const DEFAULT_LATENT_BINS = collect(-25.0:0.5:25.0)
 const DEFAULT_TIME_FLUX_BIN_PERIOD = Hour(6)
 const WEATHER_CLASS_ORDER = ("clear_sky", "overcast_cloudy", "foggy", "transient", "unknown")
 const AIR_TEMPERATURE_CLASS_ORDER = ("cold", "near_zero", "warm", "unknown")
+const DSHIP_HISTOGRAM_SPECS = [
+    (:air_pressure, "Air pressure [hPa]"),
+    (:air_temperature, "Air temperature [deg C]"),
+    (:ceiling_m, "Ceiling [m]"),
+    (:dewpoint, "Dew point [deg C]"),
+    (:global_radiation, "Global radiation [W m^-2]"),
+    (:precipitation, "Precipitation [mm min^-1]"),
+    (:rel_humidity, "Relative humidity [%]"),
+    (:true_wind_direction, "True wind direction [deg]"),
+    (:true_wind_velocity, "True wind velocity [m s^-1]"),
+    (:visibility, "Visibility [m]"),
+    (:water_temperature, "Water temperature [deg C]"),
+]
 const WEATHER_CLASS_LABELS = Dict(
     "clear_sky" => "clear sky",
     "overcast_cloudy" => "overcast/cloudy",
@@ -363,8 +376,8 @@ function plot_surface_histogram(data::DataFrame, output_file::AbstractString, av
         row_index == 1 && ax_h.legend(fontsize=8)
 
         ax_le.axvline(0, color="grey", alpha=0.4)
-        safe_hist!(ax_le, finite_values(row_data.LE); bins=DEFAULT_LATENT_BINS, color="C2")
-        add_hours_text!(ax_le, "$(round(data_hours(row_data.LE, avg_period), digits=1)) h", x=0.20)
+        safe_hist!(ax_le, finite_values(data_1m.LE); bins=DEFAULT_LATENT_BINS, color="C2")
+        add_hours_text!(ax_le, "$(round(data_hours(data_1m.LE, avg_period), digits=1)) h", x=0.20)
         ax_le.tick_params(axis="y", labelleft=false)
         ax_le.grid(alpha=0.3)
 
@@ -375,7 +388,7 @@ function plot_surface_histogram(data::DataFrame, output_file::AbstractString, av
     end
 
     axes[1, 1].set_title("Sensible")
-    axes[1, 2].set_title("Latent")
+    axes[1, 2].set_title("Latent (~1m)")
     !isempty(title_suffix) && fig.suptitle(title_suffix)
 
     PyPlot.tight_layout()
@@ -403,6 +416,204 @@ end
 
 function string_column_mask(data::DataFrame, column::Symbol, value::AbstractString)
     return [!ismissing(row_value) && string(row_value) == value for row_value in data[!, column]]
+end
+
+temperature_threshold_text(value::Real) = isinteger(value) ? string(Int(value)) : string(value)
+
+function temperature_class_range_text(class_value::AbstractString, thresholds)
+    lower_temperature, upper_temperature = temperature_threshold_text.(thresholds)
+
+    class_value == "cold" && return "T < $lower_temperature C"
+    class_value == "near_zero" && return "$lower_temperature C <= T <= $upper_temperature C"
+    class_value == "warm" && return "T > $upper_temperature C"
+    error("Unknown paper temperature class '$class_value'.")
+end
+
+function temperature_class_plot_label(class_value::AbstractString, thresholds)
+    lower_temperature, upper_temperature = temperature_threshold_text.(thresholds)
+    degree_c = "\\,^{\\circ}\\mathrm{C}"
+
+    class_value == "cold" && return "\$T < " * lower_temperature * degree_c * "\$"
+    class_value == "near_zero" && return (
+        "\$" * lower_temperature * degree_c * " \\leq T \\leq " * upper_temperature * degree_c * "\$")
+    class_value == "warm" && return "\$T > " * upper_temperature * degree_c * "\$"
+    error("Unknown paper temperature class '$class_value'.")
+end
+
+function plot_paper_flux_row!(ax_h, ax_le, data::DataFrame, avg_period::Period;
+                              row_label="", show_legend=false)
+    data_1m = data[string_column_mask(data, :height_band, "1m"), :]
+    data_2m = data[string_column_mask(data, :height_band, "2m"), :]
+
+    ax_h.axvline(0, color="grey", alpha=0.4)
+    safe_hist!(
+        ax_h,
+        finite_values(data_1m.H);
+        bins=DEFAULT_SENSIBLE_BINS,
+        color="C0",
+        alpha=0.60,
+        label="~1m",
+    )
+    safe_hist!(
+        ax_h,
+        finite_values(data_2m.H);
+        bins=DEFAULT_SENSIBLE_BINS,
+        color="C1",
+        alpha=0.60,
+        label="~2m",
+    )
+    add_hours_text!(
+        ax_h,
+        "1m: $(round(data_hours(data_1m.H, avg_period), digits=1)) h\n" *
+        "2m: $(round(data_hours(data_2m.H, avg_period), digits=1)) h",
+        x=0.24,
+    )
+    ax_h.tick_params(axis="y", labelleft=false)
+    ax_h.grid(alpha=0.3)
+    show_legend && ax_h.legend(fontsize=8)
+
+    if !isempty(row_label)
+        ax_h.set_ylabel(row_label, fontsize=10, rotation=0, labelpad=64, va="center")
+    end
+
+    ax_le.axvline(0, color="grey", alpha=0.4)
+    safe_hist!(ax_le, finite_values(data_1m.LE); bins=DEFAULT_LATENT_BINS, color="C2")
+    add_hours_text!(ax_le, "$(round(data_hours(data_1m.LE, avg_period), digits=1)) h")
+    ax_le.tick_params(axis="y", labelleft=false)
+    ax_le.grid(alpha=0.3)
+    return nothing
+end
+
+function plot_paper_all_flux_histogram(data::DataFrame, plot_dir::AbstractString, avg_period::Period)
+    output_file = joinpath(plot_dir, "hist_paper_all_fluxes_by_height.pdf")
+    fig, axes = PyPlot.subplots(1, 2, figsize=(6.8, 3.2))
+
+    plot_paper_flux_row!(axes[1], axes[2], data, avg_period; show_legend=true)
+    axes[1].set_title("Sensible")
+    axes[2].set_title("Latent (~1m)")
+    axes[1].set_xlabel(L"\overline{w'T'}~\mathrm{[W~m^{-2}]}")
+    axes[2].set_xlabel(L"\overline{w'q'}~\mathrm{[W~m^{-2}]}")
+
+    PyPlot.tight_layout()
+    mkpath(dirname(output_file))
+    PyPlot.savefig(output_file, bbox_inches="tight")
+    PyPlot.close(fig)
+    return output_file
+end
+
+function plot_paper_temperature_flux_histograms(
+        data::DataFrame, plot_dir::AbstractString, avg_period::Period, thresholds)
+    output_file = joinpath(plot_dir, "hist_paper_fluxes_by_air_temperature.pdf")
+    temperature_classes = ("cold", "near_zero", "warm")
+    fig, axes = PyPlot.subplots(3, 2, figsize=(8.4, 8.0), sharex="col")
+
+    for (row_index, class_value) in enumerate(temperature_classes)
+        class_data = data[string_column_mask(data, :air_temperature_class, class_value), :]
+        plot_paper_flux_row!(
+            axes[row_index, 1],
+            axes[row_index, 2],
+            class_data,
+            avg_period;
+            row_label=temperature_class_plot_label(class_value, thresholds),
+            show_legend=row_index == 1,
+        )
+    end
+
+    axes[1, 1].set_title("Sensible")
+    axes[1, 2].set_title("Latent (~1m)")
+    axes[end, 1].set_xlabel(L"\overline{w'T'}~\mathrm{[W~m^{-2}]}")
+    axes[end, 2].set_xlabel(L"\overline{w'q'}~\mathrm{[W~m^{-2}]}")
+
+    PyPlot.tight_layout()
+    mkpath(dirname(output_file))
+    PyPlot.savefig(output_file, bbox_inches="tight")
+    PyPlot.close(fig)
+    return output_file
+end
+
+function distribution_statistics(values)
+    valid = finite_values(values)
+    n = length(valid)
+    n == 0 && return (
+        n=0,
+        mean=missing,
+        median=missing,
+        std=missing,
+        percentile_05=missing,
+        percentile_95=missing,
+        skewness=missing,
+    )
+
+    skewness_value = n >= 3 ? StatsBase.skewness(valid) : missing
+    if !ismissing(skewness_value) && !isfinite(skewness_value)
+        skewness_value = missing
+    end
+
+    return (
+        n=n,
+        mean=mean(valid),
+        median=median(valid),
+        std=n >= 2 ? std(valid) : missing,
+        percentile_05=quantile(valid, 0.05),
+        percentile_95=quantile(valid, 0.95),
+        skewness=skewness_value,
+    )
+end
+
+function paper_flux_distribution_statistics(data::DataFrame, thresholds)
+    statistics = DataFrame(
+        temperature_class=String[],
+        temperature_range=String[],
+        flux=String[],
+        height_band=String[],
+        n=Int[],
+        mean=Union{Missing,Float64}[],
+        median=Union{Missing,Float64}[],
+        std=Union{Missing,Float64}[],
+        percentile_05=Union{Missing,Float64}[],
+        percentile_95=Union{Missing,Float64}[],
+        skewness=Union{Missing,Float64}[],
+    )
+
+    temperature_groups = [("all", "all temperatures", data)]
+    for class_value in ("cold", "near_zero", "warm")
+        class_data = data[string_column_mask(data, :air_temperature_class, class_value), :]
+        push!(temperature_groups, (
+            class_value,
+            temperature_class_range_text(class_value, thresholds),
+            class_data,
+        ))
+    end
+
+    for (class_value, range_label, group_data) in temperature_groups
+        for (flux_column, height_band) in ((:H, "1m"), (:H, "2m"), (:LE, "1m"))
+            height_data = group_data[string_column_mask(group_data, :height_band, height_band), :]
+            descriptors = distribution_statistics(height_data[!, flux_column])
+            push!(statistics, (
+                temperature_class=class_value,
+                temperature_range=range_label,
+                flux=string(flux_column),
+                height_band=height_band,
+                n=descriptors.n,
+                mean=descriptors.mean,
+                median=descriptors.median,
+                std=descriptors.std,
+                percentile_05=descriptors.percentile_05,
+                percentile_95=descriptors.percentile_95,
+                skewness=descriptors.skewness,
+            ))
+        end
+    end
+
+    return statistics
+end
+
+function write_paper_flux_distribution_statistics(
+        data::DataFrame, plot_dir::AbstractString, thresholds)
+    output_file = joinpath(plot_dir, "paper_flux_distribution_statistics.csv")
+    mkpath(dirname(output_file))
+    CSV.write(output_file, paper_flux_distribution_statistics(data, thresholds))
+    return output_file
 end
 
 function default_classification_order(classification_column)
@@ -791,6 +1002,48 @@ function add_dship_meteo_columns!(flux_data::DataFrame, dship_meteo::DataFrame, 
     return flux_data
 end
 
+function dship_histogram_values(data::DataFrame, column::Symbol)
+    values = finite_numeric_values(data[!, column])
+    filter!(value -> value > -9000, values)
+
+    if column == :ceiling_m
+        # DSHIP uses 99999 when no ceiling was detected.
+        filter!(value -> 0 <= value < 90_000, values)
+    elseif column == :rel_humidity
+        filter!(value -> 0 <= value <= 100, values)
+    elseif column in (:precipitation, :visibility)
+        filter!(value -> value >= 0, values)
+    elseif column == :true_wind_direction
+        values = mod.(values, 360)
+    end
+
+    return values
+end
+
+function plot_dship_meteo_histograms(data::DataFrame, plot_dir::AbstractString)
+    output_file = joinpath(plot_dir, "hist_dship_meteo_at_flux_times.pdf")
+    fig, axes_raw = PyPlot.subplots(4, 3, figsize=(10, 10))
+    axes = vec(axes_raw)
+
+    for (ax, (column, label)) in zip(axes, DSHIP_HISTOGRAM_SPECS)
+        values = dship_histogram_values(data, column)
+        bins = column == :true_wind_direction ? collect(0:10:360) : 30
+
+        safe_hist!(ax, values; bins=bins, color="C0")
+        ax.set_xlabel(label)
+        ax.tick_params(axis="y", labelleft=false)
+        ax.grid(alpha=0.3)
+        add_hours_text!(ax, "n = $(length(values))")
+    end
+
+    fig.delaxes(axes[end])
+    PyPlot.tight_layout()
+    mkpath(dirname(output_file))
+    PyPlot.savefig(output_file, bbox_inches="tight")
+    PyPlot.close(fig)
+    return output_file
+end
+
 ## Settings
 # Run this section first, then either rebuild from high-frequency data or read the cache.
 
@@ -918,6 +1171,8 @@ flux_data[!, :air_temperature_class] = dship_meteo_agg.air_temperature_class
 
 ## Plotting
 
+dship_hist_data = unique(dship_meteo_agg, :time)
+
 plot_outputs = plot_histograms(
     flux_data,
     plot_dir,
@@ -926,6 +1181,21 @@ plot_outputs = plot_histograms(
     classification_order=classification_order,
     classification_labels=classification_labels,
 )
+push!(plot_outputs, plot_dship_meteo_histograms(dship_hist_data, plot_dir))
+append!(plot_outputs, [
+    plot_paper_all_flux_histogram(flux_data, plot_dir, avg_period),
+    plot_paper_temperature_flux_histograms(
+        flux_data,
+        plot_dir,
+        avg_period,
+        air_temperature_thresholds,
+    ),
+    write_paper_flux_distribution_statistics(
+        flux_data,
+        plot_dir,
+        air_temperature_thresholds,
+    ),
+])
 if plot_time_flux_histograms
     append!(plot_outputs, plot_heat_flux_time_histograms(
         flux_data,
