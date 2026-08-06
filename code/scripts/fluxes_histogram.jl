@@ -33,6 +33,14 @@ const DEFAULT_LATENT_BINS = collect(-25.0:0.5:25.0)
 const DEFAULT_TIME_FLUX_BIN_PERIOD = Hour(6)
 const WEATHER_CLASS_ORDER = ("clear_sky", "overcast_cloudy", "foggy", "transient", "unknown")
 const AIR_TEMPERATURE_CLASS_ORDER = ("cold", "near_zero", "warm", "unknown")
+const FLUX_SURFACE_ROW_SPECS = (
+    ("total", "total"),
+    ("lead", "lead"),
+    ("pond", "pond"),
+    ("ice", "ice"),
+    ("ridge", "ridge"),
+)
+const HEIGHT_RESOLVED_FLUX_SERIES = ((:H, "1m"), (:H, "2m"), (:LE, "1m"))
 const DSHIP_HISTOGRAM_SPECS = [
     (:air_pressure, "Air pressure [hPa]"),
     (:air_temperature, "Air temperature [deg C]"),
@@ -346,15 +354,7 @@ function plot_surface_histogram(data::DataFrame, output_file::AbstractString, av
                                 title_suffix="")
     fig, axes = PyPlot.subplots(5, 2, figsize=(8.4, 12.0), sharex="col")
 
-    row_specs = [
-        ("total", "total"),
-        ("lead", "lead"),
-        ("pond", "pond"),
-        ("ice", "ice"),
-        ("ridge", "ridge"),
-    ]
-
-    for (row_index, (label, surface_type)) in enumerate(row_specs)
+    for (row_index, (label, surface_type)) in enumerate(FLUX_SURFACE_ROW_SPECS)
         row_data = subset_surface(data, surface_type)
         ax_h = axes[row_index, 1]
         ax_le = axes[row_index, 2]
@@ -381,7 +381,7 @@ function plot_surface_histogram(data::DataFrame, output_file::AbstractString, av
         ax_le.tick_params(axis="y", labelleft=false)
         ax_le.grid(alpha=0.3)
 
-        if row_index == length(row_specs)
+        if row_index == length(FLUX_SURFACE_ROW_SPECS)
             ax_h.set_xlabel(L"\overline{w'T'}~\mathrm{[W~m^{-2}]}")
             ax_le.set_xlabel(L"\overline{w'q'}~\mathrm{[W~m^{-2}]}")
         end
@@ -560,6 +560,88 @@ function distribution_statistics(values)
     )
 end
 
+function empty_flux_distribution_statistics()
+    return DataFrame(
+        surface_type=String[],
+        flux=String[],
+        height_band=String[],
+        n=Int[],
+        mean=Union{Missing,Float64}[],
+        median=Union{Missing,Float64}[],
+        std=Union{Missing,Float64}[],
+        percentile_05=Union{Missing,Float64}[],
+        percentile_95=Union{Missing,Float64}[],
+        skewness=Union{Missing,Float64}[],
+    )
+end
+
+function append_flux_distribution_statistics!(
+        statistics::DataFrame, surface_type, flux_column::Symbol, height_band, values)
+    descriptors = distribution_statistics(values)
+    push!(statistics, (
+        surface_type=String(surface_type),
+        flux=string(flux_column),
+        height_band=String(height_band),
+        n=descriptors.n,
+        mean=descriptors.mean,
+        median=descriptors.median,
+        std=descriptors.std,
+        percentile_05=descriptors.percentile_05,
+        percentile_95=descriptors.percentile_95,
+        skewness=descriptors.skewness,
+    ))
+    return statistics
+end
+
+function total_flux_distribution_statistics(data::DataFrame)
+    statistics = empty_flux_distribution_statistics()
+    for flux_column in (:H, :LE)
+        append_flux_distribution_statistics!(
+            statistics, "total", flux_column, "all", data[!, flux_column])
+    end
+    return statistics
+end
+
+function surface_flux_distribution_statistics(data::DataFrame)
+    statistics = empty_flux_distribution_statistics()
+
+    for (_, surface_type) in FLUX_SURFACE_ROW_SPECS
+        surface_data = subset_surface(data, surface_type)
+        for (flux_column, height_band) in HEIGHT_RESOLVED_FLUX_SERIES
+            height_data = surface_data[string_column_mask(surface_data, :height_band, height_band), :]
+            append_flux_distribution_statistics!(
+                statistics,
+                surface_type,
+                flux_column,
+                height_band,
+                height_data[!, flux_column],
+            )
+        end
+    end
+
+    return statistics
+end
+
+function time_flux_distribution_statistics(data::DataFrame, flux_column::Symbol)
+    statistics = empty_flux_distribution_statistics()
+
+    for (_, surface_type) in FLUX_SURFACE_ROW_SPECS
+        surface_data = subset_surface(data, surface_type)
+        append_flux_distribution_statistics!(
+            statistics, surface_type, flux_column, "all", surface_data[!, flux_column])
+    end
+
+    return statistics
+end
+
+function write_histogram_statistics(plot_output_file::AbstractString, statistics::DataFrame)
+    output_stem, _ = splitext(plot_output_file)
+    output_file = "$(output_stem)_statistics.csv"
+    mkpath(dirname(output_file))
+    CSV.write(output_file, statistics)
+    return output_file
+end
+
 function paper_flux_distribution_statistics(data::DataFrame, thresholds)
     statistics = DataFrame(
         temperature_class=String[],
@@ -586,7 +668,7 @@ function paper_flux_distribution_statistics(data::DataFrame, thresholds)
     end
 
     for (class_value, range_label, group_data) in temperature_groups
-        for (flux_column, height_band) in ((:H, "1m"), (:H, "2m"), (:LE, "1m"))
+        for (flux_column, height_band) in HEIGHT_RESOLVED_FLUX_SERIES
             height_data = group_data[string_column_mask(group_data, :height_band, height_band), :]
             descriptors = distribution_statistics(height_data[!, flux_column])
             push!(statistics, (
@@ -649,19 +731,24 @@ end
 
 function plot_histogram_pair(data::DataFrame, plot_dir::AbstractString, avg_period::Period;
                              suffix="", title_suffix="")
+    total_output = plot_total_histogram(
+        data,
+        joinpath(plot_dir, "hist_all_fluxes$(suffix).pdf"),
+        avg_period;
+        title_suffix=title_suffix,
+    )
+    surface_output = plot_surface_histogram(
+        data,
+        joinpath(plot_dir, "hist_surface_types$(suffix).pdf"),
+        avg_period;
+        title_suffix=title_suffix,
+    )
+
     return [
-        plot_total_histogram(
-            data,
-            joinpath(plot_dir, "hist_all_fluxes$(suffix).pdf"),
-            avg_period;
-            title_suffix=title_suffix,
-        ),
-        plot_surface_histogram(
-            data,
-            joinpath(plot_dir, "hist_surface_types$(suffix).pdf"),
-            avg_period;
-            title_suffix=title_suffix,
-        ),
+        total_output,
+        write_histogram_statistics(total_output, total_flux_distribution_statistics(data)),
+        surface_output,
+        write_histogram_statistics(surface_output, surface_flux_distribution_statistics(data)),
     ]
 end
 
@@ -824,19 +911,12 @@ function plot_flux_time_histogram(data::DataFrame, output_file::AbstractString, 
     all_time_values = pydates.date2num.(all_times)
     max_count = max(1, histogram2d_max_count(all_time_values, all_values, time_edges, flux_bins))
 
-    row_specs = [
-        ("total", "total"),
-        ("lead", "lead"),
-        ("pond", "pond"),
-        ("ice", "ice"),
-        ("ridge", "ridge"),
-    ]
-
-    fig, axes_raw = PyPlot.subplots(length(row_specs), 1, figsize=(8.6, 9.0), sharex=true, sharey=true)
+    fig, axes_raw = PyPlot.subplots(
+        length(FLUX_SURFACE_ROW_SPECS), 1, figsize=(8.6, 9.0), sharex=true, sharey=true)
     axes = vec(axes_raw)
     hist_image = nothing
 
-    for (row_index, (label, surface_type)) in enumerate(row_specs)
+    for (row_index, (label, surface_type)) in enumerate(FLUX_SURFACE_ROW_SPECS)
         ax = axes[row_index]
         row_data = subset_surface(data, surface_type)
         row_times, row_values = finite_time_flux_values(row_data, flux_column)
@@ -911,7 +991,11 @@ function plot_heat_flux_time_histograms(data::DataFrame, plot_dir::AbstractStrin
             time_bin_period=time_bin_period,
             title_suffix=group_title,
         )
-        !isnothing(output) && push!(outputs, output)
+        if !isnothing(output)
+            push!(outputs, output)
+            push!(outputs, write_histogram_statistics(
+                output, time_flux_distribution_statistics(group_data, flux_column)))
+        end
 
         if !isnothing(classification_column)
             for class_value in sorted_string_values(group_data[!, classification_column]; order=classification_order)
@@ -931,7 +1015,11 @@ function plot_heat_flux_time_histograms(data::DataFrame, plot_dir::AbstractStrin
                     time_bin_period=time_bin_period,
                     title_suffix=join(title_parts, " - "),
                 )
-                !isnothing(output) && push!(outputs, output)
+                if !isnothing(output)
+                    push!(outputs, output)
+                    push!(outputs, write_histogram_statistics(
+                        output, time_flux_distribution_statistics(class_data, flux_column)))
+                end
             end
         end
     end
@@ -1018,6 +1106,37 @@ function dship_histogram_values(data::DataFrame, column::Symbol)
     end
 
     return values
+end
+
+function dship_meteo_distribution_statistics(data::DataFrame)
+    statistics = DataFrame(
+        variable=String[],
+        label=String[],
+        n=Int[],
+        mean=Union{Missing,Float64}[],
+        median=Union{Missing,Float64}[],
+        std=Union{Missing,Float64}[],
+        percentile_05=Union{Missing,Float64}[],
+        percentile_95=Union{Missing,Float64}[],
+        skewness=Union{Missing,Float64}[],
+    )
+
+    for (column, label) in DSHIP_HISTOGRAM_SPECS
+        descriptors = distribution_statistics(dship_histogram_values(data, column))
+        push!(statistics, (
+            variable=string(column),
+            label=label,
+            n=descriptors.n,
+            mean=descriptors.mean,
+            median=descriptors.median,
+            std=descriptors.std,
+            percentile_05=descriptors.percentile_05,
+            percentile_95=descriptors.percentile_95,
+            skewness=descriptors.skewness,
+        ))
+    end
+
+    return statistics
 end
 
 function plot_dship_meteo_histograms(data::DataFrame, plot_dir::AbstractString)
@@ -1181,7 +1300,14 @@ plot_outputs = plot_histograms(
     classification_order=classification_order,
     classification_labels=classification_labels,
 )
-push!(plot_outputs, plot_dship_meteo_histograms(dship_hist_data, plot_dir))
+dship_plot_output = plot_dship_meteo_histograms(dship_hist_data, plot_dir)
+append!(plot_outputs, [
+    dship_plot_output,
+    write_histogram_statistics(
+        dship_plot_output,
+        dship_meteo_distribution_statistics(dship_hist_data),
+    ),
+])
 append!(plot_outputs, [
     plot_paper_all_flux_histogram(flux_data, plot_dir, avg_period),
     plot_paper_temperature_flux_histograms(
