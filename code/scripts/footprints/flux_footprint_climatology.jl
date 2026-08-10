@@ -116,8 +116,21 @@ for ix in 1:size(names, 1)
         wind_dir[j] = (wind_dir[j] + wind_direction_offsets[ix]) % 360
     end
 
-    output = py"FFP_climatology"(meas_heights[ix], nothing, PyVector(umean), PyVector(h), PyVector(ol),
-    PyVector(sigmav), PyVector(ustar), PyVector(wind_dir), PyVector(domain), dx, dy, nx, ny, PyVector(rs), rslayer, smooth_data, crop, pulse, verbosity, fig)
+    #keep only periods for which every required footprint input is finite
+    valid_blocks = map(eachindex(umean)) do j
+        all(isfinite, (umean[j], ol[j], sigmav[j],ustar[j], wind_dir[j],))
+    end
+
+    nvalid = sum(valid_blocks)
+
+    if nvalid == 0
+        error("No valid periods available for $(names[ix]).")
+    end
+
+    println("Using $nvalid of $nrblocks periods; ", nrblocks-nvalid, " period(s) containing NaN/Inf were ignored.")
+
+    output = py"FFP_climatology"(meas_heights[ix], nothing, PyVector(umean[valid_blocks]), PyVector(h[valid_blocks]), PyVector(ol[valid_blocks]),
+    PyVector(sigmav[valid_blocks]), PyVector(ustar[valid_blocks]), PyVector(wind_dir[valid_blocks]), PyVector(domain), dx, dy, nx, ny, PyVector(rs), rslayer, smooth_data, crop, pulse, verbosity, fig)
     if output["flag_err"] != 0
         @warn("Error flag set to true! There is an error!")
     end
@@ -159,10 +172,11 @@ fluxloc_final, bgextend_final = footprint_background_geometry(
 )
 
 ##
+PyPlot.pygui(true)
 ctab10 = PyPlot.cm.tab10
 ffp_fig = PyPlot.figure(figsize=(10,8))
 ax1 = ffp_fig.add_subplot(111)
-ax1.set_title("Station $(station_label) Flux footprints")
+#ax1.set_title("Station $(station_label) Flux footprints")
 bg = ax1.imshow(orthomosaic, extent=bgextend_final)
 #bg = ax1.pcolormesh(orthomosaic)
 ax1.set_xlabel("meter")

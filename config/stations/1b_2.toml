@@ -40,7 +40,7 @@ fluxloc = [[619, 1402], [619, 1402], [526, 1512], [526, 1512]]
 bgextend_m = [263.182, 316.09]
 bgextend_pxl = [2165, 2204]
 figorigin = [614, 1402]
-contour_indices = [-1, -1, -2, -2]
+contour_indices = [-1, -1, -1, -1]
 
 [block_footprints]
 classes_file = "/home/haugened/Documents/data/CONTRASTS/pics/setups/1b/map 270725_cut_classes.jpg"
