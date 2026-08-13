@@ -31,6 +31,7 @@ const FLUX_SURFACE_TYPES = ("ice", "lead", "pond", "ridge")
 const DEFAULT_SENSIBLE_BINS = collect(-50.0:1.0:50.0)
 const DEFAULT_LATENT_BINS = collect(-25.0:0.5:25.0)
 const LEAD_ICE_STATIONS = ("1c", "2a")
+const RIDGE_ICE_STATIONS = ("3a", "3b", "3c")
 const POND_ICE_STATIONS = ("1a", "1b_1", "1b_2", "2b", "2c")
 const SURFACE_ICE_HISTOGRAM_SETTINGS = Dict(
     "lead" => (
@@ -42,8 +43,8 @@ const SURFACE_ICE_HISTOGRAM_SETTINGS = Dict(
         LE=(xlimits=(-10.0, 25.0), bin_width=0.7),
     ),
     "ridge" => (
-        H=(xlimits=(-40.0, 40.0), bin_width=1.0),
-        LE=(xlimits=(-20.0, 30.0), bin_width=1.0),
+        H=(xlimits=(-60.0, 60.0), bin_width=1.2),
+        LE=(xlimits=(-25.0, 25.0), bin_width=0.5),
     ),
 )
 const DEFAULT_TIME_FLUX_BIN_PERIOD = Hour(6)
@@ -379,6 +380,9 @@ end
 surface_height_label(surface_type, height_m) =
     "\$\\mathrm{" * String(surface_type) * "},~\\approx " * string(height_m) *
     "\\,\\mathrm{m}\$"
+ice_reference_label(surface_type::AbstractString) =
+    surface_type == "ridge" ? "ice/lead" : "ice"
+
 
 function surface_height_data(distributions, surface_kind::AbstractString,
                              height_band::AbstractString)
@@ -388,6 +392,7 @@ end
 
 function plot_surface_ice_flux!(
         ax, distributions, flux_column::Symbol, bins, surface_type::AbstractString)
+    reference_label = ice_reference_label(surface_type)
     height_specs = (("1m", 1, "C0"), ("2m", 2, "C1"))
 
     # Draw the faint filled ice references first so the surface outlines remain visible.
@@ -402,7 +407,7 @@ function plot_surface_ice_flux!(
             histtype="stepfilled",
             linewidth=1.0,
             median_linestyle=":",
-            label=surface_height_label("ice", height_m),
+            label=surface_height_label(reference_label, height_m),
         )
     end
 
@@ -460,38 +465,28 @@ function surface_ice_bin_edges(settings, surface_type::AbstractString,
     return collect(range(lower_limit, upper_limit; length=bin_count + 1))
 end
 
-"""
-    plot_surface_ice_histograms(data, plot_dir, surface_type, station_names)
-
-Plot a consistently styled surface-versus-ice comparison. Sensible heat flux is
-shown separately at approximately 1 m and 2 m. Latent distributions are included
-at every height where finite observations exist. Axis limits and bin widths come
-from SURFACE_ICE_HISTOGRAM_SETTINGS.
-"""
-function plot_surface_ice_histograms(
-        data::DataFrame, plot_dir::AbstractString, surface_type::AbstractString,
-        station_names)
-    output_file = joinpath(plot_dir, "hist_paper_$(surface_type)_ice.pdf")
-    distributions = surface_ice_distribution_data(data, surface_type, station_names)
-    sensible_settings = surface_ice_flux_settings(surface_type, :H)
-    latent_settings = surface_ice_flux_settings(surface_type, :LE)
-    sensible_bins = surface_ice_bin_edges(sensible_settings, surface_type, :H)
-    latent_bins = surface_ice_bin_edges(latent_settings, surface_type, :LE)
-
+function validate_surface_ice_histogram_data(
+        distributions, surface_type::AbstractString, station_names)
     sensible_surface_lower = finite_values(distributions.surface_lower.H)
     sensible_surface_upper = finite_values(distributions.surface_upper.H)
     latent_surface_lower = finite_values(distributions.surface_lower.LE)
     latent_surface_upper = finite_values(distributions.surface_upper.LE)
+
     isempty(sensible_surface_lower) && error(
         "No finite approximately 1 m $surface_type H data for stations $(join(station_names, ", ")).")
     isempty(sensible_surface_upper) && error(
         "No finite approximately 2 m $surface_type H data for stations $(join(station_names, ", ")).")
     isempty(latent_surface_lower) && isempty(latent_surface_upper) && error(
         "No finite $surface_type LE data for stations $(join(station_names, ", ")).")
+    return nothing
+end
 
-    fig, axes = PyPlot.subplots(1, 2, figsize=(7.4, 3.3))
+function plot_surface_ice_histogram_row!(
+        ax_h, ax_le, data::DataFrame, surface_type::AbstractString, station_names,
+        sensible_bins, latent_bins; row_label="", show_legend=false,
+        panel_labels=nothing)
+    distributions = surface_ice_distribution_data(data, surface_type, station_names)
 
-    ax_h = axes[1]
     ax_h.axvline(0, color="black", linewidth=0.8, alpha=0.45)
     plot_surface_ice_flux!(
         ax_h,
@@ -500,14 +495,21 @@ function plot_surface_ice_histograms(
         sensible_bins,
         surface_type,
     )
-    ax_h.set_xlabel(L"Q_H~\mathrm{[W~m^{-2}]}")
-    ax_h.set_ylabel("probability density")
-    add_panel_label!(ax_h, "a")
-    ax_h.legend(fontsize=7.5, loc="upper right")
+    if isempty(row_label)
+        ax_h.set_ylabel("probability density")
+    else
+        ax_h.set_ylabel(
+            row_label,
+            fontsize=10,
+            rotation=0,
+            labelpad=64,
+            va="center",
+        )
+        ax_h.tick_params(axis="y", labelleft=false)
+    end
+    show_legend && ax_h.legend(fontsize=7.5, loc="upper right")
     ax_h.grid(alpha=0.25)
-    ax_h.set_xlim(sensible_settings.xlimits)
 
-    ax_le = axes[2]
     ax_le.axvline(0, color="black", linewidth=0.8, alpha=0.45)
     plot_surface_ice_flux!(
         ax_le,
@@ -516,12 +518,64 @@ function plot_surface_ice_histograms(
         latent_bins,
         surface_type,
     )
-    ax_le.set_xlabel(L"Q_E~\mathrm{[W~m^{-2}]}")
     ax_le.tick_params(axis="y", labelleft=false)
-    add_panel_label!(ax_le, "b")
-    ax_le.legend(fontsize=7.5, loc="upper right")
+    show_legend && ax_le.legend(fontsize=7.5, loc="upper right")
     ax_le.grid(alpha=0.25)
-    ax_le.set_xlim(latent_settings.xlimits)
+
+    if !isnothing(panel_labels)
+        add_panel_label!(ax_h, panel_labels[1])
+        add_panel_label!(ax_le, panel_labels[2])
+    end
+    return nothing
+end
+
+"""
+    plot_surface_ice_histogram_grid(
+        data, output_file, surface_type, station_names; row_specs, figsize)
+
+Plot a consistently styled surface-versus-ice comparison. Each row specification
+contains a row label and a DataFrame subset, allowing the same renderer to produce
+both the all-data and classified figures. Axis limits and bin widths come from
+SURFACE_ICE_HISTOGRAM_SETTINGS.
+"""
+function plot_surface_ice_histogram_grid(
+        data::DataFrame, output_file::AbstractString, surface_type::AbstractString,
+        station_names; row_specs=(("", data),), figsize=(7.4, 3.3))
+    distributions = surface_ice_distribution_data(data, surface_type, station_names)
+    validate_surface_ice_histogram_data(distributions, surface_type, station_names)
+
+    sensible_settings = surface_ice_flux_settings(surface_type, :H)
+    latent_settings = surface_ice_flux_settings(surface_type, :LE)
+    sensible_bins = surface_ice_bin_edges(sensible_settings, surface_type, :H)
+    latent_bins = surface_ice_bin_edges(latent_settings, surface_type, :LE)
+
+    fig, axes = PyPlot.subplots(
+        length(row_specs),
+        2;
+        figsize=figsize,
+        sharex="col",
+        squeeze=false,
+    )
+
+    for (row_index, (row_label, row_data)) in enumerate(row_specs)
+        plot_surface_ice_histogram_row!(
+            axes[row_index, 1],
+            axes[row_index, 2],
+            row_data,
+            surface_type,
+            station_names,
+            sensible_bins,
+            latent_bins;
+            row_label=row_label,
+            show_legend=row_index == 1,
+            panel_labels=row_index == 1 ? ("a", "b") : nothing,
+        )
+        axes[row_index, 1].set_xlim(sensible_settings.xlimits)
+        axes[row_index, 2].set_xlim(latent_settings.xlimits)
+    end
+
+    axes[end, 1].set_xlabel(L"Q_H~\mathrm{[W~m^{-2}]}")
+    axes[end, 2].set_xlabel(L"Q_E~\mathrm{[W~m^{-2}]}")
 
     PyPlot.tight_layout()
     mkpath(dirname(output_file))
@@ -530,11 +584,46 @@ function plot_surface_ice_histograms(
     return output_file
 end
 
+function plot_surface_ice_histograms(
+        data::DataFrame, plot_dir::AbstractString, surface_type::AbstractString,
+        station_names)
+    return plot_surface_ice_histogram_grid(
+        data,
+        joinpath(plot_dir, "hist_paper_$(surface_type)_ice.pdf"),
+        surface_type,
+        station_names,
+    )
+end
+
 plot_paper_lead_ice_histograms(data::DataFrame, plot_dir::AbstractString) =
     plot_surface_ice_histograms(data, plot_dir, "lead", LEAD_ICE_STATIONS)
 
 plot_paper_pond_ice_histograms(data::DataFrame, plot_dir::AbstractString) =
     plot_surface_ice_histograms(data, plot_dir, "pond", POND_ICE_STATIONS)
+
+plot_paper_ridge_ice_histograms(data::DataFrame, plot_dir::AbstractString) =
+    plot_surface_ice_histograms(data, plot_dir, "ridge", RIDGE_ICE_STATIONS)
+
+function plot_paper_ridge_ice_temperature_histograms(
+        data::DataFrame, plot_dir::AbstractString, thresholds)
+    :air_temperature_class in propertynames(data) || error(
+        "Cannot plot ridge temperature classes without :air_temperature_class.")
+    row_specs = [
+        (
+            temperature_class_plot_label(class_value, thresholds),
+            data[string_column_mask(data, :air_temperature_class, class_value), :],
+        )
+        for class_value in AIR_TEMPERATURE_CLASS_ORDER[1:3]
+    ]
+    return plot_surface_ice_histogram_grid(
+        data,
+        joinpath(plot_dir, "hist_paper_ridge_ice_by_air_temperature.pdf"),
+        "ridge",
+        RIDGE_ICE_STATIONS;
+        row_specs=row_specs,
+        figsize=(8.4, 8.0),
+    )
+end
 
 function plot_total_histogram(data::DataFrame, output_file::AbstractString, avg_period::Period;
                               title_suffix="")
@@ -857,6 +946,7 @@ end
 function surface_ice_flux_distribution_statistics(
         data::DataFrame, avg_period::Period, surface_type::AbstractString,
         station_names)
+    reference_surface = ice_reference_label(surface_type)
     distributions = surface_ice_distribution_data(data, surface_type, station_names)
     statistics = DataFrame(
         stations=String[],
@@ -867,7 +957,7 @@ function surface_ice_flux_distribution_statistics(
         duration_hours=Float64[],
         mean=Union{Missing,Float64}[],
         median=Union{Missing,Float64}[],
-        median_difference_from_same_height_ice=Union{Missing,Float64}[],
+        median_difference_from_same_height_reference=Union{Missing,Float64}[],
         std=Union{Missing,Float64}[],
         percentile_05=Union{Missing,Float64}[],
         percentile_95=Union{Missing,Float64}[],
@@ -881,7 +971,7 @@ function surface_ice_flux_distribution_statistics(
             ice_descriptors = distribution_statistics(ice_data[!, flux_column])
 
             for (distribution_surface, values) in (
-                    ("ice", ice_data[!, flux_column]),
+                    (reference_surface, ice_data[!, flux_column]),
                     (surface_type, surface_data[!, flux_column]))
                 descriptors = distribution_statistics(values)
                 descriptors.n == 0 && continue
@@ -901,7 +991,7 @@ function surface_ice_flux_distribution_statistics(
                     duration_hours=descriptors.n * period_seconds(avg_period) / 3600,
                     mean=descriptors.mean,
                     median=descriptors.median,
-                    median_difference_from_same_height_ice=median_difference,
+                    median_difference_from_same_height_reference=median_difference,
                     std=descriptors.std,
                     percentile_05=descriptors.percentile_05,
                     percentile_95=descriptors.percentile_95,
@@ -917,6 +1007,10 @@ end
 lead_ice_flux_distribution_statistics(data::DataFrame, avg_period::Period) =
     surface_ice_flux_distribution_statistics(
         data, avg_period, "lead", LEAD_ICE_STATIONS)
+
+ridge_ice_flux_distribution_statistics(data::DataFrame, avg_period::Period) =
+    surface_ice_flux_distribution_statistics(
+        data, avg_period, "ridge", RIDGE_ICE_STATIONS)
 
 pond_ice_flux_distribution_statistics(data::DataFrame, avg_period::Period) =
     surface_ice_flux_distribution_statistics(
@@ -1612,7 +1706,8 @@ append!(plot_outputs, [
 ])
 for (plot_function, statistics_function) in (
         (plot_paper_lead_ice_histograms, lead_ice_flux_distribution_statistics),
-        (plot_paper_pond_ice_histograms, pond_ice_flux_distribution_statistics))
+        (plot_paper_pond_ice_histograms, pond_ice_flux_distribution_statistics),
+        (plot_paper_ridge_ice_histograms, ridge_ice_flux_distribution_statistics))
     surface_ice_plot_output = plot_function(flux_data, plot_dir)
     append!(plot_outputs, [
         surface_ice_plot_output,
@@ -1622,6 +1717,14 @@ for (plot_function, statistics_function) in (
         ),
     ])
 end
+push!(
+    plot_outputs,
+    plot_paper_ridge_ice_temperature_histograms(
+        flux_data,
+        plot_dir,
+        air_temperature_thresholds,
+    ),
+)
 if plot_time_flux_histograms
     append!(plot_outputs, plot_heat_flux_time_histograms(
         flux_data,
