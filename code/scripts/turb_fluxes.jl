@@ -226,6 +226,51 @@ PyPlot.tight_layout()
 output_folder_uw = output_folder = stationcfg.plot_dir(station_config, "uw_ustar")
 #PyPlot.savefig(joinpath(output_folder_uw, "$(station_file_stem).pdf"), bbox_inches="tight")
 ##
+###########################################################################
+##
+# Momentum fluxes and friction velocity plot with uw and vw
+fig, (ax1, ax2, ax3) = PyPlot.subplots(3, 1, figsize=(10, 8), sharex=true)
+
+# Define colors for consistent legend
+colors = ["C0", "C1", "C2", "C3"]
+
+# Define plotting step size
+step = 20*60  # every 1min
+
+# Upper subplot - Vertical momentum fluxes u'w'
+ax1.set_title("Vertical Momentum Fluxes and Friction Velocity")
+uw1 = ax1.plot(fx1.time[1:step:end], fx1.uw[1:step:end], color=colors[1])
+uw2 = ax1.plot(fx2.time[1:step:end], fx2.uw[1:step:end], color=colors[2])
+uw3 = ax1.plot(fx3.time[1:step:end], fx3.uw[1:step:end], color=colors[3])
+uw4 = ax1.plot(fx4.time[1:step:end], fx4.uw[1:step:end], color=colors[4])
+ax1.set_ylabel(L"\overline{u'w'} ~\mathrm{[m^2~s^{-2}]}")
+ax1.grid()
+
+# Middle subplot - Vertical momentum fluxes v'w'
+vw1 = ax2.plot(fx1.time[1:step:end], fx1.vw[1:step:end], color=colors[1])
+vw2 = ax2.plot(fx2.time[1:step:end], fx2.vw[1:step:end], color=colors[2])
+vw3 = ax2.plot(fx3.time[1:step:end], fx3.vw[1:step:end], color=colors[3])
+vw4 = ax2.plot(fx4.time[1:step:end], fx4.vw[1:step:end], color=colors[4])
+ax2.set_ylabel(L"\overline{v'w'} ~\mathrm{[m^2~s^{-2}]}")
+ax2.grid()
+
+# Lower subplot - Friction velocity
+us1 = ax3.plot(fx1.time[1:step:end], fx1.u_star[1:step:end], color=colors[1])
+us2 = ax3.plot(fx2.time[1:step:end], fx2.u_star[1:step:end], color=colors[2])
+us3 = ax3.plot(fx3.time[1:step:end], fx3.u_star[1:step:end], color=colors[3])
+us4 = ax3.plot(fx4.time[1:step:end], fx4.u_star[1:step:end], color=colors[4])
+ax3.set_ylabel(L"u_*~\mathrm{[m~s^{-1}]}")
+ax3.set_xlabel("Time")
+ax3.xaxis_date()
+ax3.grid()
+
+# Create a single legend for the entire figure
+handles = [uw1[1], uw2[1], uw3[1], uw4[1]]
+#labels same as above
+ax1.legend(handles, labels)
+
+PyPlot.tight_layout()
+##
 ##########################################################
 #=
 ##
