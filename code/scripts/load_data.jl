@@ -107,6 +107,36 @@ stationcfg.apply_station_wind_direction_rotations!(wds, station_config)
 ######################################################
 ###               LOADING SLOW DATA                ###
 ######################################################
+#=
+"""
+    export_1s_mean_winddirs(output_file, wd1, wd2, wd3, wd4)
+
+Calculate circular one-second means for the four wind-direction DataFrames and
+write them to a CSV with columns `timestamp`, `wd1`, `wd2`, `wd3`, and `wd4`.
+"""
+function export_1s_mean_winddirs(output_file, wd1, wd2, wd3, wd4)
+    function one_second_means(wd, column_name)
+        per_second = DataFrame(timestamp=floor.(wd.time, Second), direction=wd.α)
+        return combine(
+            groupby(per_second, :timestamp),
+            :direction => (α -> turb.mean_winddir(collect(skipmissing(α)))) => column_name,
+        )
+    end
+
+    means = map(
+        one_second_means,
+        (wd1, wd2, wd3, wd4),
+        (:wd1, :wd2, :wd3, :wd4),
+    )
+    output = reduce((left, right) -> outerjoin(left, right, on=:timestamp), means)
+    sort!(output, :timestamp)
+    CSV.write(output_file, output)
+    return output
+end
+
+# Example:
+export_1s_mean_winddirs("/home/haugened/Documents/data/CONTRASTS/plots/wind_roses/3a_wind_dir_1s.csv", wds[1], wds[2], wds[3], wds[4])
+=#
 
 ######################################################
 ###                   PLOTTING                     ###

@@ -1069,3 +1069,53 @@ mad_uw3 = scatter_uw3b_mean - scatter_uw3a_mean
 mad_uw4 = scatter_uw4b_mean - scatter_uw4a_mean
 ##
 ######################################################
+######################################################
+###                  EXPORT CSV                    ###
+######################################################
+#=
+"""
+    export_averaged_fluxes(output_file, averaging_seconds, fx1, fx2, fx3, fx4)
+
+Average every flux column into bins of `averaging_seconds` seconds and write all
+four instruments to one CSV. Output columns are prefixed with `fx1_`, ...,
+`fx4_`.
+"""
+function export_averaged_fluxes(output_file, averaging_seconds, fx1, fx2, fx3, fx4)
+    averaging_seconds isa Integer || throw(ArgumentError("averaging_seconds must be an integer"))
+    averaging_seconds > 0 || throw(ArgumentError("averaging_seconds must be positive"))
+    averaging_period = Second(averaging_seconds)
+
+    function averaged_fluxes(fx, prefix)
+        binned = select(
+            fx,
+            :time => ByRow(time -> floor(time, averaging_period)) => :timestamp,
+            Not(:time),
+        )
+        flux_columns = names(binned, Not(:timestamp))
+
+        mean_without_nan(values) = begin
+            valid = filter(!isnan, collect(skipmissing(values)))
+            isempty(valid) ? NaN : mean(valid)
+        end
+
+        return combine(
+            groupby(binned, :timestamp),
+            [column => mean_without_nan => Symbol("$(prefix)_$(column)")
+             for column in flux_columns]...,
+        )
+    end
+
+    means = map(
+        averaged_fluxes,
+        (fx1, fx2, fx3, fx4),
+        (:fx1, :fx2, :fx3, :fx4),
+    )
+    output = reduce((left, right) -> outerjoin(left, right, on=:timestamp), means)
+    sort!(output, :timestamp)
+    CSV.write(output_file, output)
+    return output
+end
+
+# Set the second argument to the desired averaging interval in seconds:
+export_averaged_fluxes("/home/haugened/Documents/data/CONTRASTS/plots/3a_fluxes_10s.csv", 10, fx1, fx2, fx3, fx4)
+=#
