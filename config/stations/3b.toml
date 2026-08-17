@@ -16,6 +16,7 @@ instrument_type = ["IRG", "CSAT", "IRG", "CSAT"]
 
 [flux_histogram]
 surface_type = ["ice", "ice", "ridge", "ridge"]
+flow_across_ridge_interval = [270, 90]
 
 [manual_nanmask]
 enabled = true

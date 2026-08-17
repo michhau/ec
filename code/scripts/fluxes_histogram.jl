@@ -192,7 +192,9 @@ function apply_manual_nanmask!(evaldf::DataFrame, station_config, sensor_index::
     return evaldf
 end
 
-function load_sensor_data(station_config, data_file::AbstractString, sensor_index::Integer)
+function prepare_sensor_data(
+        station_config, data_file::AbstractString, sensor_index::Integer;
+        calculate_wind_direction::Bool=false)
     datapath = String(stationcfg.require_key(station_config, "data_root"))
     evalstart = stationcfg.station_datetime(station_config, "evalstart")
     evalend = stationcfg.station_datetime(station_config, "evalend")
@@ -200,21 +202,44 @@ function load_sensor_data(station_config, data_file::AbstractString, sensor_inde
     evaldf = turb.readturbasnetcdf(joinpath(datapath, data_file), evalstart, evalend)
     turb.printmissstats(evaldf)
     evaldf = turb.interpolatemissing(evaldf)
+    wind_direction = calculate_wind_direction ? turb.winddir(evaldf) : nothing
     turb.drdf!(evaldf, periodwise=false)
     apply_manual_nanmask!(evaldf, station_config, sensor_index)
     turb.missing2nan!(evaldf)
-    return evaldf
+    return (data=evaldf, wind_direction=wind_direction)
 end
 
-function load_station_data(station_config)
+load_sensor_data(station_config, data_file::AbstractString, sensor_index::Integer) =
+    prepare_sensor_data(station_config, data_file, sensor_index).data
+
+function load_station_data_with_wind_directions(station_config)
+    station_id = String(stationcfg.require_key(station_config, "id"))
+    calculate_wind_direction = station_id in RIDGE_ICE_STATIONS
     data_files = String.(stationcfg.require_key(station_config, "data_files"))
-    length(data_files) == 4 || error("Station $(stationcfg.require_key(station_config, "id")) must define four data_files.")
+    length(data_files) == 4 || error("Station $station_id must define four data_files.")
 
     println()
     println("Loading station ", stationcfg.station_label(station_config), " from ", station_config["config_file"])
-    return [load_sensor_data(station_config, data_file, sensor_index)
-            for (sensor_index, data_file) in enumerate(data_files)]
+    loaded = [
+        prepare_sensor_data(
+            station_config,
+            data_file,
+            sensor_index;
+            calculate_wind_direction=calculate_wind_direction,
+        )
+        for (sensor_index, data_file) in enumerate(data_files)
+    ]
+    evaldfs = [sensor.data for sensor in loaded]
+    wind_directions = if calculate_wind_direction
+        directions = [sensor.wind_direction for sensor in loaded]
+        stationcfg.apply_station_wind_direction_rotations!(directions, station_config)
+    else
+        nothing
+    end
+    return (data=evaldfs, wind_directions=wind_directions)
 end
+
+load_station_data(station_config) = load_station_data_with_wind_directions(station_config).data
 
 calculate_fluxes(evaldfs, avg_period::Period) = [turb.turbflux(evaldf, avg_period, 1.0) for evaldf in evaldfs]
 average_fluxes(fx_raws, avg_period::Period) = [turb.avgflux(fx_raw, avg_period, true, 0.1) for fx_raw in fx_raws]
@@ -234,7 +259,40 @@ end
 
 low_frequency_fluxes(fx_avgs, avg_period::Period) = [low_frequency_flux(fx_avg, avg_period) for fx_avg in fx_avgs]
 
-function station_flux_records(station_config, low_fluxes)
+function station_upwind_wind_direction(
+        station_config, wind_directions, flux_times, avg_period::Period)
+    station_id = String(stationcfg.require_key(station_config, "id"))
+    station_id in RIDGE_ICE_STATIONS || return nothing
+    isnothing(wind_directions) && error(
+        "No wind directions were calculated for ridge station $station_id.")
+
+    surface_types = flux_surface_types(station_config)
+    upwind_indices = findall(!=("ridge"), surface_types)
+    length(upwind_indices) == 2 || error(
+        "Ridge station $station_id must define exactly two non-ridge/upwind sensors in " *
+        "flux_histogram.surface_type.")
+
+    block_directions = Vector{Vector{Float64}}()
+    for sensor_index in upwind_indices
+        block_times, directions = gen.block_average_winddir(
+            wind_directions[sensor_index].time,
+            wind_directions[sensor_index].α,
+            avg_period,
+        )
+        block_times == flux_times || error(
+            "Wind-direction and flux block times do not match for station $station_id " *
+            "sensor $sensor_index.")
+        push!(block_directions, directions)
+    end
+
+    return [
+        turb.mean_winddir([directions[block_index] for directions in block_directions])
+        for block_index in eachindex(flux_times)
+    ]
+end
+
+function station_flux_records(
+        station_config, low_fluxes; ridge_upwind_wind_direction=nothing)
     length(low_fluxes) == 4 || error("Expected four low-frequency flux DataFrames.")
 
     station_id = String(stationcfg.require_key(station_config, "id"))
@@ -249,10 +307,26 @@ function station_flux_records(station_config, low_fluxes)
         "instrument_type",
     ))
     instrument_labels = stationcfg.station_labels(station_config)
+    if !(station_id in RIDGE_ICE_STATIONS)
+        # Non-ridge stations do not calculate or validate an upwind direction.
+        ridge_upwind_wind_direction = nothing
+    elseif isnothing(ridge_upwind_wind_direction)
+        error("No upwind wind direction was provided for ridge station $station_id.")
+    else
+        ridge_upwind_wind_direction = Float64.(ridge_upwind_wind_direction)
+    end
 
     station_records = DataFrame[]
     for (sensor_index, fx_low) in enumerate(low_fluxes)
         n = nrow(fx_low)
+        sensor_upwind_wind_direction = if isnothing(ridge_upwind_wind_direction)
+            fill(NaN, n)
+        else
+            length(ridge_upwind_wind_direction) == n || error(
+                "Upwind wind-direction and flux record counts do not match for " *
+                "ridge station $station_id sensor $sensor_index.")
+            ridge_upwind_wind_direction
+        end
         records = DataFrame(
             station = fill(station_id, n),
             station_label = fill(station_label, n),
@@ -264,6 +338,7 @@ function station_flux_records(station_config, low_fluxes)
             height = fill(heights[sensor_index], n),
             height_band = fill(height_bands[sensor_index], n),
             time = fx_low.time,
+            ridge_upwind_wind_direction = sensor_upwind_wind_direction,
         )
 
         for column_name in names(fx_low)[2:end]
@@ -341,6 +416,70 @@ function station_subset(data::DataFrame, station_names)
     return data[station_mask, :]
 end
 
+function flow_across_ridge_interval(station_config)
+    station_id = String(stationcfg.require_key(station_config, "id"))
+    interval = Float64.(stationcfg.require_key(
+        station_config,
+        "flux_histogram",
+        "flow_across_ridge_interval",
+    ))
+    length(interval) == 2 || error(
+        "Station $station_id flux_histogram.flow_across_ridge_interval must contain " *
+        "exactly [lower_bound, upper_bound].")
+
+    lower_bound, upper_bound = interval
+    all(isfinite, interval) || error(
+        "Station $station_id flow-across-ridge interval bounds must be finite.")
+    all(bound -> 0 <= bound <= 360, interval) || error(
+        "Station $station_id flow-across-ridge interval bounds must each be between " *
+        "0 and 360 degrees.")
+    return lower_bound, upper_bound
+end
+
+function wind_direction_in_interval(direction::Real, lower_bound::Real, upper_bound::Real)
+    isfinite(direction) || return false
+    if lower_bound <= upper_bound
+        return lower_bound <= direction <= upper_bound
+    end
+    return direction >= lower_bound || direction <= upper_bound
+end
+
+function flow_across_ridge_subset(
+        data::DataFrame, station_configs, station_names=RIDGE_ICE_STATIONS)
+    :ridge_upwind_wind_direction in propertynames(data) || error(
+        "The flux cache has no :ridge_upwind_wind_direction column. Rebuild it from " *
+        "the high-frequency data before plotting flow-across-ridge histograms.")
+
+    configs_by_id = Dict(
+        String(stationcfg.require_key(config, "id")) => config
+        for config in station_configs
+    )
+    present_stations = Set(string_values(data.station))
+    station_data = DataFrame[]
+
+    for station_id in station_names
+        station_id in present_stations || continue
+        haskey(configs_by_id, station_id) || error(
+            "No loaded station config is available for ridge station $station_id.")
+        lower_bound, upper_bound = flow_across_ridge_interval(configs_by_id[station_id])
+        data_for_station = station_subset(data, (station_id,))
+        in_interval = map(data_for_station.ridge_upwind_wind_direction) do direction
+            if ismissing(direction)
+                return false
+            end
+            direction_float = Float64(direction)
+            return wind_direction_in_interval(
+                direction_float,
+                lower_bound,
+                upper_bound,
+            )
+        end
+        push!(station_data, data_for_station[in_interval, :])
+    end
+
+    return isempty(station_data) ? data[1:0, :] : vcat(station_data...; cols=:union)
+end
+
 function surface_ice_distribution_data(
         data::DataFrame, surface_type::AbstractString, station_names)
     surface_data = station_subset(subset_surface(data, surface_type), station_names)
@@ -351,6 +490,24 @@ function surface_ice_distribution_data(
         surface_upper=surface_data[string_column_mask(surface_data, :height_band, "2m"), :],
         ice_lower=ice_data[string_column_mask(ice_data, :height_band, "1m"), :],
         ice_upper=ice_data[string_column_mask(ice_data, :height_band, "2m"), :],
+    )
+end
+
+function ridge_upwind_distribution_data(
+        data::DataFrame, surface_type::AbstractString, station_names)
+    surface_type == "ridge" || error(
+        "Ridge/upwind distributions only support the ridge surface type.")
+    ridge_station_data = station_subset(data, station_names)
+    ridge_data = ridge_station_data[
+        string_column_mask(ridge_station_data, :flux_surface_type, "ridge"), :]
+    upwind_data = ridge_station_data[
+        .!string_column_mask(ridge_station_data, :flux_surface_type, "ridge"), :]
+
+    return (
+        surface_lower=ridge_data[string_column_mask(ridge_data, :height_band, "1m"), :],
+        surface_upper=ridge_data[string_column_mask(ridge_data, :height_band, "2m"), :],
+        ice_lower=upwind_data[string_column_mask(upwind_data, :height_band, "1m"), :],
+        ice_upper=upwind_data[string_column_mask(upwind_data, :height_band, "2m"), :],
     )
 end
 
@@ -484,8 +641,9 @@ end
 function plot_surface_ice_histogram_row!(
         ax_h, ax_le, data::DataFrame, surface_type::AbstractString, station_names,
         sensible_bins, latent_bins; row_label="", show_legend=false,
-        panel_labels=nothing)
-    distributions = surface_ice_distribution_data(data, surface_type, station_names)
+        panel_labels=nothing,
+        distribution_function=surface_ice_distribution_data)
+    distributions = distribution_function(data, surface_type, station_names)
 
     ax_h.axvline(0, color="black", linewidth=0.8, alpha=0.45)
     plot_surface_ice_flux!(
@@ -540,8 +698,9 @@ SURFACE_ICE_HISTOGRAM_SETTINGS.
 """
 function plot_surface_ice_histogram_grid(
         data::DataFrame, output_file::AbstractString, surface_type::AbstractString,
-        station_names; row_specs=(("", data),), figsize=(7.4, 3.3))
-    distributions = surface_ice_distribution_data(data, surface_type, station_names)
+        station_names; row_specs=(("", data),), figsize=(7.4, 3.3),
+        distribution_function=surface_ice_distribution_data)
+    distributions = distribution_function(data, surface_type, station_names)
     validate_surface_ice_histogram_data(distributions, surface_type, station_names)
 
     sensible_settings = surface_ice_flux_settings(surface_type, :H)
@@ -569,6 +728,7 @@ function plot_surface_ice_histogram_grid(
             row_label=row_label,
             show_legend=row_index == 1,
             panel_labels=row_index == 1 ? ("a", "b") : nothing,
+            distribution_function=distribution_function,
         )
         axes[row_index, 1].set_xlim(sensible_settings.xlimits)
         axes[row_index, 2].set_xlim(latent_settings.xlimits)
@@ -604,6 +764,18 @@ plot_paper_pond_ice_histograms(data::DataFrame, plot_dir::AbstractString) =
 plot_paper_ridge_ice_histograms(data::DataFrame, plot_dir::AbstractString) =
     plot_surface_ice_histograms(data, plot_dir, "ridge", RIDGE_ICE_STATIONS)
 
+function plot_paper_ridge_upwind_across_histograms(
+        data::DataFrame, plot_dir::AbstractString, station_configs)
+    across_data = flow_across_ridge_subset(data, station_configs)
+    return plot_surface_ice_histogram_grid(
+        across_data,
+        joinpath(plot_dir, "hist_paper_ridge_upwind_across_ridge.pdf"),
+        "ridge",
+        RIDGE_ICE_STATIONS;
+        distribution_function=ridge_upwind_distribution_data,
+    )
+end
+
 function plot_paper_ridge_ice_temperature_histograms(
         data::DataFrame, plot_dir::AbstractString, thresholds)
     :air_temperature_class in propertynames(data) || error(
@@ -622,6 +794,33 @@ function plot_paper_ridge_ice_temperature_histograms(
         RIDGE_ICE_STATIONS;
         row_specs=row_specs,
         figsize=(8.4, 8.0),
+    )
+end
+
+function plot_paper_ridge_upwind_across_temperature_histograms(
+        data::DataFrame, plot_dir::AbstractString, thresholds, station_configs)
+    :air_temperature_class in propertynames(data) || error(
+        "Cannot plot ridge temperature classes without :air_temperature_class.")
+    across_data = flow_across_ridge_subset(data, station_configs)
+    row_specs = [
+        (
+            temperature_class_plot_label(class_value, thresholds),
+            across_data[
+                string_column_mask(across_data, :air_temperature_class, class_value), :],
+        )
+        for class_value in AIR_TEMPERATURE_CLASS_ORDER[1:3]
+    ]
+    return plot_surface_ice_histogram_grid(
+        across_data,
+        joinpath(
+            plot_dir,
+            "hist_paper_ridge_upwind_across_ridge_by_air_temperature.pdf",
+        ),
+        "ridge",
+        RIDGE_ICE_STATIONS;
+        row_specs=row_specs,
+        figsize=(8.4, 8.0),
+        distribution_function=ridge_upwind_distribution_data,
     )
 end
 
@@ -945,9 +1144,9 @@ end
 
 function surface_ice_flux_distribution_statistics(
         data::DataFrame, avg_period::Period, surface_type::AbstractString,
-        station_names)
+        station_names; distribution_function=surface_ice_distribution_data)
     reference_surface = ice_reference_label(surface_type)
-    distributions = surface_ice_distribution_data(data, surface_type, station_names)
+    distributions = distribution_function(data, surface_type, station_names)
     statistics = DataFrame(
         stations=String[],
         surface_type=String[],
@@ -1011,6 +1210,18 @@ lead_ice_flux_distribution_statistics(data::DataFrame, avg_period::Period) =
 ridge_ice_flux_distribution_statistics(data::DataFrame, avg_period::Period) =
     surface_ice_flux_distribution_statistics(
         data, avg_period, "ridge", RIDGE_ICE_STATIONS)
+
+function ridge_upwind_across_flux_distribution_statistics(
+        data::DataFrame, avg_period::Period, station_configs)
+    across_data = flow_across_ridge_subset(data, station_configs)
+    return surface_ice_flux_distribution_statistics(
+        across_data,
+        avg_period,
+        "ridge",
+        RIDGE_ICE_STATIONS;
+        distribution_function=ridge_upwind_distribution_data,
+    )
+end
 
 pond_ice_flux_distribution_statistics(data::DataFrame, avg_period::Period) =
     surface_ice_flux_distribution_statistics(
@@ -1567,7 +1778,9 @@ plot_dir = default_plot_dir(station_configs)
 #=
 station_ix = 1
 station_config = station_configs[station_ix]
-evaldfs = load_station_data(station_config)
+station_data = load_station_data_with_wind_directions(station_config)
+evaldfs = station_data.data
+wind_directions = station_data.wind_directions
 
 ## Flux calculation
 
@@ -1577,7 +1790,22 @@ fx_raws = calculate_fluxes(evaldfs, avg_period)
 
 fx_avgs = average_fluxes(fx_raws, avg_period)
 low_fluxes = low_frequency_fluxes(fx_avgs, avg_period)
-station_flux_data = station_flux_records(station_config, low_fluxes)
+ridge_upwind_wind_direction = if String(
+        stationcfg.require_key(station_config, "id")) in RIDGE_ICE_STATIONS
+    station_upwind_wind_direction(
+        station_config,
+        wind_directions,
+        first(low_fluxes).time,
+        avg_period,
+    )
+else
+    nothing
+end
+station_flux_data = station_flux_records(
+    station_config,
+    low_fluxes;
+    ridge_upwind_wind_direction=ridge_upwind_wind_direction,
+)
 flux_data = copy(station_flux_data)
 =#
 ## Accumulate all stations without keeping all high-frequency data in memory
@@ -1585,13 +1813,36 @@ flux_data = copy(station_flux_data)
 #=
 flux_data = DataFrame()
 @showprogress for station_config_loop in station_configs
-    evaldfs = load_station_data(station_config_loop)
+    station_data = load_station_data_with_wind_directions(station_config_loop)
+    evaldfs = station_data.data
+    wind_directions = station_data.wind_directions
     fx_raws = calculate_fluxes(evaldfs, avg_period)
     fx_avgs = average_fluxes(fx_raws, avg_period)
     low_fluxes = low_frequency_fluxes(fx_avgs, avg_period)
-    append!(flux_data, station_flux_records(station_config_loop, low_fluxes); cols=:union)
+    station_id_loop = String(stationcfg.require_key(station_config_loop, "id"))
+    ridge_upwind_wind_direction = if station_id_loop in RIDGE_ICE_STATIONS
+        station_upwind_wind_direction(
+            station_config_loop,
+            wind_directions,
+            first(low_fluxes).time,
+            avg_period,
+        )
+    else
+        nothing
+    end
+    append!(
+        flux_data,
+        station_flux_records(
+            station_config_loop,
+            low_fluxes;
+            ridge_upwind_wind_direction=ridge_upwind_wind_direction,
+        );
+        cols=:union,
+    )
 
+    station_data = nothing
     evaldfs = nothing
+    wind_directions = nothing
     fx_raws = nothing
     fx_avgs = nothing
     low_fluxes = nothing
@@ -1717,12 +1968,34 @@ for (plot_function, statistics_function) in (
         ),
     ])
 end
+ridge_upwind_across_plot_output = plot_paper_ridge_upwind_across_histograms(
+    flux_data,
+    plot_dir,
+    station_configs,
+)
+append!(plot_outputs, [
+    ridge_upwind_across_plot_output,
+    write_histogram_statistics(
+        ridge_upwind_across_plot_output,
+        ridge_upwind_across_flux_distribution_statistics(
+            flux_data,
+            avg_period,
+            station_configs,
+        ),
+    ),
+])
 push!(
     plot_outputs,
     plot_paper_ridge_ice_temperature_histograms(
         flux_data,
         plot_dir,
         air_temperature_thresholds,
+    ),
+    plot_paper_ridge_upwind_across_temperature_histograms(
+        flux_data,
+        plot_dir,
+        air_temperature_thresholds,
+        station_configs,
     ),
 )
 if plot_time_flux_histograms
