@@ -105,7 +105,7 @@ stationcfg.apply_station_wind_direction_rotations!(wds, station_config)
 (wd1, wd2, wd3, wd4) = wds
 
 ######################################################
-###               LOADING SLOW DATA                ###
+###                    EXPORTING                   ###
 ######################################################
 #=
 """
