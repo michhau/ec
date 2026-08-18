@@ -34,9 +34,9 @@ c_p = 1004 #J kg^{-1} K^{-1}
 L_v = 2500e3 #J kg^{-1} (approx @0°C)
 
 #######################################################
-station_name = "3c"
-save_figs = true
-save_csv = true
+station_name = "1c"
+save_figs = false
+save_csv = false
 #######################################################
 #read station specifics
 station_config = stationcfg.load_station_config(station_name)
@@ -80,6 +80,7 @@ if save_csv
 end
 ##
 #######################################################
+#=
 #plot time series of fluxes and feature (lead, pond, ridge) fraction
 time_series_columns = [
     (subplot_order[1], subplot_order[3]),
@@ -280,6 +281,7 @@ for color_variable_raw in colored_scatter_variables
     end
 end
 ##
+=#
 #######################################################
 ###     feature fraction and flux DIFFERENCES       ###
 #######################################################
@@ -297,7 +299,7 @@ if save_csv
     CSV.write(joinpath(output_folder, "$(station_file_stem)_block_flux_$(feature_file_label)_difference_correlations.csv"),
     flux_feature_difference_correlations)
 end
-
+#=
 fig_diff_ts, axs_diff_ts = PyPlot.subplots(1, 3, figsize=(15, 4.2), sharex=true)
 fig_diff_ts.suptitle("$(station_label) - Heat flux and $(surface_feature) fraction differences")
 for (ax, (flux_names, flux_column, conversion_factor, flux_kind, flux_ylabel)) in
@@ -315,10 +317,10 @@ if save_figs
         "$(station_file_stem)_block_flux_$(feature_file_label)_difference_timeseries.pdf"),
         bbox_inches="tight")
 end
-
+=#
 #######################################################
 #scatter plot
-fig_diff_scatter, axs_diff_scatter = PyPlot.subplots(1, 3, figsize=(15, 4.2), sharex=true)
+fig_diff_scatter, axs_diff_scatter = PyPlot.subplots(1, 3, figsize=(15, 4.2), sharex=false)
 fig_diff_scatter.suptitle("$(station_label) - Heat flux difference vs $(surface_feature) fraction difference")
 for (ax, (flux_names, flux_column, conversion_factor, flux_kind, flux_ylabel)) in
         zip(vec(axs_diff_scatter), difference_time_series_specs)
@@ -364,6 +366,7 @@ end
 ##
 
 #######################################################
+#=
 ##
 #scatter plot with color-coded points
 for colored_scatter_variable in ["time", "u", "wT", "wq", "wind_dir", "T"]
@@ -491,3 +494,4 @@ for colored_scatter_variable in ["time", "u", "wT", "wq", "wind_dir", "T"]
     end
 end
 ##
+=#
