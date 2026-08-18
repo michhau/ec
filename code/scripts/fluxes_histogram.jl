@@ -28,19 +28,19 @@ const C_P = 1004.0        # J kg^-1 K^-1
 const L_V = 2500e3        # J kg^-1
 
 const FLUX_SURFACE_TYPES = ("ice", "lead", "pond", "ridge")
-const DEFAULT_SENSIBLE_BINS = collect(-50.0:1.0:50.0)
+const DEFAULT_SENSIBLE_BINS = collect(-45.0:0.9:45.0)
 const DEFAULT_LATENT_BINS = collect(-25.0:0.5:25.0)
 const LEAD_ICE_STATIONS = ("1c", "2a")
 const RIDGE_ICE_STATIONS = ("3a", "3b", "3c")
 const POND_ICE_STATIONS = ("1a", "1b_1", "1b_2", "2b", "2c")
 const SURFACE_ICE_HISTOGRAM_SETTINGS = Dict(
     "lead" => (
-        H=(xlimits=(-30.0, 20.0), bin_width=1.0),
-        LE=(xlimits=(-15.0, 10.0), bin_width=0.5),
+        H=(xlimits=(-30.0, 20.0), bin_width=0.5),
+        LE=(xlimits=(-15.0, 10.0), bin_width=0.25),
     ),
     "pond" => (
-        H=(xlimits=(-25.0, 25.0), bin_width=1.0),
-        LE=(xlimits=(-10.0, 25.0), bin_width=0.7),
+        H=(xlimits=(-25.0, 25.0), bin_width=0.5),
+        LE=(xlimits=(-10.0, 25.0), bin_width=0.35),
     ),
     "ridge" => (
         H=(xlimits=(-60.0, 60.0), bin_width=1.2),
@@ -48,7 +48,7 @@ const SURFACE_ICE_HISTOGRAM_SETTINGS = Dict(
     ),
 )
 const DEFAULT_TIME_FLUX_BIN_PERIOD = Hour(6)
-const WEATHER_CLASS_ORDER = ("clear_sky", "overcast_cloudy", "foggy", "transient", "unknown")
+#const WEATHER_CLASS_ORDER = ("clear_sky", "overcast_cloudy", "foggy", "transient", "unknown")
 const AIR_TEMPERATURE_CLASS_ORDER = ("cold", "near_zero", "warm", "unknown")
 const FLUX_SURFACE_ROW_SPECS = (
     ("total", "total"),
@@ -71,13 +71,13 @@ const DSHIP_HISTOGRAM_SPECS = [
     (:visibility, "Visibility [m]"),
     (:water_temperature, "Water temperature [deg C]"),
 ]
-const WEATHER_CLASS_LABELS = Dict(
+#=const WEATHER_CLASS_LABELS = Dict(
     "clear_sky" => "clear sky",
     "overcast_cloudy" => "overcast/cloudy",
     "foggy" => "foggy",
     "transient" => "transient",
     "unknown" => "unknown",
-)
+)=#
 
 """
     read_dship_meteo_csv(filename::String, datatypes::Vector{DataType}, dateformat_inp=DateFormat("yyyymmddTHHMMSS"))
@@ -356,7 +356,7 @@ end
 
 function plot_density_distribution!(ax, values; bins, color, label,
                                     alpha=1.0, histtype="step", linewidth=1.5,
-                                    median_linestyle="--")
+                                    median_linestyle="--", show_median=true)
     isempty(values) && return nothing
     ax.hist(
         values;
@@ -368,12 +368,14 @@ function plot_density_distribution!(ax, values; bins, color, label,
         linewidth=linewidth,
         label=label,
     )
-    ax.axvline(
-        median(values),
-        color=color,
-        linestyle=median_linestyle,
-        linewidth=1.2,
-    )
+    if show_median
+        ax.axvline(
+            median(values),
+            color=color,
+            linestyle=median_linestyle,
+            linewidth=1.2,
+        )
+    end
     return nothing
 end
 
@@ -381,7 +383,7 @@ surface_height_label(surface_type, height_m) =
     "\$\\mathrm{" * String(surface_type) * "},~\\approx " * string(height_m) *
     "\\,\\mathrm{m}\$"
 ice_reference_label(surface_type::AbstractString) =
-    surface_type == "ridge" ? "ice/lead" : "ice"
+    surface_type == "ridge" ? "upwind" : "ice"
 
 
 function surface_height_data(distributions, surface_kind::AbstractString,
@@ -398,6 +400,7 @@ function plot_surface_ice_flux!(
     # Draw the faint filled ice references first so the surface outlines remain visible.
     for (height_band, height_m, color) in height_specs
         ice_data = surface_height_data(distributions, "ice", height_band)
+        show_median = surface_type != "ridge"
         plot_density_distribution!(
             ax,
             finite_values(ice_data[!, flux_column]);
@@ -408,17 +411,20 @@ function plot_surface_ice_flux!(
             linewidth=1.0,
             median_linestyle=":",
             label=surface_height_label(reference_label, height_m),
+            show_median
         )
     end
 
     for (height_band, height_m, color) in height_specs
         surface_data = surface_height_data(distributions, "surface", height_band)
+        show_median = surface_type != "ridge"
         plot_density_distribution!(
             ax,
             finite_values(surface_data[!, flux_column]);
             bins=bins,
             color=color,
             label=surface_height_label(surface_type, height_m),
+            show_median
         )
     end
 
@@ -496,14 +502,22 @@ function plot_surface_ice_histogram_row!(
         surface_type,
     )
     if isempty(row_label)
-        ax_h.set_ylabel("probability density")
+        #ax_h.set_ylabel("probability density")
+        ax_h.tick_params(axis="y", labelleft=false)
+
     else
-        ax_h.set_ylabel(
-            row_label,
+        ax_h.annotate(
+            row_label;
+            xy=(0, 0.5),
+            xycoords="axes fraction",
+            xytext=(-30, 0),
+            textcoords="offset points",
             fontsize=10,
-            rotation=0,
-            labelpad=64,
+            fontweight="bold",
+            rotation=90,
+            ha="center",
             va="center",
+            annotation_clip=false,
         )
         ax_h.tick_params(axis="y", labelleft=false)
     end
@@ -568,12 +582,15 @@ function plot_surface_ice_histogram_grid(
             latent_bins;
             row_label=row_label,
             show_legend=row_index == 1,
-            panel_labels=row_index == 1 ? ("a", "b") : nothing,
+            panel_labels=row_index == 1 ? nothing : nothing,
         )
         axes[row_index, 1].set_xlim(sensible_settings.xlimits)
         axes[row_index, 2].set_xlim(latent_settings.xlimits)
     end
 
+    for j in 1:size(axes, 1)
+        axes[j, 1].set_ylabel("probability density")
+    end
     axes[end, 1].set_xlabel(L"Q_H~\mathrm{[W~m^{-2}]}")
     axes[end, 2].set_xlabel(L"Q_E~\mathrm{[W~m^{-2}]}")
 
@@ -632,20 +649,20 @@ function plot_total_histogram(data::DataFrame, output_file::AbstractString, avg_
     ax_h = axes[1]
     ax_h.axvline(0, color="grey", alpha=0.4)
     safe_hist!(ax_h, finite_values(data.H); bins=DEFAULT_SENSIBLE_BINS, color="C0")
-    ax_h.set_xlabel(L"\overline{w'T'}~\mathrm{[W~m^{-2}]}")
-    ax_h.set_ylabel("density")
+    ax_h.set_xlabel(L"Q_H~\mathrm{[W~m^{-2}]}")
+    ax_h.set_ylabel("probability density")
     ax_h.tick_params(axis="y", labelleft=false)
     ax_h.set_title("Sensible")
-    add_hours_text!(ax_h, "$(round(data_hours(data.H, avg_period), digits=1)) h")
+    add_hours_text!(ax_h, "$(round(Int, data_hours(data.H, avg_period))) h")
     ax_h.grid(alpha=0.3)
 
     ax_le = axes[2]
     ax_le.axvline(0, color="grey", alpha=0.4)
     safe_hist!(ax_le, finite_values(data.LE); bins=DEFAULT_LATENT_BINS, color="C1")
-    ax_le.set_xlabel(L"\overline{w'q'}~\mathrm{[W~m^{-2}]}")
+    ax_le.set_xlabel(L"Q_E~\mathrm{[W~m^{-2}]}")
     ax_le.tick_params(axis="y", labelleft=false)
     ax_le.set_title("Latent")
-    add_hours_text!(ax_le, "$(round(data_hours(data.LE, avg_period), digits=1)) h")
+    add_hours_text!(ax_le, "$(round(Int, data_hours(data.LE, avg_period))) h")
     ax_le.grid(alpha=0.3)
 
     !isempty(title_suffix) && fig.suptitle(title_suffix)
@@ -672,12 +689,12 @@ function plot_surface_histogram(data::DataFrame, output_file::AbstractString, av
         data_2m = row_data[row_data.height_band .== "2m", :]
 
         ax_h.axvline(0, color="grey", alpha=0.4)
-        safe_hist!(ax_h, finite_values(data_1m.H); bins=DEFAULT_SENSIBLE_BINS, color="C0", alpha=0.60, label="~1m")
-        safe_hist!(ax_h, finite_values(data_2m.H); bins=DEFAULT_SENSIBLE_BINS, color="C1", alpha=0.60, label="~2m")
+        safe_hist!(ax_h, finite_values(data_1m.H); bins=DEFAULT_SENSIBLE_BINS, color="C0", alpha=0.60, label=L"\approx 1\mathrm{m}")
+        safe_hist!(ax_h, finite_values(data_2m.H); bins=DEFAULT_SENSIBLE_BINS, color="C1", alpha=0.60, label=L"\approx 2\mathrm{m}")
         add_hours_text!(
             ax_h,
-            "1m: $(round(data_hours(data_1m.H, avg_period), digits=1)) h\n2m: $(round(data_hours(data_2m.H, avg_period), digits=1)) h",
-            x=0.24,
+            "1m: $(round(Int, data_hours(data_1m.H, avg_period))) h\n2m: $(round(Int, data_hours(data_2m.H, avg_period))) h",
+            x=0.2,
         )
         ax_h.set_ylabel(label, fontsize=11, fontweight="bold", rotation=0, labelpad=36, va="center")
         ax_h.tick_params(axis="y", labelleft=false)
@@ -685,19 +702,20 @@ function plot_surface_histogram(data::DataFrame, output_file::AbstractString, av
         row_index == 1 && ax_h.legend(fontsize=8)
 
         ax_le.axvline(0, color="grey", alpha=0.4)
-        safe_hist!(ax_le, finite_values(data_1m.LE); bins=DEFAULT_LATENT_BINS, color="C2")
-        add_hours_text!(ax_le, "$(round(data_hours(data_1m.LE, avg_period), digits=1)) h", x=0.20)
+        safe_hist!(ax_le, finite_values(data_1m.LE); bins=DEFAULT_LATENT_BINS, color="C2", label=L"\approx 1\mathrm{m}")
+        add_hours_text!(ax_le, "$(round(Int, data_hours(data_1m.LE, avg_period))) h", x=0.12)
         ax_le.tick_params(axis="y", labelleft=false)
         ax_le.grid(alpha=0.3)
+        row_index == 1 && ax_le.legend(fontsize=8)
 
         if row_index == length(FLUX_SURFACE_ROW_SPECS)
-            ax_h.set_xlabel(L"\overline{w'T'}~\mathrm{[W~m^{-2}]}")
-            ax_le.set_xlabel(L"\overline{w'q'}~\mathrm{[W~m^{-2}]}")
+            ax_h.set_xlabel(L"Q_H~\mathrm{[W~m^{-2}]}")
+            ax_le.set_xlabel(L"Q_E~\mathrm{[W~m^{-2}]}")
         end
     end
 
     axes[1, 1].set_title("Sensible")
-    axes[1, 2].set_title("Latent (~1m)")
+    axes[1, 2].set_title("Latent")
     !isempty(title_suffix) && fig.suptitle(title_suffix)
 
     PyPlot.tight_layout()
@@ -740,12 +758,11 @@ end
 
 function temperature_class_plot_label(class_value::AbstractString, thresholds)
     lower_temperature, upper_temperature = temperature_threshold_text.(thresholds)
-    degree_c = "\\,^{\\circ}\\mathrm{C}"
+    degree_c = "\\mathbf{^{\\circ} C}"
 
-    class_value == "cold" && return "\$T < " * lower_temperature * degree_c * "\$"
-    class_value == "near_zero" && return (
-        "\$" * lower_temperature * degree_c * " \\leq T \\leq " * upper_temperature * degree_c * "\$")
-    class_value == "warm" && return "\$T > " * upper_temperature * degree_c * "\$"
+    class_value == "cold" && return ("\$\\mathbf{T_{29m} < " * lower_temperature * degree_c * "}\$")
+    class_value == "near_zero" && return ("\$\\mathbf{" * lower_temperature * degree_c * " \\leq T_{29m} \\leq " * upper_temperature * degree_c * "}\$")
+    class_value == "warm" && return ("\$\\mathbf{T_{29m} > " * upper_temperature * degree_c * "}\$")
     error("Unknown paper temperature class '$class_value'.")
 end
 
@@ -761,7 +778,7 @@ function plot_paper_flux_row!(ax_h, ax_le, data::DataFrame, avg_period::Period;
         bins=DEFAULT_SENSIBLE_BINS,
         color="C0",
         alpha=0.60,
-        label="~1m",
+        label=L"\approx 1\mathrm{m}",
     )
     safe_hist!(
         ax_h,
@@ -769,27 +786,39 @@ function plot_paper_flux_row!(ax_h, ax_le, data::DataFrame, avg_period::Period;
         bins=DEFAULT_SENSIBLE_BINS,
         color="C1",
         alpha=0.60,
-        label="~2m",
+        label=L"\approx 2 \mathrm{m}",
     )
     add_hours_text!(
         ax_h,
-        "1m: $(round(data_hours(data_1m.H, avg_period), digits=1)) h\n" *
-        "2m: $(round(data_hours(data_2m.H, avg_period), digits=1)) h",
-        x=0.24,
+        "1m: $(round(Int, data_hours(data_1m.H, avg_period))) h\n" *
+        "2m: $(round(Int, data_hours(data_2m.H, avg_period))) h",
+        x=0.2,
     )
     ax_h.tick_params(axis="y", labelleft=false)
     ax_h.grid(alpha=0.3)
     show_legend && ax_h.legend(fontsize=8)
 
     if !isempty(row_label)
-        ax_h.set_ylabel(row_label, fontsize=10, rotation=0, labelpad=64, va="center")
+        ax_h.annotate(
+            row_label;
+            xy=(0,0.5),
+            xycoords="axes fraction",
+            xytext=(-30,0),
+            textcoords="offset points",
+            fontsize=10,
+            fontweight="bold",
+            rotation=90,
+            ha="center",
+            va="center",
+            annotation_clip=false)
     end
 
     ax_le.axvline(0, color="grey", alpha=0.4)
-    safe_hist!(ax_le, finite_values(data_1m.LE); bins=DEFAULT_LATENT_BINS, color="C2")
-    add_hours_text!(ax_le, "$(round(data_hours(data_1m.LE, avg_period), digits=1)) h")
+    safe_hist!(ax_le, finite_values(data_1m.LE); bins=DEFAULT_LATENT_BINS, color="C2", label=L"\approx 1\mathrm{m}")
+    add_hours_text!(ax_le, "$(round(Int, data_hours(data_1m.LE, avg_period))) h", x=0.12)
     ax_le.tick_params(axis="y", labelleft=false)
     ax_le.grid(alpha=0.3)
+    show_legend && ax_le.legend(fontsize=8)
     return nothing
 end
 
@@ -798,10 +827,11 @@ function plot_paper_all_flux_histogram(data::DataFrame, plot_dir::AbstractString
     fig, axes = PyPlot.subplots(1, 2, figsize=(6.8, 3.2))
 
     plot_paper_flux_row!(axes[1], axes[2], data, avg_period; show_legend=true)
+    axes[1].set_ylabel("probability density")
     axes[1].set_title("Sensible")
-    axes[2].set_title("Latent (~1m)")
-    axes[1].set_xlabel(L"\overline{w'T'}~\mathrm{[W~m^{-2}]}")
-    axes[2].set_xlabel(L"\overline{w'q'}~\mathrm{[W~m^{-2}]}")
+    axes[2].set_title("Latent")
+    axes[1].set_xlabel(L"Q_H~\mathrm{[W~m^{-2}]}")
+    axes[2].set_xlabel(L"Q_E~\mathrm{[W~m^{-2}]}")
 
     PyPlot.tight_layout()
     mkpath(dirname(output_file))
@@ -828,10 +858,13 @@ function plot_paper_temperature_flux_histograms(
         )
     end
 
+    for j in 1:size(axes, 1)
+        axes[j, 1].set_ylabel("probability density")
+    end
     axes[1, 1].set_title("Sensible")
-    axes[1, 2].set_title("Latent (~1m)")
-    axes[end, 1].set_xlabel(L"\overline{w'T'}~\mathrm{[W~m^{-2}]}")
-    axes[end, 2].set_xlabel(L"\overline{w'q'}~\mathrm{[W~m^{-2}]}")
+    axes[1, 2].set_title("Latent")
+    axes[end, 1].set_xlabel(L"Q_H~\mathrm{[W~m^{-2}]}")
+    axes[end, 2].set_xlabel(L"Q_E~\mathrm{[W~m^{-2}]}")
 
     PyPlot.tight_layout()
     mkpath(dirname(output_file))
@@ -1081,15 +1114,16 @@ function write_paper_flux_distribution_statistics(
 end
 
 function default_classification_order(classification_column)
-    classification_column == :weather_class && return WEATHER_CLASS_ORDER
+    #classification_column == :weather_class && return WEATHER_CLASS_ORDER
     classification_column == :air_temperature_class && return AIR_TEMPERATURE_CLASS_ORDER
     return ()
 end
 
 function default_classification_labels(classification_column, air_temperature_thresholds)
-    if classification_column == :weather_class
+    #=if classification_column == :weather_class
         return WEATHER_CLASS_LABELS
-    elseif classification_column == :air_temperature_class
+    end=#
+    if classification_column == :air_temperature_class
         lower_temperature, upper_temperature = air_temperature_thresholds
         return Dict(
             "cold" => "T < $(lower_temperature) C",
@@ -1259,8 +1293,8 @@ function histogram2d_max_count(x_values, y_values, x_edges, y_edges)
 end
 
 function flux_column_label(flux_column::Symbol)
-    flux_column == :H && return L"\overline{w'T'}~\mathrm{[W~m^{-2}]}"
-    flux_column == :LE && return L"\overline{w'q'}~\mathrm{[W~m^{-2}]}"
+    flux_column == :H && return L"Q_H~\mathrm{[W~m^{-2}]}"
+    flux_column == :LE && return L"Q_E~\mathrm{[W~m^{-2}]}"
     return string(flux_column)
 end
 
@@ -1315,7 +1349,7 @@ function plot_flux_time_histogram(data::DataFrame, output_file::AbstractString, 
             hist_image = hist_result[end]
         end
 
-        add_hours_text!(ax, "$(round(data_hours(row_data[!, flux_column], avg_period), digits=1)) h")
+        add_hours_text!(ax, "$(round(Int, data_hours(row_data[!, flux_column], avg_period))) h")
         ax.set_ylabel(label, fontsize=11, fontweight="bold", rotation=0, labelpad=36, va="center")
         ax.grid(alpha=0.25)
     end
@@ -1598,7 +1632,7 @@ flux_data = DataFrame()
     GC.gc()
 end
 
-## Saving or loading low-frequency data
+# Saving or loading low-frequency data
 
 write_flux_cache(cache_file, flux_data)
 =#
@@ -1617,6 +1651,7 @@ dship_meteo = dship_meteo[flux_data.time[1]-avg_period/2 .<= dship_meteo.time .<
 #aggregate dship_meteo to flux_data time
 dship_meteo_agg = aggregate_dship_meteo_to_flux_times(dship_meteo, flux_data.time, avg_period)
 
+#=
 ## Classify DSHIP meteo records
 """
     classify_dship_weather(row)::Symbol
@@ -1642,6 +1677,7 @@ function classify_dship_weather(row)::Symbol
         return :transient
     end
 end
+=#
 
 function classify_air_temperature(air_temperature, thresholds)::Symbol
     if ismissing(air_temperature)
@@ -1660,13 +1696,13 @@ function classify_air_temperature(air_temperature, thresholds)::Symbol
     end
 end
 
-dship_meteo_agg.weather_class = [classify_dship_weather(row) for row in eachrow(dship_meteo_agg)]
+#dship_meteo_agg.weather_class = [classify_dship_weather(row) for row in eachrow(dship_meteo_agg)]
 dship_meteo_agg.air_temperature_class = [
     classify_air_temperature(air_temperature, air_temperature_thresholds)
     for air_temperature in dship_meteo_agg.air_temperature
 ]
 
-flux_data[!, :weather_class] = dship_meteo_agg.weather_class
+#flux_data[!, :weather_class] = dship_meteo_agg.weather_class
 flux_data[!, :air_temperature] = dship_meteo_agg.air_temperature
 flux_data[!, :air_temperature_class] = dship_meteo_agg.air_temperature_class
 
