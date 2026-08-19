@@ -239,11 +239,11 @@ function standard_difference_specs(subplot_order, latent_subplot_order,
 
     return [
         ((subplot_order[1], subplot_order[2]), :wT, sensible_conversion_factor, "sensible",
-            L"\Delta H~\mathrm{[W~m^{-2}]}"),
+            L"\Delta Q_H~\mathrm{[W~m^{-2}]}"),
         ((subplot_order[3], subplot_order[4]), :wT, sensible_conversion_factor, "sensible",
-            L"\Delta H~\mathrm{[W~m^{-2}]}"),
+            L"\Delta Q_H~\mathrm{[W~m^{-2}]}"),
         ((latent_subplot_order[1], latent_subplot_order[2]), :wq, latent_conversion_factor, "latent",
-            L"\Delta L_E~\mathrm{[W~m^{-2}]}"),
+            L"\Delta Q_E~\mathrm{[W~m^{-2}]}"),
     ]
 end
 
@@ -411,7 +411,7 @@ function plot_block_difference_timeseries_panel!(ax, block_data::AbstractDict,
     end
     if any(isfinite, feature_difference)
         fraction_line = ax_right.plot(time, feature_difference, color="C3", linestyle="--", linewidth=1.0,
-            alpha=0.8, label="$(feature_label) fraction difference")
+            alpha=0.8, label=L"\Delta f_{\mathrm{%$(feature_label)}}")
     end
 
     ax.axhline(0, color="grey", linewidth=0.8, alpha=0.55)
@@ -443,7 +443,7 @@ function plot_feature_flux_difference_panel!(ax, block_data::AbstractDict,
     ax.axhline(0, color="grey", linewidth=0.8, alpha=0.55)
     ax.axvline(0, color="grey", linewidth=0.8, alpha=0.55)
     ax.set_title("$(flux_kind): $(difference_label)")
-    ax.set_xlabel(show_xlabel ? "$(feature_label) fraction difference" : "")
+    ax.set_xlabel(show_xlabel ? L"\Delta f_{\mathrm{%$(feature_label)}}" : "")
     ax.set_ylabel(show_ylabel ? flux_ylabel : "")
     #ax.set_xlim()
     ax.set_ylim(ylim)
