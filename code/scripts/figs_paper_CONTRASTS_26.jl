@@ -380,10 +380,350 @@ ax2.legend([wq1[1], wq2[1]], [instr_labels[1], instr_labels[3]])
 # fig.autofmt_xdate()
 
 PyPlot.tight_layout()
-output_folder = stationcfg.plot_dir(station_config, "wT_wq")
-#PyPlot.savefig(joinpath("/home/haugened/Documents/data/CONTRASTS/plots/paper_CONTRASTS_26/", "1c_heat_fluxes.pdf"), bbox_inches="tight")
+output_folder = "/home/haugened/Documents/data/CONTRASTS/plots/paper_CONTRASTS_26/"
+#PyPlot.savefig(joinpath(output_folder, "1c_heat_fluxes.pdf"), bbox_inches="tight")
 
+#depending on the data length, the following block takes more than 10min!
+#when no parameters are changed, the ready file is read afterwards automatically
+#only uncomment, if you change parameters
+#=
+##
+######################################################
+###      CALCULATE FOOTPRINTS PER BLOCK FLUX       ###
+###            author: Michi Haugeneder            ###
+######################################################
 
+#variables
+reyavg_periods = [:ra1, :ra2, :ra3, :ra4]
+block_flux_names = [:block_fluxes1, :block_fluxes2, :block_fluxes3, :block_fluxes4]
+footprint_input_names = [:ffp_inputs1, :ffp_inputs2, :ffp_inputs3, :ffp_inputs4]
+outnames_block = [:ffp_blocks1, :ffp_blocks2, :ffp_blocks3, :ffp_blocks4]
+nrelemgrid = 1000
+
+block_fluxes_all = Dict{Symbol, DataFrame}()
+ffp_inputs_all = Dict{Symbol, DataFrame}()
+ffp_blocks_all = Dict{Symbol, Vector{Dict{String, Any}}}()
+
+#optional input
+rs_block = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9] #levels for later plotting/analysis
+rslayer_block = false
+
+println()
+println("Calculating block fluxes and per-block footprints for station ", station_label)
+
+PyPlot.pygui(false)
+for ix in eachindex(names)
+    println("Processing ", String(names[ix]))
+
+    ecdata = @eval $(names[ix])
+    fluxdata = @eval $(fluxes[ix])
+    peri = @eval $(reyavg_periods[ix])
+    wd_tmp = @eval $(wd[ix])
+
+    turb.missing2nan!(ecdata)
+    turb.missing2nan!(fluxdata)
+
+    block_flux, center_indices, start_indices, end_indices = ffp_block.extract_block_fluxes(fluxdata, peri)
+    println("Extracted ", nrow(block_flux), " full non-overlapping blocks from ", String(fluxes[ix]), ".")
+
+    inputs = ffp_block.block_footprint_inputs(
+        ecdata,
+        block_flux,
+        wd_tmp,
+        start_indices,
+        end_indices,
+        meas_heights[ix],
+        pbl_height,
+        wind_direction_offsets[ix],
+    )
+
+    block_flux[!, :u] = [
+        ffp_block.nanmean(
+            sqrt.(ecdata.u[start_indices[j]:end_indices[j]] .^ 2 .+
+                  ecdata.v[start_indices[j]:end_indices[j]] .^ 2)
+        )
+        for j in eachindex(start_indices)
+    ]
+    block_flux[!, :T] = [
+        ffp_block.nanmean(ecdata.T[start_indices[j]:end_indices[j]])
+        for j in eachindex(start_indices)
+    ]
+    block_flux[!, :wind_dir] = [
+        turb.mean_winddir(wd_tmp[ecdata.time[start_indices[j]] .<= wd_tmp.time .<
+            ecdata.time[end_indices[j]], Symbol("α")])
+        for j in eachindex(start_indices)
+    ]
+
+    footprints = ffp_block.calculate_footprints(inputs, meas_heights[ix], rs_block, rslayer_block, nrelemgrid, crop)
+
+    block_fluxes_all[fluxes[ix]] = block_flux
+    ffp_inputs_all[fluxes[ix]] = inputs
+    ffp_blocks_all[fluxes[ix]] = footprints
+
+    @eval $(block_flux_names[ix]) = $block_flux
+    @eval $(footprint_input_names[ix]) = $inputs
+    @eval $(outnames_block[ix]) = $footprints
+end
+PyPlot.pygui(true)
+
+##################################################
+# Combine with a drone overview image to classify
+using Images
+classes_file = String(station_config["block_footprints"]["classes_file"])
+classes_reference_file = String(stationcfg.require_key(station_config, "footprint", "orthomosaic"))
+classes_scale_file = isfile(ffp_block.footprint_world_file(classes_file)) ? classes_file : classes_reference_file
+classes_img = load(classes_file);
+classes_img_size = size(classes_img);
+#for plotting
+mpimg = pyimport("matplotlib.image")
+classes_img_pyplot = mpimg.imread(classes_file)
+
+"""
+    read_criterion_from_config(config)
+
+Read RGB-criterions for ice and feature (e.g. lead, pond, ridge) from the config Dictionary
+"""
+function read_criterion_from_config(station_config::Dict)
+    #read criterion for true classification = feature (e.g. lead, pond, ridge) from config file
+    ice_red_crit_bigger_than = Int(station_config["block_footprints"]["crit_ice_red_bigger_eq"])
+    ice_red_crit_smaller_eq = Int(station_config["block_footprints"]["crit_ice_red_smaller_eq"])
+    ice_green_crit_bigger_than = Int(station_config["block_footprints"]["crit_ice_green_bigger_eq"])
+    ice_green_crit_smaller_eq = Int(station_config["block_footprints"]["crit_ice_green_smaller_eq"])
+    ice_blue_crit_bigger_than = Int(station_config["block_footprints"]["crit_ice_blue_bigger_eq"])
+    ice_blue_crit_smaller_eq = Int(station_config["block_footprints"]["crit_ice_blue_smaller_eq"])
+
+    ice_crit_rgb = [[ice_red_crit_bigger_than, ice_red_crit_smaller_eq],
+                    [ice_green_crit_bigger_than, ice_green_crit_smaller_eq],
+                    [ice_blue_crit_bigger_than, ice_blue_crit_smaller_eq]]
+
+    feature_red_crit_bigger_than = Int(station_config["block_footprints"]["crit_feature_red_bigger_eq"])
+    feature_red_crit_smaller_eq = Int(station_config["block_footprints"]["crit_feature_red_smaller_eq"])
+    feature_green_crit_bigger_than = Int(station_config["block_footprints"]["crit_feature_green_bigger_eq"])
+    feature_green_crit_smaller_eq = Int(station_config["block_footprints"]["crit_feature_green_smaller_eq"])
+    feature_blue_crit_bigger_than = Int(station_config["block_footprints"]["crit_feature_blue_bigger_eq"])
+    feature_blue_crit_smaller_eq = Int(station_config["block_footprints"]["crit_feature_blue_smaller_eq"])
+
+    feature_crit_rgb = [[feature_red_crit_bigger_than, feature_red_crit_smaller_eq],
+                            [feature_green_crit_bigger_than, feature_green_crit_smaller_eq],
+                            [feature_blue_crit_bigger_than, feature_blue_crit_smaller_eq]]
+
+    return ice_crit_rgb, feature_crit_rgb
+end
+
+#create classes matrix
+"""
+    create_classes_array(img::Matrix{RGB{N0f8}}, )
+
+Create a class array with surface classes from an input image.
+Criterions need to be set in the config file!
+"""
+function create_classes_array(img::Matrix{RGB{N0f8}},
+    ice_crit::Vector, feature_crit::Vector)::Array{Union{Missing, Bool}}
+    classes_array = Array{Union{Missing, Bool}}(undef, size(img))#fill(false, size(img))
+    #missing: do not use
+    #true: ice
+    #false: feature such as lead, pond, ridge
+    red_vals = round.(Int, float.(red.(img))*255)
+    green_vals = round.(Int, float.(green.(img))*255)
+    blue_vals = round.(Int, float.(blue.(img))*255)
+    for i in eachindex(classes_array)
+        if ice_crit[1][1] <= red_vals[i] <= ice_crit[1][2] &&
+           ice_crit[2][1] <= green_vals[i] <= ice_crit[2][2] &&
+           ice_crit[3][1] <= blue_vals[i] <= ice_crit[3][2]
+            classes_array[i] = true
+        elseif feature_crit[1][1] <= red_vals[i] <= feature_crit[1][2] &&
+               feature_crit[2][1] <= green_vals[i] <= feature_crit[2][2] &&
+               feature_crit[3][1] <= blue_vals[i] <= feature_crit[3][2]
+            classes_array[i] = false
+        else
+            classes_array[i] = missing
+        end
+    end
+    return classes_array
+end
+
+ice_crit_rgb, feature_crit_rgb = read_criterion_from_config(station_config)
+surface_feature = String(station_config["block_footprints"]["feature"])
+
+#read same as for footprints. Change, if pictures are not the same!
+classes_array = create_classes_array(classes_img, ice_crit_rgb, feature_crit_rgb)
+
+classes_fluxloc_pxl = stationcfg.toml_matrix(stationcfg.require_key(station_config, "footprint", "fluxloc"); T=Float64)
+classes_extend_m_config = stationcfg.optional_key(station_config, nothing, "footprint", "bgextend_m")
+classes_extend_pxl_config = stationcfg.optional_key(station_config, nothing, "footprint", "bgextend_pxl")
+classes_extend_m = isnothing(classes_extend_m_config) ? nothing : Float64.(classes_extend_m_config)
+classes_extend_pxl = isnothing(classes_extend_pxl_config) ? nothing : Float64.(classes_extend_pxl_config)
+classes_figorigin_pxl = Float64.(stationcfg.require_key(station_config, "footprint", "figorigin"))
+
+classes_scale = ffp_block.footprint_meterperpxl(classes_scale_file, classes_extend_m, classes_extend_pxl)
+classes_meterperpxl_row = classes_scale.meterperpxl_row
+classes_meterperpxl_col = classes_scale.meterperpxl_col
+classes_coordinates_zero_based = true
+
+"""
+    footprint_weighted_class_fractions(footprint, classes_array, origin_pxl,
+        meterperpxl_row, meterperpxl_col; origin_is_zero_based=true)
+
+Calculate the footprint-weighted ice and feature (lead/pond/ridge) fractions for one footprint.
+Footprint points outside `classes_array` or on `missing` class pixels are
+excluded from the ice/feature denominator.
+"""
+function footprint_weighted_class_fractions(footprint::AbstractDict,
+        classes_array::AbstractMatrix{Union{Missing, Bool}},
+        origin_pxl::AbstractVector{<:Real},
+        meterperpxl_row::Real,
+        meterperpxl_col::Real;
+        origin_is_zero_based::Bool=true)
+
+    if get(footprint, "flag_err", false)
+        return (
+            ice_fraction=missing,
+            feature_fraction=missing,
+            classified_weight_fraction=0.0,
+            outside_weight_fraction=missing,
+            missing_class_weight_fraction=missing,
+            ice_weight=0.0,
+            feature_weight=0.0,
+            classified_weight=0.0,
+            total_weight=0.0,
+        )
+    end
+
+    x = footprint["x_2d"]
+    y = footprint["y_2d"]
+    f = footprint["f_2d"]
+
+    size(x) == size(y) == size(f) || error("Footprint x_2d, y_2d, and f_2d must have the same size.")
+
+    row0 = Float64(origin_pxl[1])
+    col0 = Float64(origin_pxl[2])
+    index_offset = origin_is_zero_based ? 1 : 0
+    nrows, ncols = size(classes_array)
+
+    ice_weight = 0.0
+    feature_weight = 0.0
+    classified_weight = 0.0
+    outside_weight = 0.0
+    missing_class_weight = 0.0
+    total_weight = 0.0
+
+    @inbounds for k in eachindex(f)
+        weight = f[k]
+        isfinite(weight) && weight > 0 || continue
+        total_weight += weight
+
+        row = round(Int, row0 - y[k] / meterperpxl_row) + index_offset
+        col = round(Int, col0 + x[k] / meterperpxl_col) + index_offset
+
+        if !(1 <= row <= nrows && 1 <= col <= ncols)
+            outside_weight += weight
+            continue
+        end
+
+        class_value = classes_array[row, col]
+        if ismissing(class_value)
+            missing_class_weight += weight
+            continue
+        end
+
+        classified_weight += weight
+        if class_value
+            ice_weight += weight
+        else
+            feature_weight += weight
+        end
+    end
+
+    if classified_weight == 0
+        return (
+            ice_fraction=missing,
+            feature_fraction=missing,
+            classified_weight_fraction=total_weight > 0 ? classified_weight / total_weight : 0.0,
+            outside_weight_fraction=total_weight > 0 ? outside_weight / total_weight : missing,
+            missing_class_weight_fraction=total_weight > 0 ? missing_class_weight / total_weight : missing,
+            ice_weight=ice_weight,
+            feature_weight=feature_weight,
+            classified_weight=classified_weight,
+            total_weight=total_weight,
+        )
+    end
+
+    return (
+        ice_fraction=ice_weight / classified_weight,
+        feature_fraction=feature_weight / classified_weight,
+        classified_weight_fraction=total_weight > 0 ? classified_weight / total_weight : 0.0,
+        outside_weight_fraction=total_weight > 0 ? outside_weight / total_weight : missing,
+        missing_class_weight_fraction=total_weight > 0 ? missing_class_weight / total_weight : missing,
+        ice_weight=ice_weight,
+        feature_weight=feature_weight,
+        classified_weight=classified_weight,
+        total_weight=total_weight,
+    )
+end
+
+function footprint_weighted_class_fractions_dataframe(footprints::AbstractVector,
+        classes_array::AbstractMatrix{Union{Missing, Bool}},
+        origin_pxl::AbstractVector{<:Real},
+        meterperpxl_row::Real,
+        meterperpxl_col::Real;
+        origin_is_zero_based::Bool=true)
+
+    fractions = [
+        footprint_weighted_class_fractions(
+            footprint,
+            classes_array,
+            origin_pxl,
+            meterperpxl_row,
+            meterperpxl_col;
+            origin_is_zero_based=origin_is_zero_based,
+        )
+        for footprint in footprints
+    ]
+    return DataFrame(fractions)
+end
+
+footprint_class_fractions_all = Dict{Symbol, DataFrame}()
+footprint_class_fraction_names = [
+    :footprint_class_fractions1,
+    :footprint_class_fractions2,
+    :footprint_class_fractions3,
+    :footprint_class_fractions4,
+]
+
+for ix in eachindex(fluxes)
+    flux = fluxes[ix]
+    fractions = footprint_weighted_class_fractions_dataframe(
+        ffp_blocks_all[flux],
+        classes_array,
+        classes_fluxloc_pxl[ix, :],
+        classes_meterperpxl_row,
+        classes_meterperpxl_col;
+        origin_is_zero_based=classes_coordinates_zero_based,
+    )
+
+    insertcols!(
+        fractions,
+        1,
+        :time => block_fluxes_all[flux].time,
+        :block_start => block_fluxes_all[flux].block_start,
+        :block_end => block_fluxes_all[flux].block_end,
+    )
+
+    footprint_class_fractions_all[flux] = fractions
+
+    block_fluxes_all[flux][!, :footprint_ice_fraction] = fractions.ice_fraction
+    block_fluxes_all[flux][!, :footprint_feature_fraction] = fractions.feature_fraction
+    block_fluxes_all[flux][!, :footprint_classified_weight_fraction] = fractions.classified_weight_fraction
+    block_fluxes_all[flux][!, :footprint_outside_weight_fraction] = fractions.outside_weight_fraction
+    block_fluxes_all[flux][!, :footprint_missing_class_weight_fraction] = fractions.missing_class_weight_fraction
+
+    @eval $(footprint_class_fraction_names[ix]) = $fractions
+end
+
+block_fluxes_output_file = ffp_block.save_block_fluxes_netcdf(block_fluxes_all, station_id; output_dir=output_folder)
+println("Saved block fluxes to ", block_fluxes_output_file)
+##
+=#
 #######################################################
 ###                BLOCK ANALYSIS                   ###
 #######################################################
@@ -397,7 +737,7 @@ surface_feature = String(stationcfg.require_key(station_config, "block_footprint
 feature_file_label = block_analyze.feature_file_label(surface_feature)
 #######################################################
 #load the block file
-block_data = ffp_block.read_block_fluxes_netcdf(station_name)
+block_data = ffp_block.read_block_fluxes_netcdf(station_name; input_dir=output_folder)
 
 #order of the subplots
 #left top, right top, left bottom, right bottom
@@ -410,8 +750,6 @@ latent_subplot_order = block_analyze.read_subplot_order(station_config, "latent_
 #######################################################
 wT_limits = Tuple(Float64.(stationcfg.optional_key(station_config, [-20.0, 20.0], "plot", "wT_limits")))
 wq_limits = Tuple(Float64.(stationcfg.optional_key(station_config, [-5.0, 5.0], "plot", "wq_limits")))
-output_folder = "/home/haugened/Documents/data/CONTRASTS/plots/paper_CONTRASTS_26/"
-mkpath(output_folder)
 ##
 #######################################################
 #calculate correlations and export to .csv
@@ -458,8 +796,15 @@ for (ax, (flux_names, flux_column, conversion_factor, flux_kind, flux_ylabel)) i
         surface_type, heights; color=color, feature_label=surface_feature)
 end
 axs_diff_scatter[1].set_xlim(0.2, 0.9)
-axs_diff_scatter[2].set_xlim(0.5, 1.0)
-axs_diff_scatter[3].set_xlim(0.3, 1.0)
+axs_diff_scatter[2].set_xlim(0.55, 1.0)
+axs_diff_scatter[3].set_xlim(0.35, 1.0)
+
+subplot_labels = ["a)", "b)", "c)"]
+for (ax, label) in zip(vec(axs_diff_scatter), subplot_labels)
+    ax.text(-0.2, 1.1, label, transform=ax.transAxes, ha="left", va="top",
+    fontsize=14, fontweight="normal", clip_on=false)
+end
+
 PyPlot.tight_layout(rect=[0, 0, 1, 0.91])
 
 #fitting linear model to differences
@@ -489,10 +834,7 @@ if save_csv
         DataFrame(linear_fit_params))
 end
 
-if save_figs
-    fig_diff_scatter.savefig(joinpath(output_folder,
-    "$(station_file_stem)_block_flux_$(feature_file_label)_difference_scatter.pdf"), bbox_inches="tight")
-end
+#fig_diff_scatter.savefig(joinpath(output_folder, "$(station_file_stem)_block_flux_$(feature_file_label)_difference_scatter.pdf"), bbox_inches="tight")
 
 ###################################################################################################
 #Figures for ridge section (Figs. xxx)
@@ -868,8 +1210,8 @@ ax2.legend([wq1[1], wq2[1]], [instr_labels[1], instr_labels[3]])
 # fig.autofmt_xdate()
 
 PyPlot.tight_layout()
-output_folder = stationcfg.plot_dir(station_config, "wT_wq")
-#PyPlot.savefig(joinpath("/home/haugened/Documents/data/CONTRASTS/plots/paper_CONTRASTS_26/", "3a2_heat_fluxes.pdf"), bbox_inches="tight")
+output_folder = "/home/haugened/Documents/data/CONTRASTS/plots/paper_CONTRASTS_26/"
+#PyPlot.savefig(joinpath(output_folder, "3a2_heat_fluxes.pdf"), bbox_inches="tight")
 
 ##############################
 #Scatter plot height comparison heat fluxes CONTRASTS
