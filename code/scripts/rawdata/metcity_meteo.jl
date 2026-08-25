@@ -1,0 +1,183 @@
+####################################################################
+###          READING AND EVALUATING DATA FROM METCITY            ###
+####################################################################
+
+using Dates, DataFrames
+import CSV
+
+const METCITY_PATH = "/home/haugened/Documents/data/CONTRASTS/MetCity"
+const METCITY_DATE_FORMAT = dateformat"yyyy-mm-dd HH:MM:SS"
+
+const FLAG_BASE_NAMES = Dict(
+    "RH2" => "Tower_RH2",
+    "RH6" => "Tower_RH6",
+    "RH10" => "Tower_RH10",
+    "LuftT2" => "Tower_AirT2",
+    "LuftT6" => "Tower_AirT6",
+    "LuftT10" => "Tower_AirT10",
+    "TKE" => "TKE_mean",
+)
+
+function standardize_flag_names!(flags)
+    rename!(flags, :datetime => :time)
+
+    for name in names(flags)[2:end]
+        base_name = replace(name, r"_QAQC_flag$|_Flag$|_flag$" => "")
+        data_name = get(FLAG_BASE_NAMES, base_name, base_name)
+        rename!(flags, name => "$(data_name)_Flag")
+    end
+
+    fill_missing_flags!(flags)
+    disallowmissing!(flags)
+    return flags
+end
+
+function fill_missing_flags!(data)
+    for column in names(data, r"_Flag$")
+        data[!, column] = coalesce.(data[!, column], -1)
+    end
+
+    return data
+end
+
+function read_metcity_station(directory, station)
+    stem = "CONTRASTS_IceStation$(station)_Level0"
+
+    data = CSV.read(
+        joinpath(directory, "$(stem)_data.csv"),
+        DataFrame;
+        header=1,
+        skipto=3,
+        dateformat=METCITY_DATE_FORMAT,
+        types=Dict(1 => DateTime),
+    )
+    rename!(data, names(data)[1:4] .=> [:time, :Tower_RH2, :Tower_RH6, :Tower_RH10])
+    insertcols!(data, 2, :ice_station => fill(station, nrow(data)))
+
+    flags = CSV.read(
+        joinpath(directory, "$(stem)_flag.csv"),
+        DataFrame;
+        dateformat=METCITY_DATE_FORMAT,
+        types=Dict(:datetime => DateTime),
+    )
+    standardize_flag_names!(flags)
+
+    meteo = leftjoin(data, flags; on=:time)
+    fill_missing_flags!(meteo)
+    return meteo
+end
+
+function read_metcity_meteo(directory=METCITY_PATH)
+    meteo = vcat(
+        [read_metcity_station(directory, station) for station in 1:3]...;
+        cols=:union,
+    )
+    sort!(meteo, :time)
+    return meteo
+end
+
+function qc_timeseries(meteo, column, acceptable_flags)
+    flag_column = Symbol(column, "_Flag")
+    accepted = in.(meteo[!, flag_column], Ref(acceptable_flags))
+    return select(meteo[accepted, :], :time, column)
+end
+
+metcity_meteo = read_metcity_meteo()
+
+metcity_station1 = copy(metcity_meteo[metcity_meteo.ice_station .== 1, :])
+metcity_station2 = copy(metcity_meteo[metcity_meteo.ice_station .== 2, :])
+metcity_station3 = copy(metcity_meteo[metcity_meteo.ice_station .== 3, :])
+
+#################################################################
+#plotting
+using PyPlot
+PyPlot.pygui(true)
+
+###########################
+#albedo
+##
+albedo1_good = qc_timeseries(metcity_station1, "CNR4_albedo", [0])
+albedo2_good = qc_timeseries(metcity_station2, "CNR4_albedo", [0])
+albedo3_good = qc_timeseries(metcity_station3, "CNR4_albedo", [0])
+
+fig=PyPlot.figure()
+ax = fig.add_subplot(111)
+ax.plot(metcity_station1.time, metcity_station1.CNR4_albedo, label="regime 1")
+ax.plot(metcity_station2.time, metcity_station2.CNR4_albedo, label="regime 2")
+ax.plot(metcity_station3.time, metcity_station3.CNR4_albedo, label="regime 3")
+ax.legend()
+ax.grid(true)
+ax.set_xlabel("time")
+ax.set_ylabel("CNR4 albedo")
+ax.set_ylim(0.3,1.1)
+#fig.savefig("/home/haugened/Documents/data/CONTRASTS/plots/MetCity/albedo.pdf", bbox_inches="tight")
+##
+
+###########################
+#radiation components
+##
+radiation_columns = [
+    ("CNR4_sw_dn", "shortwave upwelling"),
+    ("CNR4_sw_up", "shortwave downwelling"),
+    ("CNR4_lw_dn_cor", "longwave upwelling"),
+    ("CNR4_lw_up_cor", "longwave downwelling"),
+]
+metcity_stations = [metcity_station1, metcity_station2, metcity_station3]
+
+fig_radiation, axs_radiation = PyPlot.subplots(4, 1, figsize=(12, 10), sharex=true)
+axs_radiation = vec(axs_radiation)
+
+for (ax_radiation, (column, label)) in zip(axs_radiation, radiation_columns)
+    for (regime, station) in enumerate(metcity_stations)
+        radiation_good = qc_timeseries(station, column, [0])
+        ax_radiation.plot(
+            radiation_good.time,
+            radiation_good[!, column],
+            label="regime $(regime)",
+        )
+    end
+
+    ax_radiation.set_ylabel("$(label)\n[W m⁻²]")
+    ax_radiation.grid(true)
+end
+
+axs_radiation[1].legend()
+axs_radiation[end].set_xlabel("time")
+fig_radiation.suptitle("CNR4 radiation components")
+fig_radiation.tight_layout()
+#fig_radiation.savefig("/home/haugened/Documents/data/CONTRASTS/plots/MetCity/radiation_components.pdf", bbox_inches="tight")
+##
+
+###########################
+#net radiation
+##
+net_radiation_columns = [
+    ("CNR4_sw_net_ice", "net shortwave radiation"),
+    ("CNR4_lw_net_ice", "net longwave radiation"),
+    ("CNR4_net_ice", "total radiation budget"),
+]
+
+fig_net_radiation, axs_net_radiation = PyPlot.subplots(3, 1, figsize=(12, 8), sharex=true)
+axs_net_radiation = vec(axs_net_radiation)
+
+for (ax_net, (column, label)) in zip(axs_net_radiation, net_radiation_columns)
+    for (regime, station) in enumerate(metcity_stations)
+        radiation_good = qc_timeseries(station, column, [0])
+        ax_net.plot(
+            radiation_good.time,
+            radiation_good[!, column],
+            label="regime $(regime)",
+        )
+    end
+
+    ax_net.axhline(0, color="black", linewidth=0.8)
+    ax_net.set_ylabel("$(label)\n[W m⁻²]")
+    ax_net.grid(true)
+end
+
+axs_net_radiation[1].legend()
+axs_net_radiation[end].set_xlabel("time")
+fig_net_radiation.suptitle("CNR4 net radiation")
+fig_net_radiation.tight_layout()
+#fig_net_radiation.savefig("/home/haugened/Documents/data/CONTRASTS/plots/MetCity/net_radiation.pdf", bbox_inches="tight")
+##
