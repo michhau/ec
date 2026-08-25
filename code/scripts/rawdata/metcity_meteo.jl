@@ -6,6 +6,7 @@ using Dates, DataFrames
 import CSV
 
 const METCITY_PATH = "/home/haugened/Documents/data/CONTRASTS/MetCity"
+const TURBULENCE_FLUX_FILE = "/home/haugened/Documents/data/CONTRASTS/EC_offline_preproc/cut/for_hist/fluxes_histogram_400s.csv"
 const METCITY_DATE_FORMAT = dateformat"yyyy-mm-dd HH:MM:SS"
 
 const FLAG_BASE_NAMES = Dict(
@@ -82,7 +83,30 @@ function qc_timeseries(meteo, column, acceptable_flags)
     return select(meteo[accepted, :], :time, column)
 end
 
-metcity_meteo = read_metcity_meteo()
+function qc_dataframe(meteo, columns, acceptable_flags)
+    accepted = reduce(.&, [
+        in.(meteo[!, Symbol(column, "_Flag")], Ref(acceptable_flags))
+        for column in columns
+    ])
+    return select(meteo[accepted, :], :time, :ice_station, columns)
+end
+
+function valid_turbulence_windows(filename=TURBULENCE_FLUX_FILE)
+    fluxes = CSV.read(filename, DataFrame; types=Dict(:time => DateTime))
+    fluxes.ice_station = parse.(Int, first.(fluxes.station))
+    fluxes.time = ceil.(fluxes.time, Minute(10))
+
+    valid_flux = isfinite.(fluxes.H) .| isfinite.(fluxes.LE)
+    return unique(select(fluxes[valid_flux, :], :ice_station, :time))
+end
+
+function filter_to_valid_turbulence(meteo, filename=TURBULENCE_FLUX_FILE)
+    valid_windows = valid_turbulence_windows(filename)
+    return semijoin(meteo, valid_windows; on=[:ice_station, :time])
+end
+
+metcity_meteo_all = read_metcity_meteo()
+metcity_meteo = filter_to_valid_turbulence(metcity_meteo_all)
 
 metcity_station1 = copy(metcity_meteo[metcity_meteo.ice_station .== 1, :])
 metcity_station2 = copy(metcity_meteo[metcity_meteo.ice_station .== 2, :])
@@ -122,6 +146,7 @@ radiation_columns = [
     ("CNR4_lw_dn_cor", "longwave upwelling"),
     ("CNR4_lw_up_cor", "longwave downwelling"),
 ]
+radiation_components_df = qc_dataframe(metcity_meteo, first.(radiation_columns), [0])
 metcity_stations = [metcity_station1, metcity_station2, metcity_station3]
 
 fig_radiation, axs_radiation = PyPlot.subplots(4, 1, figsize=(12, 10), sharex=true)
@@ -156,6 +181,7 @@ net_radiation_columns = [
     ("CNR4_lw_net_ice", "net longwave radiation"),
     ("CNR4_net_ice", "total radiation budget"),
 ]
+net_radiation_df = qc_dataframe(metcity_meteo, first.(net_radiation_columns), [0])
 
 fig_net_radiation, axs_net_radiation = PyPlot.subplots(3, 1, figsize=(12, 8), sharex=true)
 axs_net_radiation = vec(axs_net_radiation)
