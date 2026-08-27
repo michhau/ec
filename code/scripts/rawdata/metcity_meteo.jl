@@ -295,3 +295,82 @@ axs_radiation_flux[1].set_ylabel("probability density")
 axs_radiation_flux[1].legend()
 fig_radiation_flux.tight_layout()
 #fig_radiation_flux.savefig("/home/haugened/Documents/data/CONTRASTS/plots/MetCity/radiation_flux_histograms.pdf", bbox_inches="tight")
+
+###########################
+#net radiation and turbulent heat flux
+##
+selected_irgason = (
+    (fluxes_for_comparison.instrument_type .== "IRG") .&
+    (
+        ((fluxes_for_comparison.ice_station .< 3) .&
+         (fluxes_for_comparison.surface_type .== "ice")) .|
+        ((fluxes_for_comparison.ice_station .== 3) .&
+         (fluxes_for_comparison.surface_type .!= "floe"))
+    ) .&
+    isfinite.(fluxes_for_comparison.H) .&
+    isfinite.(fluxes_for_comparison.LE)
+)
+
+selected_irgason_fluxes = copy(fluxes_for_comparison[selected_irgason, :])
+selected_irgason_fluxes.turbulent_flux_sum = (
+    selected_irgason_fluxes.H .+ selected_irgason_fluxes.LE
+)
+
+turbulent_flux_sum_10min = combine(
+    groupby(selected_irgason_fluxes, [:station, :ice_station, :time]),
+    :turbulent_flux_sum => mean => :turbulent_flux_sum,
+)
+
+radiation_turbulent_comparison_df = innerjoin(
+    net_radiation_df,
+    turbulent_flux_sum_10min;
+    on=[:ice_station, :time],
+)
+
+radiation_turbulent_distribution = [
+    ("net radiation", radiation_turbulent_comparison_df.CNR4_net_ice),
+    ("sensible + latent heat flux", radiation_turbulent_comparison_df.turbulent_flux_sum),
+]
+
+radiation_turbulent_statistics = DataFrame(
+    variable=first.(radiation_turbulent_distribution),
+    count=length.(last.(radiation_turbulent_distribution)),
+    mean=mean.(last.(radiation_turbulent_distribution)),
+    median=median.(last.(radiation_turbulent_distribution)),
+    standard_deviation=std.(last.(radiation_turbulent_distribution)),
+    minimum=minimum.(last.(radiation_turbulent_distribution)),
+    maximum=maximum.(last.(radiation_turbulent_distribution)),
+)
+
+fig_net_turbulent, axs_net_turbulent = PyPlot.subplots(1, 2, figsize=(8, 4))
+axs_net_turbulent = vec(axs_net_turbulent)
+net_turbulent_xlims = [(-150, 50), (-50, 50)]
+net_turbulent_labels = [
+    L"\mathrm{net~radiation~[W~m^{-2}]}",
+    L"Q_H + Q_E~\mathrm{[W~m^{-2}]}",
+]
+
+for (ax_hist, (_, values), xlim, axlabel) in zip(
+    axs_net_turbulent,
+    radiation_turbulent_distribution,
+    net_turbulent_xlims,
+    net_turbulent_labels,
+)
+    bin_width = (last(xlim) - first(xlim)) / 100
+    bins = collect(first(xlim):bin_width:last(xlim))
+    ax_hist.hist(values, bins=bins, density=true, alpha=0.8)
+    ax_hist.axvline(mean(values), color="black", linestyle="--", label="mean")
+    ax_hist.axvline(median(values), color="black", linestyle=":", label="median")
+    ax_hist.set_xlim(xlim)
+    ax_hist.set_xlabel(axlabel)
+    y_max = last(ax_hist.get_ylim())
+    ax_hist.set_yticks(collect(range(0, y_max; length=6)))
+    ax_hist.tick_params(axis="y", labelleft=false)
+    ax_hist.grid(true)
+end
+
+axs_net_turbulent[1].set_ylabel("probability density")
+axs_net_turbulent[1].legend()
+fig_net_turbulent.tight_layout()
+#fig_net_turbulent.savefig("/home/haugened/Documents/data/CONTRASTS/plots/MetCity/net_radiation_turbulent_flux.pdf", bbox_inches="tight")
+##
