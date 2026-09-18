@@ -1,6 +1,6 @@
 ######################################################
 ###          LOADING DATA FROM EC SENSORS          ###
-###            author: Michi Haugeneder            ###
+###            author: <AUTHOR>                   ###
 ######################################################
 #=
 Load the preprocessed (by offline_preproc.jl)
@@ -33,11 +33,11 @@ station_label = stationcfg.station_label(station_config)
 station_file_stem = stationcfg.station_file_stem(station_config)
 
 datapath = String(stationcfg.require_key(station_config, "data_root"))
-#datapath = "/home/michi/Documents/slf/CONTRASTS25/data/processed/preproc/"
+#datapath = "/path/to/data/CONTRASTS/processed/preproc/"
 
 #timestep between single measurements, 1/measurement frequency
 timestep = Millisecond(50)
-nanfile_stam = String(stationcfg.optional_key(station_config, "/home/haugened/Documents/data/CONTRASTS/nan_periods", "manual_nanmask", "root"))
+nanfile_stam = String(stationcfg.optional_key(station_config, "/path/to/data/CONTRASTS/nan_periods", "manual_nanmask", "root"))
 nanfiles = joinpath.(nanfile_stam, String.(stationcfg.optional_key(
     station_config,
     ["t1irg_nan.csv", "t1csat_nan.csv", "t2irg_nan.csv", "t2csat_nan.csv"],
@@ -135,7 +135,7 @@ function export_1s_mean_winddirs(output_file, wd1, wd2, wd3, wd4)
 end
 
 # Example:
-export_1s_mean_winddirs("/home/haugened/Documents/data/CONTRASTS/plots/wind_roses/3a_wind_dir_1s.csv", wds[1], wds[2], wds[3], wds[4])
+export_1s_mean_winddirs("/path/to/data/CONTRASTS/plots/wind_roses/3a_wind_dir_1s.csv", wds[1], wds[2], wds[3], wds[4])
 =#
 
 ######################################################

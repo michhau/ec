@@ -1,7 +1,7 @@
 ######################################################
 ###               PERFORMING FOURIER               ###
 ###                 DECOMPOSITION                  ###
-###            author: Michi Haugeneder            ###
+###            author: <AUTHOR>                   ###
 ######################################################
 #=
 Performing Fourier spectral analysis for all 4 sonic anemometers.

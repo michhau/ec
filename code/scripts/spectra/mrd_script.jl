@@ -1,6 +1,6 @@
 ######################################################
 ###       MULTI RESOLUTION FLUX DECOMPOSITION      ###
-###            author: Michi Haugeneder            ###
+###            author: <AUTHOR>                   ###
 ######################################################
 #=
 Calculate 'normal' and quasi-continuos MRD. Load data with
@@ -12,7 +12,7 @@ pydates = pyimport("matplotlib.dates")
 animation = pyimport("matplotlib.animation")
 
 importdir = joinpath(@__DIR__, "..", "..")
-#datapath = "/home/haugened/Documents/data/"
+#datapath = "/path/to/data/"
 include(joinpath(importdir, "src", "turb_data.jl"))
 include(joinpath(importdir, "src", "general.jl"))
 include(joinpath(importdir, "src", "mrd.jl"))
@@ -182,10 +182,10 @@ for i in 1:length(starts)
     #puq, = ax.plot(Dates.value.(mrd_time[:, i]) ./ 1000, mrd_D_quant3[:, i] .* 1000, alpha=0.5, color=pm.get_color())
     #plq, = ax.plot(Dates.value.(mrd_time[:, i]) ./ 1000, mrd_D_quant1[:, i] .* 1000, alpha=0.5, color=pm.get_color())
     fl = ax.fill_between(Dates.value.(mrd_time[:, i]) ./ 1000, mrd_D_quant1[:, i] .* 1000, mrd_D_quant3[:, i] .* 1000, alpha=0.4)
-    #fig.savefig(string("/home/haugened/Documents/plots/tjk_mrd/", string(starts[i])[1:10], ".png"))
+    #fig.savefig(string("/path/to/plots/tjk_mrd/", string(starts[i])[1:10], ".png"))
 end
 #ani = animation.FuncAnimation(fig, animupdate, frames=collect(1:length(starts)), interval=5000, repeat_delay=500)
-#ani.save(string("/home/haugened/Desktop/", "short_video_", matfileraw, ".mp4"), fps=framespersec)
+#ani.save(string("/path/to/output/", "short_video_", matfileraw, ".mp4"), fps=framespersec)
 ##
 =#
 ######################################################

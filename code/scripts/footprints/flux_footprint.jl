@@ -1,6 +1,6 @@
 ######################################################
 ###           CALCULATE FLUX FOOTPRINTS            ###
-###            author: Michi Haugeneder            ###
+###            author: <AUTHOR>                   ###
 ######################################################
 #=
 Calculate flux footprints according to
@@ -17,7 +17,7 @@ LogNorm = pyimport("matplotlib.colors")
 mpimg = pyimport("matplotlib.image")
 
 importdir = joinpath(@__DIR__, "..", "..")
-datapath = "/home/haugened/Documents/data/"
+datapath = "/path/to/data/"
 include(joinpath(importdir, "src", "turb_data.jl"))
 include(joinpath(importdir, "src", "general.jl"))
 include(joinpath(importdir, "src", "kljun_ffp.jl"))

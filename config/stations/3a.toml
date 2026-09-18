@@ -3,7 +3,7 @@ label = "3a"
 file_stem = "3a"
 evalstart = "2024-07-01T10:15:00"
 evalend = "2027-07-10T16:00:00"
-data_root = "/home/haugened/Documents/data/CONTRASTS/EC_offline_preproc/cut/"
+data_root = "/path/to/data/CONTRASTS/EC_offline_preproc/cut/"
 data_files = [
     "3a_t1_irg_proc_cut.nc",
     "3a_t1_csat_proc_cut.nc",
@@ -19,13 +19,13 @@ surface_type = ["ridge", "ridge", "ice", "ice"]
 
 [manual_nanmask]
 enabled = true
-root = "/home/haugened/Documents/data/CONTRASTS/nan_periods"
+root = "/path/to/data/CONTRASTS/nan_periods"
 files = ["t1irg_nan.csv", "t1csat_nan.csv", "t2irg_nan.csv", "t2csat_nan.csv"]
 columns = ["u", "v", "w", "T"]
 
 [paths]
-plot_root = "/home/haugened/Documents/data/CONTRASTS/plots"
-presentation_root = "/home/haugened/Documents/presentation/conferences/arctic_system_26"
+plot_root = "/path/to/data/CONTRASTS/plots"
+presentation_root = "/path/to/presentations"
 
 [plot]
 heat_flux_title = "3a Turbulent Heat Fluxes - Across ridge"
@@ -35,12 +35,12 @@ heat_correlation_title = "3a across ridge - 20.07.2025 to 22.07.2025"
 
 [footprint]
 wind_direction_offsets = [228.0, 228.0, 230.0, 232.0]
-orthomosaic = "/home/haugened/Documents/data/CONTRASTS/Orthomosaics/R3_1/31_cut.jpeg"
+orthomosaic = "/path/to/data/CONTRASTS/Orthomosaics/R3_1/31_cut.jpeg"
 fluxloc = [[1801, 2005], [1801, 2005], [2071, 1787], [2071, 1787]]
 figorigin = [1801, 2005]
 
 [block_footprints]
-classes_file = "/home/haugened/Documents/data/CONTRASTS/Orthomosaics/R3_1/31_cut_classes.jpeg"
+classes_file = "/path/to/data/CONTRASTS/Orthomosaics/R3_1/31_cut_classes.jpeg"
 feature = "ridge"
 crit_ice_red_bigger_eq = 222
 crit_ice_red_smaller_eq = 255

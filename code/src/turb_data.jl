@@ -1,6 +1,6 @@
 ######################################################
 ###        MODULE FOR HANDELING TURBULENCE DATA    ###
-###             author: Michi Haugeneder           ###
+###             author: <AUTHOR>                  ###
 ######################################################
 #=
 Provides functions for the handeling of the measured turbulence data,

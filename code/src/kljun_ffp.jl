@@ -1,6 +1,6 @@
 ######################################################
 ###           FLUX FOOTPRINT CALCULATION           ###
-###            author: Michi Haugeneder            ###
+###            author: <AUTHOR>                   ###
 ######################################################
 #=
 from: Kljun et al. (2015) `A simple two-dimensional 

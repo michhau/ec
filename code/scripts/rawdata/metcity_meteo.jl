@@ -5,8 +5,8 @@
 using Dates, DataFrames, Statistics, LaTeXStrings
 import CSV
 
-const METCITY_PATH = "/home/haugened/Documents/data/CONTRASTS/MetCity"
-const TURBULENCE_FLUX_FILE = "/home/haugened/Documents/data/CONTRASTS/EC_offline_preproc/cut/for_hist/fluxes_histogram_400s.csv"
+const METCITY_PATH = "/path/to/data/CONTRASTS/MetCity"
+const TURBULENCE_FLUX_FILE = "/path/to/data/CONTRASTS/EC_offline_preproc/cut/for_hist/fluxes_histogram_400s.csv"
 const METCITY_DATE_FORMAT = dateformat"yyyy-mm-dd HH:MM:SS"
 
 const FLAG_BASE_NAMES = Dict(
@@ -152,7 +152,7 @@ ax.grid(true)
 ax.set_xlabel("time")
 ax.set_ylabel("CNR4 albedo")
 ax.set_ylim(0.3,1.1)
-#fig.savefig("/home/haugened/Documents/data/CONTRASTS/plots/MetCity/albedo.pdf", bbox_inches="tight")
+#fig.savefig("/path/to/data/CONTRASTS/plots/MetCity/albedo.pdf", bbox_inches="tight")
 ##
 
 ###########################
@@ -188,7 +188,7 @@ axs_radiation[1].legend()
 axs_radiation[end].set_xlabel("time")
 fig_radiation.suptitle("CNR4 radiation components")
 fig_radiation.tight_layout()
-#fig_radiation.savefig("/home/haugened/Documents/data/CONTRASTS/plots/MetCity/radiation_components.pdf", bbox_inches="tight")
+#fig_radiation.savefig("/path/to/data/CONTRASTS/plots/MetCity/radiation_components.pdf", bbox_inches="tight")
 ##
 
 ###########################
@@ -223,7 +223,7 @@ axs_net_radiation[1].legend()
 axs_net_radiation[end].set_xlabel("time")
 fig_net_radiation.suptitle("CNR4 net radiation")
 fig_net_radiation.tight_layout()
-#fig_net_radiation.savefig("/home/haugened/Documents/data/CONTRASTS/plots/MetCity/net_radiation.pdf", bbox_inches="tight")
+#fig_net_radiation.savefig("/path/to/data/CONTRASTS/plots/MetCity/net_radiation.pdf", bbox_inches="tight")
 ##
 
 ###########################
@@ -294,7 +294,7 @@ end
 axs_radiation_flux[1].set_ylabel("probability density")
 axs_radiation_flux[1].legend()
 fig_radiation_flux.tight_layout()
-#fig_radiation_flux.savefig("/home/haugened/Documents/data/CONTRASTS/plots/MetCity/radiation_flux_histograms.pdf", bbox_inches="tight")
+#fig_radiation_flux.savefig("/path/to/data/CONTRASTS/plots/MetCity/radiation_flux_histograms.pdf", bbox_inches="tight")
 
 ###########################
 #net radiation and turbulent heat flux
@@ -372,5 +372,5 @@ end
 axs_net_turbulent[1].set_ylabel("probability density")
 axs_net_turbulent[1].legend()
 fig_net_turbulent.tight_layout()
-#fig_net_turbulent.savefig("/home/haugened/Documents/data/CONTRASTS/plots/MetCity/net_radiation_turbulent_flux.pdf", bbox_inches="tight")
+#fig_net_turbulent.savefig("/path/to/data/CONTRASTS/plots/MetCity/net_radiation_turbulent_flux.pdf", bbox_inches="tight")
 ##

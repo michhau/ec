@@ -1,6 +1,6 @@
 ######################################################
 ###          HELPERS FOR BLOCK ANALYSIS            ###
-###            author: Michi Haugeneder            ###
+###            author: <AUTHOR>                   ###
 ######################################################
 
 module block_analyze

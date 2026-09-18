@@ -1,6 +1,6 @@
 ######################################################
 ###       MODULE CONTAINING FUNCTIONS FOR MRD      ###
-###             author: Michi Haugeneder           ###
+###             author: <AUTHOR>                  ###
 ######################################################
 #=
 Functions that are needed to compute the

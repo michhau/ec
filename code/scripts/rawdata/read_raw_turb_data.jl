@@ -1,6 +1,6 @@
 ######################################################
 ###            READ RAW TURBULENCE DATA            ###
-###            author: Michi Haugeneder            ###
+###            author: <AUTHOR>                   ###
 ######################################################
 #=
 Read the measured rawdata from CSAT/IRGASON/Kaijo and create a file
@@ -20,7 +20,7 @@ pydates = pyimport("matplotlib.dates")
 #GridSpec = pyimport("matplotlib.gridspec")
 #mpwidgets = pyimport("matplotlib.widgets")
 
-datapath = "/home/michi/Documents/slf/CONTRASTS25/data/turbtower2_slf/PS149_47-1/converted"
+datapath = "/path/to/data/CONTRASTS/turbtower2_slf/PS149_47-1/converted"
 importdir = joinpath(@__DIR__, "..", "..")
 include(joinpath(importdir, "src", "turb_data.jl"))
 include(joinpath(importdir, "src", "general.jl"))
@@ -75,8 +75,8 @@ lastelement = findlast(x->x<=DateTime(2025,08,27,15,10,00), filetime)
 irg = irg[firstelement:lastelement, :]
 csat = csat[firstelement:lastelement, :]
 
-CSV.write(joinpath("/home/michi/Documents/slf/CONTRASTS25/data/processed", "3d_t2_irg.csv"), irg)
-CSV.write(joinpath("/home/michi/Documents/slf/CONTRASTS25/data/processed", "3d_t2_csat.csv"), csat)
+CSV.write(joinpath("/path/to/data/CONTRASTS/processed", "3d_t2_irg.csv"), irg)
+CSV.write(joinpath("/path/to/data/CONTRASTS/processed", "3d_t2_csat.csv"), csat)
 
 #########################################################################
 #uncomment to read in tower 1 turbulence raw data
@@ -89,7 +89,7 @@ t1irg = DataFrame(time = t1time, u = t1data[:,1],
 v = t1data[:,2], w = t1data[:,3], T = t1data[:,4], co2 = t1data[:,5],
 h2o = t1data[:,6], airpressure = t1data[:,7], diagsonic = t1data[:,8],
 diagirg = t1data[:,9])
-CSV.write("/home/haugened/Documents/data/tower/t1irg_new_pardenn.csv", t1irg)
+CSV.write("/path/to/data/tower/t1irg_new_pardenn.csv", t1irg)
 =#
 #########################################################################
 #=
@@ -137,19 +137,19 @@ CSV.write(string(outfile_stam, ".csv"), sonicdf)
 #ventilated air temperature measurement
 #=
 #tower 2
-df2 = CSV.File("/home/haugened/Documents/data/tower/t12_slow_duerrboden.dat"; header=0, skipto=5, ntasks=Threads.nthreads()) |> Tables.matrix
+df2 = CSV.File("/path/to/data/tower/t12_slow_duerrboden.dat"; header=0, skipto=5, ntasks=Threads.nthreads()) |> Tables.matrix
 dateformat = DateFormat("yyyy-mm-dd HH:MM:SS")
 timeofmeasure2 = DateTime.(df2[:, 1], dateformat)
 t2ventdat = replace!(df2[:, 4], Inf => missing)
 t2vent = DataFrame(time=timeofmeasure, vent_air_temp=float.(replace!(t2ventdat, NaN => missing)))
-turb.saveturbasnetcdf(t2vent, "/home/haugened/Documents/data/tower/vent_air/t2.nc")
+turb.saveturbasnetcdf(t2vent, "/path/to/data/tower/vent_air/t2.nc")
 
 #tower 3
-df3 = CSV.File("/home/haugened/Documents/data/tower/t3_tairvent_duerrboden.dat"; header=0, skipto=5, ntasks=Threads.nthreads()) |> Tables.matrix
+df3 = CSV.File("/path/to/data/tower/t3_tairvent_duerrboden.dat"; header=0, skipto=5, ntasks=Threads.nthreads()) |> Tables.matrix
 timeofmeasure3 = DateTime.(df3[:, 1], dateformat)
 t3ventdat = replace!(df3[:,4], Inf => missing)
 t3vent = DataFrame(time=timeofmeasure3, vent_air_temp=float.(replace!(t3ventdat, NaN => missing)))
-turb.saveturbasnetcdf(t3vent, "/home/haugened/Documents/data/tower/vent_air/t3.nc")
+turb.saveturbasnetcdf(t3vent, "/path/to/data/tower/vent_air/t3.nc")
 =#
 #########################################################################
 

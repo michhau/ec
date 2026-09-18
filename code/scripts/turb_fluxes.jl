@@ -1,6 +1,6 @@
 ######################################################
 ###           CALCULATE TURBULENT FLUXES           ###
-###            author: Michi Haugeneder            ###
+###            author: <AUTHOR>                   ###
 ######################################################
 #=
 Calculate and plot turbulent fluxes and advection.
@@ -12,7 +12,7 @@ pydates = pyimport("matplotlib.dates")
 gridspec = pyimport("matplotlib.gridspec")
 
 importdir = joinpath(@__DIR__, "..")
-#datapath = "/home/haugened/Documents/slf/CONTRASTS25/data/2a/"
+#datapath = "/path/to/data/CONTRASTS/2a/"
 include(joinpath(importdir, "src", "turb_data.jl"))
 include(joinpath(importdir, "src", "general.jl"))
 if !@isdefined stationcfg
@@ -185,7 +185,7 @@ ax1.legend(handles, labels)#, loc="upper right", bbox_to_anchor=(1.0, 1))
 fig.autofmt_xdate()
 
 PyPlot.tight_layout()
-output_folder = String(stationcfg.optional_key(station_config, "/home/haugened/Documents/presentation/conferences/arctic_system_26", "paths", "presentation_root"))
+output_folder = String(stationcfg.optional_key(station_config, "/path/to/presentations", "paths", "presentation_root"))
 #PyPlot.savefig(joinpath(output_folder, "$(station_file_stem)_uw_wT.pdf"), bbox_inches="tight")
 ###########################################################################
 ##
@@ -1117,5 +1117,5 @@ function export_averaged_fluxes(output_file, averaging_seconds, fx1, fx2, fx3, f
 end
 
 # Set the second argument to the desired averaging interval in seconds:
-export_averaged_fluxes("/home/haugened/Documents/data/CONTRASTS/plots/3a_fluxes_10s.csv", 10, fx1, fx2, fx3, fx4)
+export_averaged_fluxes("/path/to/data/CONTRASTS/plots/3a_fluxes_10s.csv", 10, fx1, fx2, fx3, fx4)
 =#

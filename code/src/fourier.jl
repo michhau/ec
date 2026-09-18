@@ -1,6 +1,6 @@
 ######################################################
 ###        MODULE FOR FOURIER-TRAFO OF IRDATA      ###
-###            author: Michi Haugeneder            ###
+###            author: <AUTHOR>                   ###
 ######################################################
 module ft
 

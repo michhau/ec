@@ -1,6 +1,6 @@
 ######################################################
 ###        HISTOGRAMS OF TURBULENT FLUXES          ###
-###            author: Michi Haugeneder            ###
+###            author: <AUTHOR>                   ###
 ######################################################
 #=
 REPL workflow for flux histograms.
@@ -161,7 +161,7 @@ end
 function station_nan_files(station_config)
     nan_root = String(stationcfg.optional_key(
         station_config,
-        "/home/haugened/Documents/data/CONTRASTS/nan_periods",
+        "/path/to/data/CONTRASTS/nan_periods",
         "manual_nanmask",
         "root",
     ))
@@ -1642,7 +1642,7 @@ flux_data = read_flux_cache(cache_file)
 ## Add meteo data
 
 datatypes = [DateTime, Float32, Float32, Int32, Int32, Float32, Float32, Float32, Float32, Float32, Float32, Int32, Float32]
-filename = "/home/haugened/Documents/data/CONTRASTS/weather_raw_data/meteo_dship_extracted_260619/meteo_dship_260619.dat"
+filename = "/path/to/data/CONTRASTS/weather_raw_data/meteo_dship_extracted_260619/meteo_dship_260619.dat"
 
 dship_meteo = read_dship_meteo_csv(filename, datatypes) #no worries, there will be warnings for parsing "#" (missing data)
 

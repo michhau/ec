@@ -1,6 +1,6 @@
 ######################################################
 ###          COMPARE TRADITIONAL AND NO-MRD        ###
-###            author: Michi Haugeneder            ###
+###            author: <AUTHOR>                   ###
 ######################################################
 #=
 Compare 'traditional' MRD with non-orthogonal MRD.
@@ -12,7 +12,7 @@ animation = pyimport("matplotlib.animation")
 gridspec = pyimport("matplotlib.gridspec")
 
 importdir = joinpath(@__DIR__, "..", "..")
-datapath = "/home/haugened/Documents/data/"
+datapath = "/path/to/data/"
 include(joinpath(importdir, "src", "turb_data.jl"))
 include(joinpath(importdir, "src", "general.jl"))
 include(joinpath(importdir, "src", "mrd.jl"))

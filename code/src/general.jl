@@ -1,6 +1,6 @@
 ######################################################
 ###                GENERAL MODULE                  ###
-###            author: Michi Haugeneder            ###
+###            author: <AUTHOR>                   ###
 ######################################################
 #=
 Module containing general functions applicable to all measurements
@@ -16,7 +16,7 @@ block_stats, block_average_winddir
 """
     movingaverage(X::Vector, numofele::Integer)
 
-Create moving average (michi 16.09.2021); omitting NaNs!!
+Create moving average, omitting NaNs.
 """
 function movingaverage(X::Vector, numofele::Integer)
     BackDelta = div(numofele, 2)

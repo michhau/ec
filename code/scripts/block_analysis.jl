@@ -1,7 +1,7 @@
 ######################################################
 ###              ANALYSE THE BLOCK DATA            ###
 ###  (FLUXES, FOOTPRINTS, SURFACE FRACTIONS)       ###
-###            author: Michi Haugeneder            ###
+###            author: <AUTHOR>                   ###
 ######################################################
 #=
 Run load_data.jl, turb_fluxes.jl, ffp_per_flux_value.jl

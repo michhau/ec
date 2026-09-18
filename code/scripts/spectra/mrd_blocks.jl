@@ -1,6 +1,6 @@
 ######################################################
 ### MULTI_RESOLUTION FLUX DECOMPOSITION FOR BLOCKS ###
-###            author: Michi Haugeneder            ###
+###            author: <AUTHOR>                   ###
 ######################################################
 #=
 Calculate 'normal' and quasi-continuos MRD. Load data with
@@ -12,7 +12,7 @@ import PyPlot, CSV
 pydates = pyimport("matplotlib.dates")
 
 importdir = joinpath(@__DIR__, "..", "..")
-datapath = "/home/haugened/Documents/data/"
+datapath = "/path/to/data/"
 include(joinpath(importdir, "src", "turb_data.jl"))
 include(joinpath(importdir, "src", "general.jl"))
 import .turb
@@ -25,7 +25,7 @@ timestep = Millisecond(50)
 M = 14
 println("Length MRD blocks: ", 2^M * timestep)
 MRDshift = round(Int, 0.1 * 2^M) #shift between two blocks of MRD
-MRDoutfolder = "/home/haugened/Pictures/MRDs/"
+MRDoutfolder = "/path/to/plots/MRDs/"
 
 #parameters for statistics using the TJK station
 upvalleywind_leftlim = 305 #degree

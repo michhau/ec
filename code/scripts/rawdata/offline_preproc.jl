@@ -1,6 +1,6 @@
 ######################################################
 ###        OFFLINE PREPROCESSING OF EC DATA        ###
-###            author: Michi Haugeneder            ###
+###            author: <AUTHOR>                   ###
 ######################################################
 #=
 Script to do preprocessing of the raw EC data:
@@ -13,7 +13,7 @@ using Dates, PyCall, DataFrames, Statistics, ProgressMeter, NCDatasets
 import PyPlot, CSV
 pydates = pyimport("matplotlib.dates")
 
-datapath = "/home/michi/Documents/slf/CONTRASTS25/data/processed/"
+datapath = "/path/to/data/CONTRASTS/processed/"
 importdir = joinpath(@__DIR__, "..", "..")
 include(joinpath(importdir, "src", "turb_data.jl"))
 include(joinpath(importdir, "src", "general.jl"))

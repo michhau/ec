@@ -9,8 +9,8 @@ export available_station_names, load_station_config, optional_key, plot_dir,
        station_label, station_labels, toml_matrix, apply_station_wind_direction_rotations!
 
 const DEFAULT_CONFIG_DIR = normpath(joinpath(@__DIR__, "..", "..", "config", "stations"))
-const REMOTE_HOSTNAME = "slfl29682"
-const REMOTE_GVFS_PREFIX = "/run/user/1000/gvfs/sftp:host=10.37.10.38/"
+const REMOTE_HOSTNAME = "<DATA_HOSTNAME>"
+const REMOTE_GVFS_PREFIX = "/path/to/remote/mount/"
 
 _key(key) = String(key)
 
@@ -133,7 +133,7 @@ function station_labels(config::AbstractDict)
 end
 
 plot_root(config::AbstractDict) = String(
-    optional_key(config, "/home/haugened/Documents/data/CONTRASTS/plots", "paths", "plot_root")
+    optional_key(config, "/path/to/data/CONTRASTS/plots", "paths", "plot_root")
 )
 
 plot_dir(config::AbstractDict, parts::AbstractString...) = joinpath(plot_root(config), parts...)

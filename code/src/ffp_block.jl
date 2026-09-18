@@ -1,6 +1,6 @@
 ######################################################
 ###       HELPERS FOR PER-BLOCK FOOTPRINTS         ###
-###            author: Michi Haugeneder            ###
+###            author: <AUTHOR>                   ###
 ######################################################
 module ffp_block
 
@@ -19,7 +19,7 @@ export block_footprint_inputs, calculate_footprints, extract_block_fluxes,
     save_block_footprint_animation, block_fluxes_netcdf_path,
     save_block_fluxes_netcdf, read_block_fluxes_netcdf#, valid_footprint_inputs
 
-const DEFAULT_BLOCK_FLUXES_DIR = "/home/haugened/Documents/data/CONTRASTS/block_fluxes"
+const DEFAULT_BLOCK_FLUXES_DIR = "/path/to/data/CONTRASTS/block_fluxes"
 const NETCDF_NAME_SEPARATOR = "\t"
 
 function nanmean(values)

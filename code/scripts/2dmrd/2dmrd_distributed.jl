@@ -1,6 +1,6 @@
 ######################################################
 ###           DISTRIBUTED 2D-MRD OF EC-DATA        ###
-###            author: Michi Haugeneder            ###
+###            author: <AUTHOR>                   ###
 ######################################################
 #=
 Create 2D-MRDs of EC-data on multiple cores. Includes
@@ -10,21 +10,21 @@ using Distributed
 using Dates, DataFrames, NCDatasets, Statistics
 
 #add workers
-if gethostname() == "Michi-T450s" || "x1carbon5"
+if gethostname() == "<LOCAL_HOSTNAME>" || "<ALTERNATE_LOCAL_HOSTNAME>"
     if nprocs() == 1
         addprocs(2)
     end
-elseif gethostname() == "LINUX24"
+elseif gethostname() == "<WORKSTATION_HOSTNAME>"
     if nprocs() == 1
         addprocs(10)
     end
-else #HYPERION
+else #<CLUSTER_HOSTNAME>
     using SlurmClusterManager
     addprocs(SlurmManager())
 end
 
 @everywhere importdir = joinpath(@__DIR__, "..", "..")
-@everywhere datapath = "/home/haugened/mrd/data/"
+@everywhere datapath = "/path/to/data/"
 @everywhere outpath = joinpath(datapath, "2dmrd", "db_tot")
 include(joinpath(importdir, "src", "turb_data.jl"))
 @everywhere include(joinpath(importdir, "src", "mrd.jl"))

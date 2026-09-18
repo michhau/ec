@@ -1,6 +1,6 @@
 ######################################################
 ###     COMBINING SINGLE 2D-MRDS (.NC-FILES)       ###
-###          author: Michi Haugeneder              ###
+###          author: <AUTHOR>                     ###
 ######################################################
 #=
 Combine multiple single 2D-MRDs for
@@ -10,7 +10,7 @@ using Dates, Statistics, NCDatasets, PyCall, LaTeXStrings
 import PyPlot, CSV
 
 importdir = joinpath(@__DIR__, "..", "..")
-datapath = "/home/haugened/Documents/data/"
+datapath = "/path/to/data/"
 include(joinpath(importdir, "src", "turb_data.jl"))
 include(joinpath(importdir, "src", "mrd.jl"))
 import .turb

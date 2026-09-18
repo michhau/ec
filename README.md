@@ -1,6 +1,31 @@
 # Processing Eddy-Covariance Data
 
-*This is a reorganization of scripts from my messy 'ibl_patch_snow' repository*
+Scripts for processing and analysing eddy-covariance measurements.
+
+## Local configuration
+
+Local filesystem paths and machine identifiers use placeholders in this publication
+version. Replace them with locations on your system before running the scripts;
+measurement data and imagery are not included in this repository.
+
+| Placeholder | Set to |
+| --- | --- |
+| `/path/to/data` | Root directory for measurement data, preserving the dataset subdirectories shown in the scripts and station configs. |
+| `/path/to/thermal_data` | Root directory containing the converted thermal-camera data. |
+| `/path/to/plots`, `/path/to/output`, `/path/to/presentations` | Directories for generated figures, animations, and presentation output. |
+| `/path/to/remote/mount/` | Mount point for remote data, if used; keep the trailing slash. |
+| `<DATA_HOSTNAME>` | Hostname of the machine where station-config paths are directly accessible. |
+| `<LOCAL_HOSTNAME>`, `<ALTERNATE_LOCAL_HOSTNAME>`, `<WORKSTATION_HOSTNAME>` | Machine names used to select worker counts in `code/scripts/2dmrd/2dmrd_distributed.jl`. |
+
+Start with the paths in `config/stations/*.toml`, then check the standalone scripts
+and source defaults for `/path/to/` values. In `code/src/station_config.jl`, set
+`REMOTE_HOSTNAME` (`<DATA_HOSTNAME>`) to your current hostname when using local data.
+On other machines, the existing loader prepends `REMOTE_GVFS_PREFIX` to absolute
+station-config paths, so configure that mount point when accessing remote data.
+
+`<AUTHOR>` marks replaced personal author headers; `<CLUSTER_HOSTNAME>` is a comment
+label for the Slurm cluster. Scientific references and third-party attribution are
+retained.
 
 ## Raw Data
 
@@ -40,7 +65,7 @@ All the scripts in this repository are adapted (or simply converted from Python 
 ### 2D-MRDs
 Moving-window multiresolution flux decomposition to see the time dependence of scales of turbulent variables. The general methodology is described in Haugeneder et al. (2024) (https://doi.org/10.1007/s10546-023-00856-4).
 
-- 2dmrd_distributed.jl: Calculate the 2D-MRD on multiple cores (e.g. on HYPERION) using the Julia package 'Distributed'. Change variables 'path_to_data_to_use' (points to data source), 'cols_for_mrd' (which variables/flux should be decomposed), and 'savefilename' (according to the flux variable)
+- 2dmrd_distributed.jl: Calculate the 2D-MRD on multiple cores (e.g. on a Slurm cluster) using the Julia package 'Distributed'. Change variables 'path_to_data_to_use' (points to data source), 'cols_for_mrd' (which variables/flux should be decomposed), and 'savefilename' (according to the flux variable)
 - stitch_2dmrds.jl: Stitch single 2D-MRD files (*.nc) in time domain.
 - combine_2dmrds_xxx.jl: Combine 2D-MRDs to obtain a decomposition of a composed variable (as friction velocity or turbulent kinetic energy)
 - cmp_nomrd_trad.jl: Compare non-orthogonal MRD with traditional (orthogonal) MRD (see Fig. 4 in Haugeneder et al. (2024))

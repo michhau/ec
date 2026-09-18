@@ -1,6 +1,6 @@
 ######################################################
 ###                   PLOT 2D-MRD                  ###
-###            author: Michi Haugeneder            ###
+###            author: <AUTHOR>                   ###
 ######################################################
 #=
 Load data calculated with '2dmrd_distributed.jl' and
@@ -15,7 +15,7 @@ widgets = pyimport("matplotlib.widgets")
 cramericm = pyimport("cmcrameri.cm")
 
 importdir = joinpath(@__DIR__, "..", "..")
-datapath = "/home/haugened/Documents/data/"
+datapath = "/path/to/data/"
 include(joinpath(importdir, "src", "turb_data.jl"))
 include(joinpath(importdir, "src", "mrd.jl"))
 include(joinpath(importdir, "src", "general.jl"))
@@ -659,7 +659,7 @@ end
 turb.missing2nan!(fx2df)
 wndspd = gen.movingaverage(sqrt.(fx2df.u .^ 2 .+ fx2df.v .^ 2 .+ fx2df.w .^ 2), 20 * 3600)
 
-fluxpath = "/home/haugened/Documents/data/fluxes/"
+fluxpath = "/path/to/data/fluxes/"
 fx1file = joinpath(fluxpath, string(lowercase(inst1), "_fx.nc"))
 fx2file = joinpath(fluxpath, string(lowercase(inst2), "_fx.nc"))
 fx3file = joinpath(fluxpath, string(lowercase(inst3), "_fx.nc"))
@@ -898,7 +898,7 @@ end
 turb.missing2nan!(fx2df)
 wndspd = gen.movingaverage(sqrt.(fx2df.u .^ 2 .+ fx2df.v .^ 2 .+ fx2df.w .^ 2), 20 * 3600)
 
-fluxpath = "/home/haugened/Documents/data/fluxes/"
+fluxpath = "/path/to/data/fluxes/"
 fx1file = joinpath(fluxpath, string(lowercase(inst1), "_fx.nc"))
 fx2file = joinpath(fluxpath, string(lowercase(inst2), "_fx.nc"))
 fx3file = joinpath(fluxpath, string(lowercase(inst3), "_fx.nc"))

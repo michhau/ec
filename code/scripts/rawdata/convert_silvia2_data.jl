@@ -15,7 +15,7 @@ import .turb
 ######################################################
 
 # Directory containing the .dat files
-data_directory = joinpath("/home/haugened/Documents/data/silvex2/SILVEXII_Silvia2_CSAT3B_2m_preprocessed")
+data_directory = joinpath("/path/to/data/silvex2/SILVEXII_Silvia2_CSAT3B_2m_preprocessed")
 
 # Output directory for NetCDF files
 output_dir = joinpath(data_directory, "netcdf")

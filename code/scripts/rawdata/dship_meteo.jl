@@ -1,6 +1,6 @@
 ######################################################
 ###       INVESTIGATE THE DSHIP METEO DATA         ###
-###            author: Michi Haugeneder            ###
+###            author: <AUTHOR>                   ###
 ######################################################
 #=
 Use to test the fog/clear sky/overcast&cloudy classification schemes.
@@ -81,7 +81,7 @@ end
 ## Add meteo data
 
 datatypes = [DateTime, Float32, Float32, Int32, Int32, Float32, Float32, Float32, Float32, Float32, Float32, Int32, Float32]
-filename = "/home/haugened/Documents/data/CONTRASTS/weather_raw_data/meteo_dship_extracted_260619/meteo_dship_260619.dat"
+filename = "/path/to/data/CONTRASTS/weather_raw_data/meteo_dship_extracted_260619/meteo_dship_260619.dat"
 
 dship_meteo = read_dship_meteo_csv(filename, datatypes) #no worries, there will be warnings for parsing "#" (missing data)
 

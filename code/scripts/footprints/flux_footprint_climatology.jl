@@ -1,6 +1,6 @@
 ######################################################
 ### CALCULATE FLUX FOOTPRINTS CLIMATOLOGY (PYTHON) ###
-###            author: Michi Haugeneder            ###
+###            author: <AUTHOR>                   ###
 ######################################################
 #=
 Calculate (climatological) flux footprints according to

@@ -1,6 +1,6 @@
 ######################################################
 ###         FIGURES FOR PAPER CONTRASTS 2026       ###
-###            author: Michi Haugeneder            ###
+###            author: <AUTHOR>                   ###
 ######################################################
 
 ###################################################################################################
@@ -8,7 +8,7 @@
 
 ######################################################
 ###          LOADING DATA FROM EC SENSORS          ###
-###            author: Michi Haugeneder            ###
+###            author: <AUTHOR>                   ###
 ######################################################
 #=
 Load the preprocessed (by offline_preproc.jl)
@@ -66,11 +66,11 @@ station_label = stationcfg.station_label(station_config)
 station_file_stem = stationcfg.station_file_stem(station_config)
 
 datapath = String(stationcfg.require_key(station_config, "data_root"))
-#datapath = "/home/michi/Documents/slf/CONTRASTS25/data/processed/preproc/"
+#datapath = "/path/to/data/CONTRASTS/processed/preproc/"
 
 #timestep between single measurements, 1/measurement frequency
 timestep = Millisecond(50)
-nanfile_stam = String(stationcfg.optional_key(station_config, "/home/haugened/Documents/data/CONTRASTS/nan_periods", "manual_nanmask", "root"))
+nanfile_stam = String(stationcfg.optional_key(station_config, "/path/to/data/CONTRASTS/nan_periods", "manual_nanmask", "root"))
 nanfiles = joinpath.(nanfile_stam, String.(stationcfg.optional_key(
     station_config,
     ["t1irg_nan.csv", "t1csat_nan.csv", "t2irg_nan.csv", "t2csat_nan.csv"],
@@ -166,7 +166,7 @@ fx4 = turb.avgflux(fx4_raw, ra4, true, 0.1)
 
 ######################################################
 ### CALCULATE FLUX FOOTPRINTS CLIMATOLOGY (PYTHON) ###
-###            author: Michi Haugeneder            ###
+###            author: <AUTHOR>                   ###
 ######################################################
 #=
 Calculate (climatological) flux footprints according to
@@ -337,7 +337,7 @@ CairoMakie.axislegend(ax1) #position=:rb)
 CairoMakie.xlims!(ax1, -20, 130)
 CairoMakie.ylims!(ax1, -77, 60)
 display(ffp_fig)
-#CairoMakie.save(joinpath("/home/haugened/Documents/data/CONTRASTS/plots/paper_CONTRASTS_26/", "1c_ffp.pdf"), ffp_fig)
+#CairoMakie.save(joinpath("/path/to/data/CONTRASTS/plots/paper_CONTRASTS_26/", "1c_ffp.pdf"), ffp_fig)
 
 ##
 
@@ -393,7 +393,7 @@ ax2.legend([wq1[1], wq2[1]], [instr_labels[1], instr_labels[3]])
 # fig.autofmt_xdate()
 
 PyPlot.tight_layout()
-output_folder = "/home/haugened/Documents/data/CONTRASTS/plots/paper_CONTRASTS_26/"
+output_folder = "/path/to/data/CONTRASTS/plots/paper_CONTRASTS_26/"
 #PyPlot.savefig(joinpath(output_folder, "1c_heat_fluxes.pdf"), bbox_inches="tight")
 
 #depending on the data length, the following block takes more than 10min!
@@ -403,7 +403,7 @@ output_folder = "/home/haugened/Documents/data/CONTRASTS/plots/paper_CONTRASTS_2
 ##
 ######################################################
 ###      CALCULATE FOOTPRINTS PER BLOCK FLUX       ###
-###            author: Michi Haugeneder            ###
+###            author: <AUTHOR>                   ###
 ######################################################
 
 #variables
@@ -1454,7 +1454,7 @@ end
 # ------------------------------------------------------------------
 # 1️⃣  Input variables
 # ------------------------------------------------------------------
-root_dir = "/media/haugened/8f2c07c5-c77d-4280-99f1-e932f1d72d33/contrasts/converted/" #dir containing the converted folders
+root_dir = "/path/to/thermal_data/converted/" #dir containing the converted folders
 t_start = DateTime(2025,07,15,10,15,00) #start time for analysis
 t_end   = t_start + Minute(30)          #end time for analysis
 
@@ -1544,7 +1544,7 @@ fig.savefig(joinpath(output_folder, "2a_t_profiles_1015_1045.pdf"), bbox_inches=
 
 ######################################################
 ###          LOADING DATA FROM EC SENSORS          ###
-###            author: Michi Haugeneder            ###
+###            author: <AUTHOR>                   ###
 ######################################################
 #=
 Load the preprocessed (by offline_preproc.jl)
@@ -1600,11 +1600,11 @@ station_label = stationcfg.station_label(station_config)
 station_file_stem = stationcfg.station_file_stem(station_config)
 
 datapath = String(stationcfg.require_key(station_config, "data_root"))
-#datapath = "/home/michi/Documents/slf/CONTRASTS25/data/processed/preproc/"
+#datapath = "/path/to/data/CONTRASTS/processed/preproc/"
 
 #timestep between single measurements, 1/measurement frequency
 timestep = Millisecond(50)
-nanfile_stam = String(stationcfg.optional_key(station_config, "/home/haugened/Documents/data/CONTRASTS/nan_periods", "manual_nanmask", "root"))
+nanfile_stam = String(stationcfg.optional_key(station_config, "/path/to/data/CONTRASTS/nan_periods", "manual_nanmask", "root"))
 nanfiles = joinpath.(nanfile_stam, String.(stationcfg.optional_key(
     station_config,
     ["t1irg_nan.csv", "t1csat_nan.csv", "t2irg_nan.csv", "t2csat_nan.csv"],
@@ -1701,7 +1701,7 @@ fx4 = turb.avgflux(fx4_raw, ra4, true, 0.1)
 
 ######################################################
 ### CALCULATE FLUX FOOTPRINTS CLIMATOLOGY (PYTHON) ###
-###            author: Michi Haugeneder            ###
+###            author: <AUTHOR>                   ###
 ######################################################
 #=
 Calculate (climatological) flux footprints according to
@@ -1866,7 +1866,7 @@ ax1.legend()#loc="lower right")
 ax1.set_xlim(-50,25)
 ax1.set_ylim(-50,25)
 PyPlot.tight_layout()
-#PyPlot.savefig(joinpath("/home/haugened/Documents/data/CONTRASTS/plots/paper_CONTRASTS_26/", "1b2_ffp.pdf"), bbox_inches="tight")
+#PyPlot.savefig(joinpath("/path/to/data/CONTRASTS/plots/paper_CONTRASTS_26/", "1b2_ffp.pdf"), bbox_inches="tight")
 
 ##
 
@@ -1922,7 +1922,7 @@ ax2.legend([wq1[1], wq2[1]], [instr_labels[1], instr_labels[3]])
 # fig.autofmt_xdate()
 
 PyPlot.tight_layout()
-output_folder = "/home/haugened/Documents/data/CONTRASTS/plots/paper_CONTRASTS_26/"
+output_folder = "/path/to/data/CONTRASTS/plots/paper_CONTRASTS_26/"
 #PyPlot.savefig(joinpath(output_folder, "1b2_heat_fluxes.pdf"), bbox_inches="tight")
 
 #depending on the data length, the following block takes more than 10min!
@@ -1932,7 +1932,7 @@ output_folder = "/home/haugened/Documents/data/CONTRASTS/plots/paper_CONTRASTS_2
 ##
 ######################################################
 ###      CALCULATE FOOTPRINTS PER BLOCK FLUX       ###
-###            author: Michi Haugeneder            ###
+###            author: <AUTHOR>                   ###
 ######################################################
 
 #variables
@@ -2982,7 +2982,7 @@ end
 # ------------------------------------------------------------------
 # 1️⃣  Input variables
 # ------------------------------------------------------------------
-root_dir = "/media/haugened/8f2c07c5-c77d-4280-99f1-e932f1d72d33/contrasts/converted/" #dir containing the converted folders
+root_dir = "/path/to/thermal_data/converted/" #dir containing the converted folders
 t_start = DateTime(2025,07,15,10,15,00) #start time for analysis
 t_end   = t_start + Minute(30)          #end time for analysis
 
@@ -3073,7 +3073,7 @@ fig.savefig(joinpath(output_folder, "2a_t_profiles_1015_1045.pdf"), bbox_inches=
 #=
 ######################################################
 ###          LOADING DATA FROM EC SENSORS          ###
-###            author: Michi Haugeneder            ###
+###            author: <AUTHOR>                   ###
 ######################################################
 #=
 Load the preprocessed (by offline_preproc.jl)
@@ -3120,11 +3120,11 @@ station_label = stationcfg.station_label(station_config)
 station_file_stem = stationcfg.station_file_stem(station_config)
 
 datapath = String(stationcfg.require_key(station_config, "data_root"))
-#datapath = "/home/michi/Documents/slf/CONTRASTS25/data/processed/preproc/"
+#datapath = "/path/to/data/CONTRASTS/processed/preproc/"
 
 #timestep between single measurements, 1/measurement frequency
 timestep = Millisecond(50)
-nanfile_stam = String(stationcfg.optional_key(station_config, "/home/haugened/Documents/data/CONTRASTS/nan_periods", "manual_nanmask", "root"))
+nanfile_stam = String(stationcfg.optional_key(station_config, "/path/to/data/CONTRASTS/nan_periods", "manual_nanmask", "root"))
 nanfiles = joinpath.(nanfile_stam, String.(stationcfg.optional_key(
     station_config,
     ["t1irg_nan.csv", "t1csat_nan.csv", "t2irg_nan.csv", "t2csat_nan.csv"],
@@ -3220,7 +3220,7 @@ fx4 = turb.avgflux(fx4_raw, ra4, true, 0.1)
 
 ######################################################
 ### CALCULATE FLUX FOOTPRINTS CLIMATOLOGY (PYTHON) ###
-###            author: Michi Haugeneder            ###
+###            author: <AUTHOR>                   ###
 ######################################################
 #=
 Calculate (climatological) flux footprints according to
@@ -3385,7 +3385,7 @@ ax1.legend(loc="lower right")
 ax1.set_xlim(-60,50)
 ax1.set_ylim(-90,30)
 PyPlot.tight_layout()
-#PyPlot.savefig(joinpath("/home/haugened/Documents/data/CONTRASTS/plots/paper_CONTRASTS_26/", "3a2_ffp.pdf"), bbox_inches="tight")
+#PyPlot.savefig(joinpath("/path/to/data/CONTRASTS/plots/paper_CONTRASTS_26/", "3a2_ffp.pdf"), bbox_inches="tight")
 
 ##
 
@@ -3441,7 +3441,7 @@ ax2.legend([wq1[1], wq2[1]], [instr_labels[1], instr_labels[3]])
 # fig.autofmt_xdate()
 
 PyPlot.tight_layout()
-output_folder = "/home/haugened/Documents/data/CONTRASTS/plots/paper_CONTRASTS_26/"
+output_folder = "/path/to/data/CONTRASTS/plots/paper_CONTRASTS_26/"
 #PyPlot.savefig(joinpath(output_folder, "3a2_heat_fluxes.pdf"), bbox_inches="tight")
 
 ##############################
@@ -3496,7 +3496,7 @@ ax_ht2.grid()
 ax_ht2.set_aspect("equal", adjustable="box")
 
 PyPlot.tight_layout()
-#PyPlot.savefig(joinpath("/home/haugened/Documents/data/CONTRASTS/plots/paper_CONTRASTS_26/", "3a2_corr_per_tower.pdf"), bbox_inches="tight")
+#PyPlot.savefig(joinpath("/path/to/data/CONTRASTS/plots/paper_CONTRASTS_26/", "3a2_corr_per_tower.pdf"), bbox_inches="tight")
 
 ##
 #PyPlot.savefig(joinpath(output_folder_ht, "$(station_file_stem)_per_tower.pdf"), bbox_inches="tight")
@@ -3539,7 +3539,7 @@ labels = instr_labels
 ax1.legend(handles, labels)
 
 PyPlot.tight_layout()
-#PyPlot.savefig(joinpath("/home/haugened/Documents/data/CONTRASTS/plots/paper_CONTRASTS_26/", "3a2_momentum_fluxes.pdf"), bbox_inches="tight")
+#PyPlot.savefig(joinpath("/path/to/data/CONTRASTS/plots/paper_CONTRASTS_26/", "3a2_momentum_fluxes.pdf"), bbox_inches="tight")
 ##
 #############################
 #=

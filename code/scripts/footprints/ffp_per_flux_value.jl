@@ -1,6 +1,6 @@
 ######################################################
 ###      CALCULATE FOOTPRINTS PER BLOCK FLUX       ###
-###            author: Michi Haugeneder            ###
+###            author: <AUTHOR>                   ###
 ######################################################
 #=
 Calculate flux footprints according to

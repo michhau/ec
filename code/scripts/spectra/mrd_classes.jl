@@ -1,6 +1,6 @@
 ######################################################
 ###MULTI RESOLUTION FLUX DECOMPOSITION FOR CLASSES ###
-###            author: Michi Haugeneder            ###
+###            author: <AUTHOR>                   ###
 ######################################################
 #=
 Calculate MRD for data grouped in classes (for example)
@@ -12,7 +12,7 @@ pydates = pyimport("matplotlib.dates")
 animation = pyimport("matplotlib.animation")
 
 importdir = joinpath(@__DIR__, "..", "..")
-datapath = "/home/haugened/Documents/data/"
+datapath = "/path/to/data/"
 include(joinpath(importdir, "src", "turb_data.jl"))
 include(joinpath(importdir, "src", "general.jl"))
 include(joinpath(importdir, "src", "mrd.jl"))
