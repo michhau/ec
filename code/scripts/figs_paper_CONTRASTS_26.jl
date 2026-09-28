@@ -1484,7 +1484,7 @@ isempty(files) && error("No files found for the given interval.")
 # ------------------------------------------------------------------
 # 3️⃣  Show first frame for visual selection
 # ------------------------------------------------------------------
-#fig, ax, first_frame = plot_first_frame(files; tmin=-1.8, tmax=0.8)
+fig, ax, first_frame = plot_first_frame(files; tmin=-1.8, tmax=0.8)
 #PyPlot.show(fig)
 
 # ------------------------------------------------------------------
@@ -1529,7 +1529,7 @@ results = prepare_multiple_profiles(files, t_start, t_end, specs, FRAMES_PER_FIL
 # ------------------------------------------------------------------
 # 7  Plot
 # ------------------------------------------------------------------
-fig = plot_multi_profiles(first_frame, results, specs, t_start, t_end, "2a"; tmin=-1.8, tmax=0.8, pxl2meter_row, pxl2meter_col);
+fig = plot_multi_profiles(first_frame, results, specs, t_start, t_end, "2a"; tmin=-1.90, tmax=-0.7, pxl2meter_row, pxl2meter_col);
 fig.savefig(joinpath(output_folder, "2a_t_profiles_1015_1045.pdf"), bbox_inches="tight")
 =#
 ###################################################################################################
