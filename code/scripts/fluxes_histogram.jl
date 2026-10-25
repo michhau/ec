@@ -431,16 +431,19 @@ function plot_surface_ice_flux!(
     return nothing
 end
 
-function add_panel_label!(ax, label::AbstractString)
-    ax.text(
-        0.02, 0.96, label;
+function add_panel_label!(ax, label::AbstractString;
+                          x=-0.07, y=1.03, fontsize=10)
+    panel_label = ax.text(
+        x, y, label;
         transform=ax.transAxes,
         ha="left",
-        va="top",
-        fontsize=11,
-        fontweight="bold",
+        va="bottom",
+        fontsize=fontsize,
+        #fontweight="bold",
+        clip_on=false,
     )
-    return nothing
+    panel_label.set_in_layout(false)
+    return panel_label
 end
 
 function surface_ice_flux_settings(
@@ -536,11 +539,13 @@ function plot_surface_ice_histogram_row!(
     show_legend && ax_le.legend(fontsize=7.5, loc="upper right")
     ax_le.grid(alpha=0.25)
 
-    if !isnothing(panel_labels)
-        add_panel_label!(ax_h, panel_labels[1])
-        add_panel_label!(ax_le, panel_labels[2])
+    if isnothing(panel_labels)
+        return nothing
     end
-    return nothing
+    return (
+        add_panel_label!(ax_h, panel_labels[1]),
+        add_panel_label!(ax_le, panel_labels[2]),
+    )
 end
 
 """
@@ -554,7 +559,8 @@ SURFACE_ICE_HISTOGRAM_SETTINGS.
 """
 function plot_surface_ice_histogram_grid(
         data::DataFrame, output_file::AbstractString, surface_type::AbstractString,
-        station_names; row_specs=(("", data),), figsize=(7.4, 3.3))
+        station_names; row_specs=(("", data),), figsize=(7.4, 3.3),
+        panel_labels=nothing)
     distributions = surface_ice_distribution_data(data, surface_type, station_names)
     validate_surface_ice_histogram_data(distributions, surface_type, station_names)
 
@@ -570,9 +576,10 @@ function plot_surface_ice_histogram_grid(
         sharex="col",
         squeeze=false,
     )
+    panel_label_artists = Any[]
 
     for (row_index, (row_label, row_data)) in enumerate(row_specs)
-        plot_surface_ice_histogram_row!(
+        row_panel_label_artists = plot_surface_ice_histogram_row!(
             axes[row_index, 1],
             axes[row_index, 2],
             row_data,
@@ -582,8 +589,9 @@ function plot_surface_ice_histogram_grid(
             latent_bins;
             row_label=row_label,
             show_legend=row_index == 1,
-            panel_labels=row_index == 1 ? nothing : nothing,
+            panel_labels=row_index == 1 ? panel_labels : nothing,
         )
+        !isnothing(row_panel_label_artists) && append!(panel_label_artists, row_panel_label_artists)
         axes[row_index, 1].set_xlim(sensible_settings.xlimits)
         axes[row_index, 2].set_xlim(latent_settings.xlimits)
     end
@@ -594,9 +602,23 @@ function plot_surface_ice_histogram_grid(
     axes[end, 1].set_xlabel(L"Q_H~\mathrm{[W~m^{-2}]}")
     axes[end, 2].set_xlabel(L"Q_E~\mathrm{[W~m^{-2}]}")
 
-    PyPlot.tight_layout()
+    if isnothing(panel_labels)
+        PyPlot.tight_layout()
+    else
+        # Reserve an internal top margin for external panel labels so the
+        # saved figure is not enlarged by `bbox_inches="tight"`.
+        PyPlot.tight_layout(rect=(0.0, 0.0, 1.0, 0.92))
+    end
     mkpath(dirname(output_file))
-    PyPlot.savefig(output_file, bbox_inches="tight")
+    if isempty(panel_label_artists)
+        PyPlot.savefig(output_file, bbox_inches="tight")
+    else
+        PyPlot.savefig(
+            output_file,
+            bbox_inches="tight",
+            bbox_extra_artists=panel_label_artists,
+        )
+    end
     PyPlot.close(fig)
     return output_file
 end
@@ -609,6 +631,7 @@ function plot_surface_ice_histograms(
         joinpath(plot_dir, "hist_paper_$(surface_type)_ice.pdf"),
         surface_type,
         station_names,
+        panel_labels=("a)", "b)"),
     )
 end
 
