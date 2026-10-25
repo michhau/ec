@@ -298,7 +298,7 @@ function fit_feature_flux_difference(feature_difference::AbstractVector,
     fit_df = DataFrame(feature_difference=x, flux_difference=y)
     model = lm(@formula(flux_difference ~ feature_difference), fit_df)
     fit_vars = coef(model)
-    fit_vars_confint = confint(model, level=0.95)
+    fit_vars_confint = confint(model, level=0.90)
     fit_stderror = stderror(model)
 
     x_grid = isnothing(xgrid) ?
@@ -343,7 +343,7 @@ function feature_flux_difference_fit_summary(fit, feature_label::AbstractString,
 end
 
 function plot_feature_flux_difference_fit!(ax, fit; color="black",
-        label::AbstractString="linear fit", ci_label::AbstractString="95% CI",
+        label::AbstractString="linear fit", ci_label::AbstractString="IQR",
         ci_alpha::Real=0.18, linewidth::Real=1.0)
     ax.fill_between(fit.x_grid,
         fit.predictions_confidence.lower,
